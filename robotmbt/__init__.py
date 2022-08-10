@@ -36,7 +36,7 @@ from .SuiteProcessors import SuiteProcessors
 
 class robotmbt(SuiteReplacer, SuiteProcessors):
     """
-    Generic non-domain specific keywords for use by all to enhance the Natural Language experience
+    Process test suites on-the-fly to optimise test suite execution
     """
 
 __version__ = VERSION
