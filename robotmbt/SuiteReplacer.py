@@ -64,12 +64,35 @@ class SuiteReplacer:
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
 
+    @keyword(name="Set Model preconditions")
+    def set_model_preconditions(self, *args):
+        """
+        Model precondition can not contain assignments or new objects. It can only contain checks.
+        
+        Example: Checking that there are no names on the birthday card yet
+            Set Model precondition | len(birthday_card.names) \=\= 0
+        """
+        pass
+
+    @keyword(name="Set Model postconditions")
+    def set_model_postconditions(self, *args):
+        """
+        Use new <vocab term> to introduce a new domain vocabulaire object. Then assign or update
+        properties using python-like expressions.
+        
+        Example Creating a new birthday_card object with a (still empty) list property for names:
+            Set Model postcondition | new birthday_card | birthday_card.names \= []
+            
+         Note that Robot requires the '=' (equal sign) to be escaped.
+        """
+        pass            
+            
     def __process_robot_suite(self, in_suite, parent):
         logger.debug(f"processing test suite: {in_suite.name}")
         out_suite = Suite(in_suite.name, parent)
         out_suite.filename = in_suite.source
         
-        if in_suite.setup:
+        if in_suite.setup and parent is not None:
             logger.debug(f"    with setup: {in_suite.setup.name}")
             self.prev_gherkin_kw = None
             step_info = self.__process_step(in_suite.setup, parent=out_suite)
@@ -164,8 +187,8 @@ class Step:
 
     @property
     def step_kw(self):
-        first_word = self.keyword.split()[0].lower()
-        return first_word if first_word in ['given','when','then','and','but'] else None
+        first_word = self.keyword.split()[0]
+        return first_word if first_word.lower() in ['given','when','then','and','but'] else None
 
     @property
     def bare_kw(self):
