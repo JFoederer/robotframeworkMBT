@@ -31,8 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from .version import VERSION
-from .SuiteReplacer import SuiteReplacer
-from .SuiteProcessors import SuiteProcessors
+from .suitereplacer import SuiteReplacer
+from .suiteprocessors import SuiteProcessors
 
 class robotmbt(SuiteReplacer, SuiteProcessors):
     """
