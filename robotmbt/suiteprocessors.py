@@ -35,9 +35,8 @@ from robot.api.deco import not_keyword
 from robot.api import logger
 
 class SuiteProcessors:
-    @classmethod
     @not_keyword
-    def echo(cls, in_suite, coverage='*'):
+    def echo(self, in_suite, coverage='*'):
         return in_suite
 
     process_test_suite = echo # default processor

@@ -45,7 +45,8 @@ class SuiteReplacer:
         self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite = None
         self.robot_suite = None
-        suite_processor = SuiteProcessors if processor_lib is None \
+        self.current_step = None
+        suite_processor = SuiteProcessors() if processor_lib is None \
                                           else getattr(Robot.get_library_instance(processor_lib))
         self.suite_processor = getattr(suite_processor, processor)
 
@@ -72,7 +73,16 @@ class SuiteReplacer:
         Example: Checking that there are no names on the birthday card yet
             Set Model precondition | len(birthday_card.names) \=\= 0
         """
-        pass
+        self._set_model_info('IN', *args)
+        for expression in args:
+            if self._is_new_vocab_expression(expression):
+                raise ValueError("Cannot create new vocab terms during precondition checks")
+            try:
+                eval(expression)
+            except SyntaxError:
+                raise ValueError("Invalid expression. Note that statements, like assignments, are not valid during precondition checks")
+            except:
+                pass
 
     @keyword(name="Set Model postconditions")
     def set_model_postconditions(self, *args):
@@ -85,7 +95,16 @@ class SuiteReplacer:
             
          Note that Robot requires the '=' (equal sign) to be escaped.
         """
-        pass            
+        self._set_model_info('OUT', *args)
+
+    def _set_model_info(self, inout, *args):
+        for expression in args:
+            if not isinstance(expression, str):
+                raise TypeError(f"Expression wasn't text but {type(expression)}")
+            self.current_step.model_info[inout].append(expression)
+
+    def _is_new_vocab_expression(self, expression):
+        return expression.lower().startswith('new ') and len(expression.split()) == 2
             
     def __process_robot_suite(self, in_suite, parent):
         logger.debug(f"processing test suite: {in_suite.name}")
@@ -128,7 +147,9 @@ class SuiteReplacer:
         if step_def.args:
             step.args = step_def.args
         try:
-            step.model_info = Robot.run_keyword('model ' + step.bare_kw, *step_def.args)
+            self.current_step = step
+            Robot.run_keyword('model ' + step.bare_kw, *step_def.args)
+            self.current_step = None
         except Exception as ex:
             step.model_info['error']=str(ex)
         return step
