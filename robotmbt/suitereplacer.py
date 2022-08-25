@@ -35,7 +35,7 @@ from robot.api.deco import keyword
 from robot.api import logger
 import robot.running.model as rmodel
 
-from .SuiteProcessors import SuiteProcessors
+from .suiteprocessors import SuiteProcessors
 
 class SuiteReplacer:
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'
