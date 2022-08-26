@@ -36,6 +36,8 @@ from robot.api import logger
 import robot.running.model as rmodel
 
 from .suiteprocessors import SuiteProcessors
+from .suitedata import Suite, Scenario, Step
+from .modelspace import ModelSpace
 
 class SuiteReplacer:
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'
@@ -75,7 +77,7 @@ class SuiteReplacer:
         """
         self._set_model_info('IN', *args)
         for expression in args:
-            if self._is_new_vocab_expression(expression):
+            if ModelSpace.is_new_vocab_expression(expression):
                 raise ValueError("Cannot create new vocab terms during precondition checks")
             try:
                 eval(expression)
@@ -103,9 +105,6 @@ class SuiteReplacer:
                 raise TypeError(f"Expression wasn't text but {type(expression)}")
             self.current_step.model_info[inout].append(expression)
 
-    def _is_new_vocab_expression(self, expression):
-        return expression.lower().startswith('new ') and len(expression.split()) == 2
-            
     def __process_robot_suite(self, in_suite, parent):
         logger.debug(f"processing test suite: {in_suite.name}")
         out_suite = Suite(in_suite.name, parent)
@@ -178,40 +177,3 @@ class SuiteReplacer:
     def _end_suite(self, suite, result):
         if suite == self.robot_suite:
             self.robot_suite = None
-
-class Suite:
-    def __init__(self, name, parent=None):
-        self.name = name
-        self.filename = ''
-        self.parent = parent
-        self.suites = []
-        self.scenarios = []
-        self.setup = None # Can be a single step or None
-
-class Scenario:
-    def __init__(self, name, parent=None):
-        self.name = name
-        self.parent = parent
-        self.setup = None # Can be a single step or None
-        self.steps = []
-
-class Step:
-    def __init__(self, name, parent):
-        self.keyword = name      # first cell of the Robot line, including step_kw, excluding args
-        self.parent = parent     # Parent scenario for easy searching and processing
-        self.gherkin_kw = None   # given, when, then or None for non-bdd keywords
-        self.args = ()           # Comes directly from Robot
-        self.model_info = dict(IN=[], OUT=[]) # Can optionally contain an additional error field
-                                 # IN and OUT are lists of Pyhton evaluatable expressions. The
-                                 # vocab.attribute form can be used to express relations between
-                                 # properties from the domain vocabulaire.
-
-    @property
-    def step_kw(self):
-        first_word = self.keyword.split()[0]
-        return first_word if first_word.lower() in ['given','when','then','and','but'] else None
-
-    @property
-    def bare_kw(self):
-        """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
-        return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword

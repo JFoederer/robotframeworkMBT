@@ -84,7 +84,17 @@ class TestModelSpace(unittest.TestCase):
     def test_statements_return_exec(self):
         self.m.add_prop('foo')
         self.assertEqual(self.m.process_expression('foo.bar = 13'), 'exec')
-   
+
+    def test_new_vocab(self):
+        self.m.process_expression('new foo')
+        self.assertIn('foo', dir(self.m))
+        self.m.process_expression('foo.bar = 13')
+        self.assertIs(self.m.process_expression('foo.bar == 13'), True)
+
+    def test_property_exists(self):
+        self.m.process_expression('new foo')
+        self.assertTrue(self.m.process_expression('foo'))
+
     def test_get_status_text(self):
         self.m.add_prop('foo1')
         self.m.process_expression('foo1.bar = 13')

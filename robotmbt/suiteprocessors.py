@@ -34,9 +34,71 @@ from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import not_keyword
 from robot.api import logger
 
+from .suitedata import Suite, Scenario, Step
+from .modelspace import ModelSpace
+
+import copy
+import random
+
 class SuiteProcessors:
     @not_keyword
     def echo(self, in_suite, coverage='*'):
         return in_suite
 
-    process_test_suite = echo # default processor
+    @not_keyword
+    def process_test_suite(self, in_suite, coverage='*'):
+        out_suite = Suite(in_suite.name)
+        out_suite.filename = in_suite.filename
+        out_suite.parent = in_suite.parent
+        flat_suite = self._flatten_suite(in_suite)
+        model = ModelSpace()
+        attempts_left = 20
+        while flat_suite.scenarios and attempts_left:
+            scenario = random.choice(flat_suite.scenarios)
+            if self._scenario_can_execute(scenario, model):
+                logger.info(f"Adding scenario {scenario.name}")
+                self._process_scenario(scenario, model)
+                out_suite.scenarios.append(scenario)
+                flat_suite.scenarios.remove(scenario)
+            else:
+                attempts_left -=1
+        if flat_suite.scenarios:
+            raise Exception("Unable to compose a consistent suite\n"
+                           f"last model state:\n{model.get_status_text() or 'empty'}")
+        return out_suite
+
+    def _flatten_suite(self, in_suite):
+        """
+        Takes a Suite as input and returns a Suite as output. The output Suite does not
+        have any sub-suites, only scenarios. The scenarios do not have a setup. Any setup
+        keywords are inserted at the front of the scenario as regular steps.
+        """
+        out_suite = copy.deepcopy(in_suite)
+        for suite in in_suite.suites:
+            subsuite = self._flatten_suite(suite)
+            for scenario in subsuite.scenarios:
+                if scenario.setup:
+                    scenario.steps.insert(0, scenario.setup)
+                    scenario.setup = None
+            out_suite.scenarios = subsuite.scenarios + out_suite.scenarios
+        out_suite.suites = []
+        return out_suite
+
+    @staticmethod
+    def _process_scenario(scenario, model):
+        for step in scenario.steps:
+            for expr in step.model_info['IN'] + step.model_info['OUT']:
+                model.process_expression(expr)
+    @staticmethod
+    def _scenario_can_execute(scenario, model):
+        m = copy.deepcopy(model)
+        for step in scenario.steps:
+            for expr in step.model_info['IN'] + step.model_info['OUT']:
+                try:
+                    if m.process_expression(expr) is False:
+                        logger.debug(f"Scenario {scenario.name} failed at step {step.keyword}: {expr} is False")
+                        return False
+                except Exception as err:
+                    logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: [{expr}] {err}")
+                    return False
+        return True

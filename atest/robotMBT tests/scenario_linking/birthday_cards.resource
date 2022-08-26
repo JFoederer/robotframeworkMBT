@@ -14,7 +14,7 @@ model a blank Birthday card
 
 model '${name}' writes their name on the birthday card
     Set Model preconditions    birthday_card
-    Set Model postconditions    birthday_card.names.append \= [${name}]
+    Set Model postconditions    birthday_card.names.append('${name}')
 
 the birthday card has '${name}' written on it
     Should Contain    ${names}    ${name}
