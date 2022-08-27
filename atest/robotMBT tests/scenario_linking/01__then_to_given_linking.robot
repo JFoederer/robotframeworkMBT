@@ -1,4 +1,9 @@
 *** Settings ***
+Documentation     This test suite demonstrates direct one-on-one linking of scenarios.
+...               The _THEN_ from the leading scenario matches exactly to the _GIVEN_ of
+...               the trailing scenario.
+...
+...               Note that this test suite would also pass when run in Robot Framework without additional processing.
 Suite Setup       Treat this test suite Model-based
 Resource          birthday_cards.resource
 Library           robotmbt
