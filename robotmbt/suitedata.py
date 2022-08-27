@@ -30,13 +30,39 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .version import VERSION
-from .suitereplacer import SuiteReplacer
-from .suiteprocessors import SuiteProcessors
+class Suite:
+    def __init__(self, name, parent=None):
+        self.name = name
+        self.filename = ''
+        self.parent = parent
+        self.suites = []
+        self.scenarios = []
+        self.setup = None # Can be a single step or None
 
-class robotmbt(SuiteReplacer, SuiteProcessors):
-    """
-    Process test suites on-the-fly to optimise test suite execution
-    """
+class Scenario:
+    def __init__(self, name, parent=None):
+        self.name = name
+        self.parent = parent
+        self.setup = None # Can be a single step or None
+        self.steps = []
 
-__version__ = VERSION
+class Step:
+    def __init__(self, name, parent):
+        self.keyword = name      # first cell of the Robot line, including step_kw, excluding args
+        self.parent = parent     # Parent scenario for easy searching and processing
+        self.gherkin_kw = None   # given, when, then or None for non-bdd keywords
+        self.args = ()           # Comes directly from Robot
+        self.model_info = dict(IN=[], OUT=[]) # Can optionally contain an additional error field
+                                 # IN and OUT are lists of Pyhton evaluatable expressions. The
+                                 # vocab.attribute form can be used to express relations between
+                                 # properties from the domain vocabulaire.
+
+    @property
+    def step_kw(self):
+        first_word = self.keyword.split()[0]
+        return first_word if first_word.lower() in ['given','when','then','and','but'] else None
+
+    @property
+    def bare_kw(self):
+        """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
+        return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword

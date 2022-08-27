@@ -30,14 +30,56 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
-from robot.api.deco import not_keyword
-from robot.api import logger
+class ModelSpace:
+    def __init__(self, ):
+        self.std_attrs = []
+        self.props = dict()
+        self.std_attrs = dir(self)
 
-class SuiteProcessors:
-    @classmethod
-    @not_keyword
-    def echo(cls, in_suite, coverage='*'):
-        return in_suite
+    def add_prop(self, name):
+        self.props[name] = ModelSpace()
+        setattr(self, name, self.props[name])
 
-    process_test_suite = echo # default processor
+    def __dir__(self, recurse=True):
+        if recurse:
+            return [attr for attr in self.__dir__(False) if attr not in self.std_attrs]
+        else:
+            return self.__dict__.keys()
+
+    def process_expression(self, expr):
+        if self.is_new_vocab_expression(expr):
+            self.add_prop(self.new_vocab_term(expr))
+            return 'exec'
+
+        for p, obj in self.props.items():
+            action = f"{p} = self.props['{p}']"
+            exec(action)
+
+        try:
+            result = eval(expr)
+        except SyntaxError:
+            exec(expr)
+            result = 'exec'
+
+        proplist = self.props.keys()
+        for p in self.props:
+            action = f"self.props['{p}'] = {p}"
+            exec(action)
+
+        return result
+
+    @staticmethod
+    def is_new_vocab_expression(expression):
+        return expression.lower().startswith('new ') and len(expression.split()) == 2
+
+    @staticmethod
+    def new_vocab_term(expression):
+        return expression.split()[-1]
+
+    def get_status_text(self):
+        status = str()
+        for p, v in self.props.items():
+            status += f"{p}:\n"
+            for attr in dir(self.props[p]):
+                status += f"    {attr}= {getattr(self.props[p], attr)}\n"
+        return status

@@ -35,7 +35,9 @@ from robot.api.deco import keyword
 from robot.api import logger
 import robot.running.model as rmodel
 
-from .SuiteProcessors import SuiteProcessors
+from .suiteprocessors import SuiteProcessors
+from .suitedata import Suite, Scenario, Step
+from .modelspace import ModelSpace
 
 class SuiteReplacer:
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'
@@ -45,7 +47,8 @@ class SuiteReplacer:
         self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite = None
         self.robot_suite = None
-        suite_processor = SuiteProcessors if processor_lib is None \
+        self.current_step = None
+        suite_processor = SuiteProcessors() if processor_lib is None \
                                           else getattr(Robot.get_library_instance(processor_lib))
         self.suite_processor = getattr(suite_processor, processor)
 
@@ -64,12 +67,50 @@ class SuiteReplacer:
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
 
+    @keyword(name="Set Model preconditions")
+    def set_model_preconditions(self, *args):
+        """
+        Model precondition can not contain assignments or new objects. It can only contain checks.
+        
+        Example: Checking that there are no names on the birthday card yet
+            Set Model precondition | len(birthday_card.names) \=\= 0
+        """
+        self._set_model_info('IN', *args)
+        for expression in args:
+            if ModelSpace.is_new_vocab_expression(expression):
+                raise ValueError("Cannot create new vocab terms during precondition checks")
+            try:
+                eval(expression)
+            except SyntaxError:
+                raise ValueError("Invalid expression. Note that statements, like assignments, are not valid during precondition checks")
+            except:
+                pass
+
+    @keyword(name="Set Model postconditions")
+    def set_model_postconditions(self, *args):
+        """
+        Use new <vocab term> to introduce a new domain vocabulaire object. Then assign or update
+        properties using python-like expressions.
+        
+        Example Creating a new birthday_card object with a (still empty) list property for names:
+            Set Model postcondition | new birthday_card | birthday_card.names \= []
+            
+         Note that Robot requires the '=' (equal sign) to be escaped.
+        """
+        self._set_model_info('OUT', *args)
+
+    def _set_model_info(self, inout, *args):
+        for expression in args:
+            if not isinstance(expression, str):
+                raise TypeError(f"Expression wasn't text but {type(expression)}")
+            self.current_step.model_info[inout].append(expression)
+
     def __process_robot_suite(self, in_suite, parent):
         logger.debug(f"processing test suite: {in_suite.name}")
         out_suite = Suite(in_suite.name, parent)
         out_suite.filename = in_suite.source
         
-        if in_suite.setup:
+        if in_suite.setup and parent is not None:
             logger.debug(f"    with setup: {in_suite.setup.name}")
             self.prev_gherkin_kw = None
             step_info = self.__process_step(in_suite.setup, parent=out_suite)
@@ -105,7 +146,9 @@ class SuiteReplacer:
         if step_def.args:
             step.args = step_def.args
         try:
-            step.model_info = Robot.run_keyword('model ' + step.bare_kw, *step_def.args)
+            self.current_step = step
+            Robot.run_keyword('model ' + step.bare_kw, *step_def.args)
+            self.current_step = None
         except Exception as ex:
             step.model_info['error']=str(ex)
         return step
@@ -134,40 +177,3 @@ class SuiteReplacer:
     def _end_suite(self, suite, result):
         if suite == self.robot_suite:
             self.robot_suite = None
-
-class Suite:
-    def __init__(self, name, parent=None):
-        self.name = name
-        self.filename = ''
-        self.parent = parent
-        self.suites = []
-        self.scenarios = []
-        self.setup = None # Can be a single step or None
-
-class Scenario:
-    def __init__(self, name, parent=None):
-        self.name = name
-        self.parent = parent
-        self.setup = None # Can be a single step or None
-        self.steps = []
-
-class Step:
-    def __init__(self, name, parent):
-        self.keyword = name      # first cell of the Robot line, including step_kw, excluding args
-        self.parent = parent     # Parent scenario for easy searching and processing
-        self.gherkin_kw = None   # given, when, then or None for non-bdd keywords
-        self.args = ()           # Comes directly from Robot
-        self.model_info = dict(IN=[], OUT=[]) # Can optionally contain an additional error field
-                                 # IN and OUT are lists of Pyhton evaluatable expressions. The
-                                 # vocab.attribute form can be used to express relations between
-                                 # properties from the domain vocabulaire.
-
-    @property
-    def step_kw(self):
-        first_word = self.keyword.split()[0].lower()
-        return first_word if first_word in ['given','when','then','and','but'] else None
-
-    @property
-    def bare_kw(self):
-        """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
-        return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword
