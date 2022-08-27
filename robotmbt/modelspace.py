@@ -30,13 +30,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+class ModellingError(Exception):
+    pass
+
 class ModelSpace:
     def __init__(self, ):
         self.std_attrs = []
         self.props = dict()
+        self.values = []
         self.std_attrs = dir(self)
 
     def add_prop(self, name):
+        if name in self.props or name in self.values:
+            raise ModellingError(f"Naming conflict, '{name}' already in use.")
         self.props[name] = ModelSpace()
         setattr(self, name, self.props[name])
 
@@ -54,11 +60,17 @@ class ModelSpace:
         for p, obj in self.props.items():
             action = f"{p} = self.props['{p}']"
             exec(action)
-
+        for v in self.values:
+            action = f"{v} = '{v}'"
+            exec(action)
         try:
             result = eval(expr)
         except SyntaxError:
-            exec(expr)
+            try:
+                exec(expr)
+            except NameError as missing:
+                self.values.append(missing.name)
+                self.process_expression(expr)
             result = 'exec'
 
         proplist = self.props.keys()
@@ -81,5 +93,5 @@ class ModelSpace:
         for p, v in self.props.items():
             status += f"{p}:\n"
             for attr in dir(self.props[p]):
-                status += f"    {attr}= {getattr(self.props[p], attr)}\n"
+                status += f"    {attr}={getattr(self.props[p], attr)}\n"
         return status
