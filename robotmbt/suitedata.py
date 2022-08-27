@@ -38,12 +38,14 @@ class Suite:
         self.suites = []
         self.scenarios = []
         self.setup = None # Can be a single step or None
+        self.teardown = None # Can be a single step or None
 
 class Scenario:
     def __init__(self, name, parent=None):
         self.name = name
         self.parent = parent
         self.setup = None # Can be a single step or None
+        self.teardown = None # Can be a single step or None
         self.steps = []
 
 class Step:

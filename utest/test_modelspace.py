@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-from robotmbt.modelspace import ModelSpace
+from robotmbt.modelspace import ModelSpace, ModellingError
 
 # To run unit tests:
 #   * open a command prompt
@@ -48,6 +48,10 @@ class TestModelSpace(unittest.TestCase):
     def test_add_property(self):
         self.m.add_prop('foo')
         self.assertIn('foo', dir(self.m))
+
+    def test_try_add_same_property(self):
+        self.m.add_prop('foo')
+        self.assertRaises(ModellingError, self.m.add_prop, 'foo')
 
     def test_assign_property(self):
         self.m.add_prop('foo')
@@ -81,6 +85,10 @@ class TestModelSpace(unittest.TestCase):
         self.assertIs(self.m.process_expression('foo2.bar == 1313'), True)
         self.assertIs(self.m.process_expression('foo1.bar < foo2.bar'), True)
 
+    def test_fail_when_comparing_unknown_property(self):
+        self.m.add_prop('foo')
+        self.assertRaises(AttributeError, self.m.process_expression, 'foo.bar == foobar')
+
     def test_statements_return_exec(self):
         self.m.add_prop('foo')
         self.assertEqual(self.m.process_expression('foo.bar = 13'), 'exec')
@@ -101,9 +109,33 @@ class TestModelSpace(unittest.TestCase):
         self.m.add_prop('foo2')
         self.m.process_expression('foo2.bar = 1313')
         self.assertEqual(self.m.get_status_text(), "foo1:\n"
-                                                   "    bar= 13\n"
+                                                   "    bar=13\n"
                                                    "foo2:\n"
-                                                   "    bar= 1313\n")
+                                                   "    bar=1313\n")
+
+    def test_string_attributes(self):
+        self.m.process_expression('new foo')
+        self.m.process_expression('foo.bar = "foobar"')
+        self.assertIs(self.m.process_expression('foo.bar == "foobar"'), True)
+
+    def test_assigning_named_attributes(self):
+        """
+        Named attributes of properties can be used without quotes. If expressions were
+        processed as just a regular Python expression, it would fail on a NameError.
+        """
+        self.m.process_expression('new foo')
+        self.m.process_expression('foo.bar = foobar')
+        self.assertIs(self.m.process_expression('foo.bar == foobar'), True)
+
+    def test_fail_evaluating_named_attribute_before_assignment(self):
+        self.m.process_expression('new foo')
+        self.m.process_expression('foo.bar = "foobar"')
+        self.assertRaises(NameError, self.m.process_expression, 'foo.bar == foobar')
+
+    def test_fail_on_naming_conflict(self):
+        self.m.process_expression('new foo1')
+        self.m.process_expression('foo1.bar = foo2')
+        self.assertRaises(ModellingError, self.m.process_expression, 'new foo2')
 
 
 if __name__ == '__main__':

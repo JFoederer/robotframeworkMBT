@@ -117,6 +117,13 @@ class SuiteReplacer:
             if step_info.gherkin_kw != 'given':
                 step_info.model_info['error'] = "Setup must be a 'given' step"
             out_suite.setup = step_info
+        if in_suite.teardown and parent is not None:
+            logger.debug(f"    with teardown: {in_suite.teardown.name}")
+            self.prev_gherkin_kw = None
+            step_info = self.__process_step(in_suite.teardown, parent=out_suite)
+            if step_info.gherkin_kw != 'then':
+                step_info.model_info['error'] = "Teardown must be a 'then' step"
+            out_suite.teardown = step_info
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
@@ -130,6 +137,13 @@ class SuiteReplacer:
                 if step_info.gherkin_kw != 'given':
                     step_info.model_info['error'] = "Setup must be a 'given' step"
                 scenario.setup = step_info
+            if tc.teardown:
+                logger.debug(f"    with teardown: {tc.teardown.name}")
+                self.prev_gherkin_kw = None
+                step_info = self.__process_step(tc.teardown, parent=scenario)
+                if step_info.gherkin_kw != 'then':
+                    step_info.model_info['error'] = "Teardown must be a 'then' step"
+                scenario.teardown = step_info
             logger.debug('    ' + '\n    '.join([st.name + " " + " ".join([str(s) for s in st.args]) for st in tc.body]))
             self.prev_gherkin_kw = None
             for step_def in tc.body:
@@ -163,11 +177,15 @@ class SuiteReplacer:
             new_suite.resource = target_suite.resource
             if subsuite.setup:
                 new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword, args=subsuite.setup.args, type='setup')
+            if subsuite.teardown:
+                new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword, args=subsuite.teardown.args, type='teardown')
             self.__generateRobotSuite(subsuite, new_suite)
         for tc in suite_model.scenarios:
             new_tc = target_suite.tests.create(name=tc.name)
             if tc.setup:
                 new_tc.setup= rmodel.Keyword(name=tc.setup.keyword, args=tc.setup.args, type='setup')
+            if tc.teardown:
+                new_tc.teardown= rmodel.Keyword(name=tc.teardown.keyword, args=tc.teardown.args, type='teardown')
             for step in tc.steps:
                 new_tc.body.create_keyword(name=step.keyword, args=step.args)
 
