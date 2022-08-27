@@ -40,6 +40,8 @@ from .modelspace import ModelSpace
 import copy
 import random
 
+MAX_ATTEMPTS = 20
+
 class SuiteProcessors:
     @not_keyword
     def echo(self, in_suite, coverage='*'):
@@ -51,17 +53,29 @@ class SuiteProcessors:
         out_suite.filename = in_suite.filename
         out_suite.parent = in_suite.parent
         flat_suite = self._flatten_suite(in_suite)
+        bup_flat_suite = copy.deepcopy(flat_suite)
         model = ModelSpace()
-        attempts_left = 20
-        while flat_suite.scenarios and attempts_left:
-            scenario = random.choice(flat_suite.scenarios)
-            if self._scenario_can_execute(scenario, model):
-                logger.info(f"Adding scenario {scenario.name}")
-                self._process_scenario(scenario, model)
-                out_suite.scenarios.append(scenario)
-                flat_suite.scenarios.remove(scenario)
-            else:
-                attempts_left -=1
+        inner_attempts_left = MAX_ATTEMPTS # Tries to find the next suitable sceanrio,
+                                           # given the already selected scenarios
+        outer_attempts_left = MAX_ATTEMPTS # Wipes clean any prior choices and starts
+                                           # over from scratch
+        while flat_suite.scenarios and outer_attempts_left:
+            while flat_suite.scenarios and inner_attempts_left:
+                scenario = random.choice(flat_suite.scenarios)
+                if self._scenario_can_execute(scenario, model):
+                    logger.info(f"Adding scenario {scenario.name}")
+                    self._process_scenario(scenario, model)
+                    out_suite.scenarios.append(scenario)
+                    flat_suite.scenarios.remove(scenario)
+                else:
+                    inner_attempts_left -=1
+            if flat_suite.scenarios:
+                logger.info(f"Attempt did not yield a consistent sequence. Retrying...")
+                inner_attempts_left = MAX_ATTEMPTS
+                outer_attempts_left -=1
+                flat_suite = copy.deepcopy(bup_flat_suite)
+                out_suite.scenarios.clear()
+                model = ModelSpace()
         if flat_suite.scenarios:
             raise Exception("Unable to compose a consistent suite\n"
                            f"last model state:\n{model.get_status_text() or 'empty'}")
@@ -89,6 +103,7 @@ class SuiteProcessors:
         for step in scenario.steps:
             for expr in step.model_info['IN'] + step.model_info['OUT']:
                 model.process_expression(expr)
+
     @staticmethod
     def _scenario_can_execute(scenario, model):
         m = copy.deepcopy(model)
