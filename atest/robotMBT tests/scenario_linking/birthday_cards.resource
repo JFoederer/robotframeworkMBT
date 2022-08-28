@@ -24,8 +24,7 @@ model the birthday card has '${name}' written on it
     Set model postconditions    None
 
 the birthday card has ${n} name${plural} written on it
-    ${count}=    Get length    ${names}
-    Should be equal    ${count}    ${{int(${n})}}
+    Length should be    ${names}    ${{int(${n})}}
 
 model the birthday card has ${n} name${plural} written on it
     Set Model preconditions     len(birthday_card.names) == ${n}

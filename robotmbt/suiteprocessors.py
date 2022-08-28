@@ -52,7 +52,7 @@ class SuiteProcessors:
         out_suite = Suite(in_suite.name)
         out_suite.filename = in_suite.filename
         out_suite.parent = in_suite.parent
-        flat_suite = self._flatten_suite(in_suite)
+        flat_suite = self.flatten(in_suite)
         bup_flat_suite = copy.deepcopy(flat_suite)
         model = ModelSpace()
         inner_attempts_left = MAX_ATTEMPTS # Tries to find the next suitable sceanrio,
@@ -81,20 +81,32 @@ class SuiteProcessors:
                            f"last model state:\n{model.get_status_text() or 'empty'}")
         return out_suite
 
-    def _flatten_suite(self, in_suite):
+    @not_keyword
+    def flatten(self, in_suite):
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
         have any sub-suites, only scenarios. The scenarios do not have a setup. Any setup
         keywords are inserted at the front of the scenario as regular steps.
         """
         out_suite = copy.deepcopy(in_suite)
+        outer_scenarios = out_suite.scenarios
+        for scenario in outer_scenarios:
+            if scenario.setup:
+                scenario.steps.insert(0, scenario.setup)
+                scenario.setup = None
+            if scenario.teardown:
+                scenario.steps.append(scenario.teardown)
+                scenario.teardown = None
+        out_suite.scenarios = []
         for suite in in_suite.suites:
-            subsuite = self._flatten_suite(suite)
+            subsuite = self.flatten(suite)
             for scenario in subsuite.scenarios:
-                if scenario.setup:
-                    scenario.steps.insert(0, scenario.setup)
-                    scenario.setup = None
-            out_suite.scenarios = subsuite.scenarios + out_suite.scenarios
+                if subsuite.setup:
+                    scenario.steps.insert(0, subsuite.setup)
+                if subsuite.teardown:
+                    scenario.steps.append(subsuite.teardown)
+            out_suite.scenarios.extend(subsuite.scenarios)
+        out_suite.scenarios.extend(outer_scenarios)
         out_suite.suites = []
         return out_suite
 
