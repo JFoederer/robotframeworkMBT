@@ -54,10 +54,14 @@ class Step:
         self.parent = parent     # Parent scenario for easy searching and processing
         self.gherkin_kw = None   # given, when, then or None for non-bdd keywords
         self.args = ()           # Comes directly from Robot
-        self.model_info = dict(IN=[], OUT=[]) # Can optionally contain an additional error field
-                                 # IN and OUT are lists of Pyhton evaluatable expressions. The
-                                 # vocab.attribute form can be used to express relations between
-                                 # properties from the domain vocabulaire.
+        self.model_info = dict() # Modelling information is available as a dictionary.
+                                 # The standard format is dict(IN=[], OUT=[]) and can
+                                 # optionally contain an error field.
+                                 # IN and OUT are lists of Python evaluatable expressions.
+                                 # The `new vocab` form can be used to create new domain objects.
+                                 # The `vocab.attribute` form can then be used to express relations
+                                 # between properties from the domain vocabulaire.
+                                 # Custom processors can define their own attributes.
 
     @property
     def step_kw(self):

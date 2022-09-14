@@ -6,7 +6,7 @@ Documentation     There are three test cases, one must go first. The other two a
 ...               force the model to reorganise the scenarios.
 Suite Setup       Suite setup
 Suite Teardown    Should be equal    ${test_count}    ${3}
-Test Setup        Set Global Variable    ${test_count}    ${test_count+1}
+Test Setup        Test setup
 Resource          birthday_cards.resource
 Library           robotmbt
 
@@ -16,22 +16,35 @@ trailing scenario
     when 'Tannaz' writes their name on the birthday card
     then the birthday card has 'Johan' written on it
     and the birthday card has 'Tannaz' written on it
-    [Teardown]    Should be equal    ${test_count}    ${3}
+    [Teardown]    Check order    ${3}
 
 middle scenario
     Given the birthday card has 1 name written on it
     when 'Nicolas' writes their name on the birthday card
     then the birthday card has 'Nicolas' written on it
     and the birthday card has 2 names written on it
-    [Teardown]    Should be equal    ${test_count}    ${2}
+    [Teardown]    Check order    ${2}
 
 leading scenario
     Given a blank birthday card
     when 'Johan' writes their name on the birthday card
     then the birthday card has 'Johan' written on it
-    [Teardown]    Should be equal    ${test_count}    ${1}
+    [Teardown]    Check order    ${1}
 
 *** Keywords ***
 Suite setup
     Set Global Variable    ${test_count}    ${0}
     Treat this test suite Model-based
+
+Test setup
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
+    Set Global Variable    ${test_count}    ${test_count+1}
+
+Check order
+    [Arguments]    ${order}
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
+    Should be equal    ${test_count}    ${order}

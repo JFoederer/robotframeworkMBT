@@ -30,10 +30,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import re
+
 from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import keyword
 from robot.api import logger
 import robot.running.model as rmodel
+from robot.running.arguments import EmbeddedArguments
 
 from .suiteprocessors import SuiteProcessors
 from .suitedata import Suite, Scenario, Step
@@ -49,7 +52,7 @@ class SuiteReplacer:
         self.robot_suite = None
         self.current_step = None
         suite_processor = SuiteProcessors() if processor_lib is None \
-                                          else getattr(Robot.get_library_instance(processor_lib))
+                                          else Robot.get_library_instance(processor_lib)
         self.suite_processor = getattr(suite_processor, processor)
 
     @keyword(name="Treat this test suite Model-based")
@@ -66,44 +69,6 @@ class SuiteReplacer:
         modelbased_suite = self.suite_processor(master_suite)
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
-
-    @keyword(name="Set Model preconditions")
-    def set_model_preconditions(self, *args):
-        """
-        Model precondition can not contain assignments or new objects. It can only contain checks.
-        
-        Example: Checking that there are no names on the birthday card yet
-            Set Model precondition | len(birthday_card.names) \=\= 0
-        """
-        self._set_model_info('IN', *args)
-        for expression in args:
-            if ModelSpace.is_new_vocab_expression(expression):
-                raise ValueError("Cannot create new vocab terms during precondition checks")
-            try:
-                eval(expression)
-            except SyntaxError:
-                raise ValueError("Invalid expression. Note that statements, like assignments, are not valid during precondition checks")
-            except:
-                pass
-
-    @keyword(name="Set Model postconditions")
-    def set_model_postconditions(self, *args):
-        """
-        Use new <vocab term> to introduce a new domain vocabulaire object. Then assign or update
-        properties using python-like expressions.
-        
-        Example Creating a new birthday_card object with a (still empty) list property for names:
-            Set Model postcondition | new birthday_card | birthday_card.names \= []
-            
-         Note that Robot requires the '=' (equal sign) to be escaped.
-        """
-        self._set_model_info('OUT', *args)
-
-    def _set_model_info(self, inout, *args):
-        for expression in args:
-            if not isinstance(expression, str):
-                raise TypeError(f"Expression wasn't text but {type(expression)}")
-            self.current_step.model_info[inout].append(expression)
 
     def __process_robot_suite(self, in_suite, parent):
         logger.debug(f"processing test suite: {in_suite.name}")
@@ -161,11 +126,57 @@ class SuiteReplacer:
             step.args = step_def.args
         try:
             self.current_step = step
-            Robot.run_keyword('model ' + step.bare_kw, *step_def.args)
+            try:
+                step.model_info = self.__parse_model_info(step)
+            except ValueError as err:
+                step.model_info = dict(error=str(err))
             self.current_step = None
         except Exception as ex:
             step.model_info['error']=str(ex)
         return step
+
+    def __parse_model_info(self, step):
+        model_info = dict()
+        docu = Robot._namespace.get_runner(step.bare_kw)._handler.doc
+        mi_index = docu.find("*model info*")
+        if mi_index == -1:
+            return model_info
+        lines = docu[mi_index:].split('\n')
+        lines = [line.strip() for line in lines][1:]
+        if "" in lines:
+            lines = lines[:lines.index("")]
+        format_msg = "*model info* expected format: :<attr>: <expr>|<expr>"
+        while lines:
+            line = lines.pop(0)
+            if not line.startswith(":"):
+                raise ValueError(format_msg)
+            elms = line.split(":", 2)
+            if len(elms) != 3:
+                raise ValueError(format_msg)
+            key = elms[1].strip()
+            values = [e.strip() for e in elms[-1].split("|") if e]
+            if lines and not lines[0].startswith(":"):
+                values.extend([e.strip() for e in lines.pop(0).split("|") if e])
+            values = self.__fill_in_args(step, values)
+            model_info[key] = values
+        if not model_info:
+            raise ValueError("When present, *model info* cannot be empty")
+        return model_info
+
+    def __fill_in_args(self, step, expressions):
+        kw_def = Robot._namespace.get_runner(step.bare_kw)._handler.name
+        emb_args = EmbeddedArguments(kw_def)
+        re_pattern = emb_args.name
+        arg_values = dict()
+        if re_pattern:
+            arg_values = dict(zip(["${%s}"%a for a in emb_args.args],
+                                  re.match(re_pattern, step.bare_kw).groups()))
+        result = []
+        for expr in expressions:
+            result.append(expr)
+            for arg, value in arg_values.items():
+                result[-1] = result[-1].replace(arg, value)
+        return result
 
     def __clearTestSuite(self, suite):
         suite.tests.clear()
@@ -176,16 +187,24 @@ class SuiteReplacer:
             new_suite = target_suite.suites.create(name=subsuite.name)
             new_suite.resource = target_suite.resource
             if subsuite.setup:
-                new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword, args=subsuite.setup.args, type='setup')
+                new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword,
+                                                 args=subsuite.setup.args,
+                                                 type='setup')
             if subsuite.teardown:
-                new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword, args=subsuite.teardown.args, type='teardown')
+                new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword,
+                                                    args=subsuite.teardown.args,
+                                                    type='teardown')
             self.__generateRobotSuite(subsuite, new_suite)
         for tc in suite_model.scenarios:
             new_tc = target_suite.tests.create(name=tc.name)
             if tc.setup:
-                new_tc.setup= rmodel.Keyword(name=tc.setup.keyword, args=tc.setup.args, type='setup')
+                new_tc.setup= rmodel.Keyword(name=tc.setup.keyword,
+                                             args=tc.setup.args,
+                                             type='setup')
             if tc.teardown:
-                new_tc.teardown= rmodel.Keyword(name=tc.teardown.keyword, args=tc.teardown.args, type='teardown')
+                new_tc.teardown= rmodel.Keyword(name=tc.teardown.keyword,
+                                                args=tc.teardown.args,
+                                                type='teardown')
             for step in tc.steps:
                 new_tc.body.create_keyword(name=step.keyword, args=step.args)
 
