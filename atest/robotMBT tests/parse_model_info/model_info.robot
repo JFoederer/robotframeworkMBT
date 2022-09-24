@@ -16,6 +16,9 @@ leading model info
 sandwitched model info
     sandwitched model info
 
+model info on multiple lines
+    model info on multiple lines
+
 model info with altenative spacing
     model info with altenative spacing
 
@@ -51,6 +54,15 @@ sandwitched model info
     ...    :OUT: Beta | Gamma delta | Epsilon
     ...
     ...    text after model info
+    Log    Hello world!
+
+model info on multiple lines
+    [Documentation]    Text
+    ...    *model info*
+    ...    :IN: Alfa
+    ...    :OUT: Beta
+    ...    Gamma delta |
+    ...    | Epsilon |
     Log    Hello world!
 
 model info with altenative spacing

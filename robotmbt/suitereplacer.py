@@ -155,7 +155,7 @@ class SuiteReplacer:
                 raise ValueError(format_msg)
             key = elms[1].strip()
             values = [e.strip() for e in elms[-1].split("|") if e]
-            if lines and not lines[0].startswith(":"):
+            while lines and not lines[0].startswith(":"):
                 values.extend([e.strip() for e in lines.pop(0).split("|") if e])
             values = self.__fill_in_args(step, values)
             model_info[key] = values
