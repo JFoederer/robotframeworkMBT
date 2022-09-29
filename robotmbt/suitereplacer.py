@@ -52,7 +52,7 @@ class SuiteReplacer:
         self.robot_suite = None
         self.current_step = None
         suite_processor = SuiteProcessors() if processor_lib is None \
-                                          else Robot.get_library_instance(processor_lib)
+                                            else Robot.get_library_instance(processor_lib)
         self.suite_processor = getattr(suite_processor, processor)
 
     @keyword(name="Treat this test suite Model-based")
@@ -157,7 +157,7 @@ class SuiteReplacer:
 
     def __fill_in_args(self, step, expressions):
         kw_def = Robot._namespace.get_runner(step.bare_kw)._handler.name
-        emb_args = EmbeddedArguments(kw_def)
+        emb_args = EmbeddedArguments.from_name(kw_def)
         re_pattern = emb_args.name
         arg_values = dict()
         if re_pattern:
