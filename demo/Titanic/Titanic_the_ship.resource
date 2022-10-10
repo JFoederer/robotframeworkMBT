@@ -3,6 +3,9 @@ Library           DateTime
 
 *** Keywords ***
 The ship is docked in the harbour, preparing for the departure
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: new ship | ship.name =Titanic | ship.state=preparing_for_departure | ship.people_on_board=0 | ship.lifeboat_seats=1178
     Set Suite Variable    ${current_ship}    Titanic
     Log    Engines are off
     Log    Ropes are tied
@@ -10,110 +13,94 @@ The ship is docked in the harbour, preparing for the departure
     Log    Cargo cranes are deployed
     Log    Captain on the bridge
 
-Model the ship is docked in the harbour, preparing for the departure
-    Set Model preconditions    None
-    Set Model postconditions    new ship    ship.name\=Titanic    ship.state\=preparing_for_departure    ship.people_on_board\=0    ship.lifeboat_seats\=1178
-
 the ship is ready for departure
+    [Documentation]    *model info*
+    ...    :IN: ship.state==preparing_for_departure or ship.state==ready_for_departure
+    ...    :OUT: ship.state=ready_for_departure
     Log    waiting for further instructions
 
-Model the ship is ready for departure
-    Set Model preconditions    ship.state\=\=preparing_for_departure or ship.state\=\=ready_for_departure
-    Set Model postconditions    ship.state\=ready_for_departure
-
 The ship is fueled up
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
     Log    Cleaning out the old ash
     Log    Loading 8000 ton coal in ${current_ship}'s bunker
     Log    Refitting filters for water pumps
 
-Model the ship is fueled up
-    Set Model preconditions    None
-    Set Model postconditions    None
-
 the supplies are stocked
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
     Log    Loading beverages
     Log    Loading snacks
     Log    Loading something healthy
 
-Model the supplies are stocked
-    Set Model preconditions    None
-    Set Model postconditions    None
-
 the cargo is loaded
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
     Log    Loading mail for Royal mail
     Log    Loading painting La Circassienne au Bain for Mauritz Håkan Björnström-Steffansson
 
-Model the cargo is loaded
-    Set Model preconditions    None
-    Set Model postconditions    None
-
 the passengers are on board
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board
+    ...    :OUT: ship.people_on_board+=1316
     Log    Embarking third class
     Log    Embarking second class
     Log    Waiting for first class passengers
     Log    Embarking first class
 
-Model the passengers are on board
-    Set Model preconditions    ship.people_on_board
-    Set Model postconditions    ship.people_on_board+\=1316
-
 the crew is on board
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board
+    ...    :OUT: ship.people_on_board+=908
     Log    Captain Edward John Smith
     Log    Chief mate Henry Tingle Wilde
     Log    Lookout Fredrick Fleet
     Log    Lookout Reginald Lee
     Log    And 904 others
 
-Model the crew is on board
-    Set Model preconditions    ship.people_on_board
-    Set Model postconditions    ship.people_on_board+\=908
-
 the planned departure time is passed
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
     Log    Well, we are just over 100 years late, so I guess the time has passed
 
-Model the planned departure time is passed
-    Set Model preconditions    None
-    Set Model postconditions    None
-
 the ship departs
+    [Documentation]    *model info*
+    ...    :IN: ship.state==ready_for_departure or ship.state==departing
+    ...    :OUT: ship.state=departing
     Log    Starting the engines
     Log    Untying the ropes
     Log    Navigating through the harbour
 
-Model the ship departs
-    Set Model preconditions    ship.state\=\=ready_for_departure or ship.state\=\=departing
-    Set Model postconditions    ship.state\=departing
-
 the ship leaves the harbour
+    [Documentation]    *model info*
+    ...    :IN: ship.state==departing
+    ...    :OUT: ship.state=journey
     Log    Arriving in open water
 
-model the ship leaves the harbour
-    Set Model preconditions    ship.state\=\=departing
-    Set Model postconditions    ship.state\=journey
-
 the ship is on its journey
+    [Documentation]    *model info*
+    ...    :IN: ship.state==journey
+    ...    :OUT: None
     Log    Sailing the sea
 
-model the ship is on its journey
-    Set Model preconditions    ship.state\=\=journey
-    Set Model postconditions    None
-
 the current time is the departure time for the itenerary's section
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
     ${now}=    Get current date
     Log    Captain's log: Official registered time of departure ${now}
 
-model the current time is the departure time for the itenerary's section
-    Set Model preconditions    None
-    Set Model postconditions    None
-
 there are ${n} people on board
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board==${n}
+    ...    :OUT: None
     Log    Counting crew: 908
     Log    Counting passengers: 1316
     Log    Not counting the rats
-
-model there are ${n} people on board
-    Set Model preconditions    ship.people_on_board\=\=${n}
-    Set Model postconditions    None
 
 Available lifeboats
     Log    14 standard wooden lifeboats x65 seats: capacity 910 people
@@ -123,9 +110,8 @@ Available lifeboats
     [Return]    ${1178}
 
 there are at least ${n} seats available in the lifeboats
+    [Documentation]    *model info*
+    ...    :IN: ship.lifeboat_seats
+    ...    :OUT: None
     ${lifeboat_seats}=    Available lifeboats
     Should Be True    ${lifeboat_seats} >= ${n}
-
-model there are at least ${n} seats available in the lifeboats
-    Set Model preconditions    ship.lifeboat_seats
-    Set Model postconditions    None
