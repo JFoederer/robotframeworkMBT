@@ -120,6 +120,9 @@ class SuiteProcessors:
     def _scenario_can_execute(scenario, model):
         m = copy.deepcopy(model)
         for step in scenario.steps:
+            if 'error' in step.model_info:
+                logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
+                return False
             for expr in step.model_info['IN'] + step.model_info['OUT']:
                 try:
                     if m.process_expression(expr) is False:
