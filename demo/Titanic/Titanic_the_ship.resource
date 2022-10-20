@@ -4,8 +4,8 @@ Library           DateTime
 *** Keywords ***
 The ship is docked in the harbour, preparing for the departure
     [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: new ship | ship.name =Titanic | ship.state=preparing_for_departure | ship.people_on_board=0 | ship.lifeboat_seats=1178
+    ...    :IN: new ship | ship.name =Titanic | ship.state=preparing_for_departure | ship.people_on_board=0 | ship.lifeboat_seats=1178
+    ...    :OUT: None
     Set Suite Variable    ${current_ship}    Titanic
     Log    Engines are off
     Log    Ropes are tied
@@ -15,7 +15,7 @@ The ship is docked in the harbour, preparing for the departure
 
 the ship is ready for departure
     [Documentation]    *model info*
-    ...    :IN: ship.state==preparing_for_departure or ship.state==ready_for_departure
+    ...    :IN: ship.state==ready_for_departure
     ...    :OUT: ship.state=ready_for_departure
     Log    waiting for further instructions
 
@@ -69,7 +69,7 @@ the planned departure time is passed
 
 the ship departs
     [Documentation]    *model info*
-    ...    :IN: ship.state==ready_for_departure or ship.state==departing
+    ...    :IN: ship.state==departing
     ...    :OUT: ship.state=departing
     Log    Starting the engines
     Log    Untying the ropes
