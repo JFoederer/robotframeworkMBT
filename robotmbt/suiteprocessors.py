@@ -113,7 +113,7 @@ class SuiteProcessors:
     @staticmethod
     def _process_scenario(scenario, model):
         for step in scenario.steps:
-            for expr in step.model_info['IN'] + step.model_info['OUT']:
+            for expr in self.relevant_expressions(step):
                 model.process_expression(expr)
 
     @staticmethod
@@ -123,13 +123,7 @@ class SuiteProcessors:
             if 'error' in step.model_info:
                 logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
                 return False
-            expressions = []
-            if step.gherkin_kw in ['given', 'when']:
-                expressions += step.model_info['IN']
-            if step.gherkin_kw in ['when', 'then']:
-                expressions += step.model_info['OUT']
-
-            for expr in expressions:
+            for expr in self.relevant_expressions(step):
                 try:
                     if m.process_expression(expr) is False:
                         logger.debug(f"Scenario {scenario.name} failed at step {step.keyword}: {expr} is False")
@@ -138,3 +132,11 @@ class SuiteProcessors:
                     logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: [{expr}] {err}")
                     return False
         return True
+
+    def relevant_expressions(self, step):
+        expressions = []
+        if step.gherkin_kw in ['given', 'when']:
+            expressions += step.model_info['IN']
+        if step.gherkin_kw in ['when', 'then']:
+            expressions += step.model_info['OUT']
+        return expressions
