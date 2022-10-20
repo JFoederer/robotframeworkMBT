@@ -123,7 +123,13 @@ class SuiteProcessors:
             if 'error' in step.model_info:
                 logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
                 return False
-            for expr in step.model_info['IN'] + step.model_info['OUT']:
+            expressions = []
+            if step.gherkin_kw in ['given', 'when']:
+                expressions += step.model_info['IN']
+            if step.gherkin_kw in ['when', 'then']:
+                expressions += step.model_info['OUT']
+
+            for expr in expressions:
                 try:
                     if m.process_expression(expr) is False:
                         logger.debug(f"Scenario {scenario.name} failed at step {step.keyword}: {expr} is False")
