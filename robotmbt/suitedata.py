@@ -52,7 +52,7 @@ class Step:
     def __init__(self, name, parent):
         self.keyword = name      # first cell of the Robot line, including step_kw, excluding args
         self.parent = parent     # Parent scenario for easy searching and processing
-        self.gherkin_kw = None   # given, when, then or None for non-bdd keywords
+        self.__gherkin_kw = None # given, when, then or none for non-bdd keywords
         self.args = ()           # Comes directly from Robot
         self.model_info = dict() # Modelling information is available as a dictionary.
                                  # The standard format is dict(IN=[], OUT=[]) and can
@@ -62,6 +62,14 @@ class Step:
                                  # The `vocab.attribute` form can then be used to express relations
                                  # between properties from the domain vocabulaire.
                                  # Custom processors can define their own attributes.
+
+    @property
+    def gherkin_kw(self):
+        return self.__gherkin_kw
+
+    @gherkin_kw.setter
+    def gherkin_kw(self, value):
+        self.__gherkin_kw = value.lower()
 
     @property
     def step_kw(self):
