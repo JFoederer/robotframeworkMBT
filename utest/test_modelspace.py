@@ -118,16 +118,7 @@ class TestModelSpace(unittest.TestCase):
         self.m.process_expression('foo.bar = "foobar"')
         self.assertIs(self.m.process_expression('foo.bar == "foobar"'), True)
 
-    def test_using_named_attribute_from_expression(self):
-        """
-        Named attributes of properties can be used without quotes. If expressions were
-        processed as just a regular Python expression, it would fail on a NameError.
-        """
-        self.m.process_expression('new foo')
-        self.m.process_expression('foo.bar = "foobar"')
-        self.assertIs(self.m.process_expression('foo.bar == foobar'), True)
-
-    def test_using_named_attributes_from_statements(self):
+    def test_introducing_named_attribute_from_statement(self):
         """
         Here the quotes are removed from the assignment statement. Statements and
         expressions need to be handled differently. Evaluating 'foo.bar = foobar' as an
@@ -138,6 +129,17 @@ class TestModelSpace(unittest.TestCase):
         self.m.process_expression('foo.bar = foobar')
         self.assertIs(self.m.process_expression('foo.bar == foobar'), True)
 
+    def test_introducing_named_attribute_from_expression(self):
+        """
+        Just like `foo.bar = foobar` is an assignment where this is foobar's first use,
+        a name can also be introduced in an append. The difference is that the former is
+        a statement, the latter an expression.
+        """
+        self.m.process_expression('new foo')
+        self.m.process_expression('foo.bar = []')
+        self.m.process_expression('foo.bar.append(bar1)')
+        self.assertIs(self.m.process_expression('bar1 in foo.bar'), True)
+
     def test_fail_on_naming_conflict_property_exists(self):
         self.m.process_expression('new foo1')
         self.assertRaises(ModellingError, self.m.process_expression, 'new foo1')
@@ -146,6 +148,12 @@ class TestModelSpace(unittest.TestCase):
         self.m.process_expression('new foo1')
         self.m.process_expression('foo1.bar = foo2')
         self.assertRaises(ModellingError, self.m.process_expression, 'new foo2')
+
+    def test_fail_exists_check_before_using_new(self):
+        self.assertRaises(NameError, self.m.process_expression, 'foo')
+
+    def test_fail_exists_check_before_using_new_with_stripping(self):
+        self.assertRaises(NameError, self.m.process_expression, ' foo ')
 
 if __name__ == '__main__':
     unittest.main()
