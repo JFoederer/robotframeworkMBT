@@ -53,6 +53,7 @@ class ModelSpace:
             return self.__dict__.keys()
 
     def process_expression(self, expr):
+        expr = expr.strip()
         if self.is_new_vocab_expression(expr):
             self.add_prop(self.new_vocab_term(expr))
             return 'exec'
@@ -73,6 +74,8 @@ class ModelSpace:
                 self.values.append(missing.name)
                 result = self.process_expression(expr)
         except NameError as missing:
+            if missing.name == expr:
+                raise # Putting only a name in an expression can be used as exists check
             self.values.append(missing.name)
             result = self.process_expression(expr)
 
