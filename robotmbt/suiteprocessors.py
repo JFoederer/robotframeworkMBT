@@ -62,9 +62,10 @@ class SuiteProcessors:
         while flat_suite.scenarios and outer_attempts_left:
             while flat_suite.scenarios and inner_attempts_left:
                 scenario = random.choice(flat_suite.scenarios)
+                logger.debug(f"Considering scenario {scenario.name}")
                 if self._scenario_can_execute(scenario, model):
-                    logger.info(f"Adding scenario {scenario.name}")
                     self._process_scenario(scenario, model)
+                    logger.info(f"Adding scenario {scenario.name}")
                     out_suite.scenarios.append(scenario)
                     flat_suite.scenarios.remove(scenario)
                 else:
@@ -113,7 +114,9 @@ class SuiteProcessors:
     @staticmethod
     def _process_scenario(scenario, model):
         for step in scenario.steps:
-            for expr in step.model_info['IN'] + step.model_info['OUT']:
+            for expr in SuiteProcessors.relevant_expressions(step):
+                if expr.lower() != 'none':
+                    logger.debug(f"processing {expr}")
                 model.process_expression(expr)
 
     @staticmethod
@@ -123,7 +126,7 @@ class SuiteProcessors:
             if 'error' in step.model_info:
                 logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
                 return False
-            for expr in step.model_info['IN'] + step.model_info['OUT']:
+            for expr in SuiteProcessors.relevant_expressions(step):
                 try:
                     if m.process_expression(expr) is False:
                         logger.debug(f"Scenario {scenario.name} failed at step {step.keyword}: {expr} is False")
@@ -132,3 +135,11 @@ class SuiteProcessors:
                     logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: [{expr}] {err}")
                     return False
         return True
+
+    def relevant_expressions(step):
+        expressions = []
+        if step.gherkin_kw in ['given', 'when']:
+            expressions += step.model_info['IN']
+        if step.gherkin_kw in ['when', 'then']:
+            expressions += step.model_info['OUT']
+        return expressions

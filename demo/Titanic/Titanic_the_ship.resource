@@ -4,8 +4,9 @@ Library           DateTime
 *** Keywords ***
 The ship is docked in the harbour, preparing for the departure
     [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: new ship | ship.name =Titanic | ship.state=preparing_for_departure | ship.people_on_board=0 | ship.lifeboat_seats=1178
+    ...    :IN: new ship | ship.name=Titanic
+    ...         ship.state=preparing_for_departure | ship.people_on_board=0
+    ...    :OUT: None
     Set Suite Variable    ${current_ship}    Titanic
     Log    Engines are off
     Log    Ropes are tied
@@ -15,7 +16,7 @@ The ship is docked in the harbour, preparing for the departure
 
 the ship is ready for departure
     [Documentation]    *model info*
-    ...    :IN: ship.state==preparing_for_departure or ship.state==ready_for_departure
+    ...    :IN: ship.state==ready_for_departure
     ...    :OUT: ship.state=ready_for_departure
     Log    waiting for further instructions
 
@@ -69,7 +70,7 @@ the planned departure time is passed
 
 the ship departs
     [Documentation]    *model info*
-    ...    :IN: ship.state==ready_for_departure or ship.state==departing
+    ...    :IN: ship.state==departing
     ...    :OUT: ship.state=departing
     Log    Starting the engines
     Log    Untying the ropes
@@ -97,7 +98,7 @@ the current time is the departure time for the itenerary's section
 there are ${n} people on board
     [Documentation]    *model info*
     ...    :IN: ship.people_on_board==${n}
-    ...    :OUT: None
+    ...    :OUT: ship.people_on_board=${n}
     Log    Counting crew: 908
     Log    Counting passengers: 1316
     Log    Not counting the rats
@@ -111,7 +112,7 @@ Available lifeboats
 
 there are at least ${n} seats available in the lifeboats
     [Documentation]    *model info*
-    ...    :IN: ship.lifeboat_seats
-    ...    :OUT: None
+    ...    :IN: ship.lifeboat_seats >= ${n}
+    ...    :OUT: ship.lifeboat_seats=${n}
     ${lifeboat_seats}=    Available lifeboats
     Should Be True    ${lifeboat_seats} >= ${n}
