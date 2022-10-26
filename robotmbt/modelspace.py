@@ -34,10 +34,10 @@ class ModellingError(Exception):
     pass
 
 class ModelSpace:
-    def __init__(self, ):
+    def __init__(self):
         self.std_attrs = []
         self.props = dict()
-        self.values = []
+        self.values = [] # For using literals without having to use quotes (abc='abc')
         self.std_attrs = dir(self)
 
     def add_prop(self, name):
@@ -68,12 +68,14 @@ class ModelSpace:
         except SyntaxError:
             try:
                 exec(expr)
+                result = 'exec'
             except NameError as missing:
                 self.values.append(missing.name)
-                self.process_expression(expr)
-            result = 'exec'
+                result = self.process_expression(expr)
+        except NameError as missing:
+            self.values.append(missing.name)
+            result = self.process_expression(expr)
 
-        proplist = self.props.keys()
         for p in self.props:
             action = f"self.props['{p}'] = {p}"
             exec(action)

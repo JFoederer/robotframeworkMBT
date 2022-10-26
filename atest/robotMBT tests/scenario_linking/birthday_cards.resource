@@ -10,14 +10,14 @@ a blank Birthday card
 '${name}' writes their name on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card
-    ...    :OUT: birthday_card.names.append('${name}')
+    ...    :OUT: birthday_card.names.append(${name})
     Log    Writing '${name}' on the birthday card
     Set suite variable    @{names}    @{names}    ${name}
 
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
+    ...    :IN: ${name} in birthday_card.names
+    ...    :OUT: ${name} in birthday_card.names
     Should Contain    ${names}    ${name}
 
 the birthday card has ${n} name${plural} written on it

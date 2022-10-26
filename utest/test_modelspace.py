@@ -118,25 +118,34 @@ class TestModelSpace(unittest.TestCase):
         self.m.process_expression('foo.bar = "foobar"')
         self.assertIs(self.m.process_expression('foo.bar == "foobar"'), True)
 
-    def test_assigning_named_attributes(self):
+    def test_using_named_attribute_from_expression(self):
         """
         Named attributes of properties can be used without quotes. If expressions were
         processed as just a regular Python expression, it would fail on a NameError.
         """
         self.m.process_expression('new foo')
+        self.m.process_expression('foo.bar = "foobar"')
+        self.assertIs(self.m.process_expression('foo.bar == foobar'), True)
+
+    def test_using_named_attributes_from_statements(self):
+        """
+        Here the quotes are removed from the assignment statement. Statements and
+        expressions need to be handled differently. Evaluating 'foo.bar = foobar' as an
+        expression would yield a SyntaxError on the assignment, before getting to the
+        NameError on foobar.
+        """
+        self.m.process_expression('new foo')
         self.m.process_expression('foo.bar = foobar')
         self.assertIs(self.m.process_expression('foo.bar == foobar'), True)
 
-    def test_fail_evaluating_named_attribute_before_assignment(self):
-        self.m.process_expression('new foo')
-        self.m.process_expression('foo.bar = "foobar"')
-        self.assertRaises(NameError, self.m.process_expression, 'foo.bar == foobar')
+    def test_fail_on_naming_conflict_property_exists(self):
+        self.m.process_expression('new foo1')
+        self.assertRaises(ModellingError, self.m.process_expression, 'new foo1')
 
-    def test_fail_on_naming_conflict(self):
+    def test_fail_on_naming_conflict_literal_exists(self):
         self.m.process_expression('new foo1')
         self.m.process_expression('foo1.bar = foo2')
         self.assertRaises(ModellingError, self.m.process_expression, 'new foo2')
-
 
 if __name__ == '__main__':
     unittest.main()
