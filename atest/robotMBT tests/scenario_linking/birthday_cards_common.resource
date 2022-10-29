@@ -7,13 +7,6 @@ a blank Birthday card
     @{names}=    Create list
     Set suite variable    ${names}
 
-'${name}' writes their name on the birthday card
-    [Documentation]    *model info*
-    ...    :IN: birthday_card
-    ...    :OUT: birthday_card.names.append(${name})
-    Log    Writing '${name}' on the birthday card
-    Set suite variable    @{names}    @{names}    ${name}
-
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
     ...    :IN: ${name} in birthday_card.names
@@ -23,5 +16,5 @@ the birthday card has '${name}' written on it
 the birthday card has ${n} name${plural} written on it
     [Documentation]    *model info*
     ...    :IN: len(birthday_card.names) == ${n}
-    ...    :OUT: None
+    ...    :OUT: len(birthday_card.names) == ${n}
     Length should be    ${names}    ${{int(${n})}}

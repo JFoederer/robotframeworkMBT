@@ -48,41 +48,6 @@ class SuiteProcessors:
         return in_suite
 
     @not_keyword
-    def process_test_suite(self, in_suite, coverage='*'):
-        out_suite = Suite(in_suite.name)
-        out_suite.filename = in_suite.filename
-        out_suite.parent = in_suite.parent
-        flat_suite = self.flatten(in_suite)
-        bup_flat_suite = copy.deepcopy(flat_suite)
-        model = ModelSpace()
-        inner_attempts_left = MAX_ATTEMPTS # Tries to find the next suitable sceanrio,
-                                           # given the already selected scenarios
-        outer_attempts_left = MAX_ATTEMPTS # Wipes clean any prior choices and starts
-                                           # over from scratch
-        while flat_suite.scenarios and outer_attempts_left:
-            while flat_suite.scenarios and inner_attempts_left:
-                scenario = random.choice(flat_suite.scenarios)
-                logger.debug(f"Considering scenario {scenario.name}")
-                if self._scenario_can_execute(scenario, model):
-                    self._process_scenario(scenario, model)
-                    logger.info(f"Adding scenario {scenario.name}")
-                    out_suite.scenarios.append(scenario)
-                    flat_suite.scenarios.remove(scenario)
-                else:
-                    inner_attempts_left -=1
-            if flat_suite.scenarios:
-                logger.info(f"Attempt did not yield a consistent sequence. Retrying...")
-                inner_attempts_left = MAX_ATTEMPTS
-                outer_attempts_left -=1
-                flat_suite = copy.deepcopy(bup_flat_suite)
-                out_suite.scenarios.clear()
-                model = ModelSpace()
-        if flat_suite.scenarios:
-            raise Exception("Unable to compose a consistent suite\n"
-                           f"last model state:\n{model.get_status_text() or 'empty'}")
-        return out_suite
-
-    @not_keyword
     def flatten(self, in_suite):
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
@@ -111,10 +76,109 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
+    @not_keyword
+    def process_test_suite(self, in_suite, coverage='*'):
+        self.out_suite = Suite(in_suite.name)
+        self.out_suite.filename = in_suite.filename
+        self.out_suite.parent = in_suite.parent
+        self.flat_suite = self.flatten(in_suite)
+        bup_flat_suite = copy.deepcopy(self.flat_suite)
+        model = ModelSpace()
+        inner_attempts_left = MAX_ATTEMPTS # Tries to find the next suitable scenario,
+                                           # given the already selected scenarios
+        outer_attempts_left = MAX_ATTEMPTS # Wipes clean any prior choices and starts
+                                           # over from scratch
+        while self.flat_suite.scenarios and outer_attempts_left:
+            while self.flat_suite.scenarios and inner_attempts_left:
+                scenario = random.choice(self.flat_suite.scenarios)
+                scenario_placed = self._try_to_fit_in_scenario(scenario, model)
+                if not scenario_placed:
+                    inner_attempts_left -=1
+            if self.flat_suite.scenarios:
+                logger.info(f"Attempt did not yield a consistent sequence. Retrying...")
+                inner_attempts_left = MAX_ATTEMPTS
+                outer_attempts_left -=1
+                self.flat_suite = copy.deepcopy(bup_flat_suite)
+                self.out_suite.scenarios.clear()
+                model = ModelSpace()
+        if self.flat_suite.scenarios:
+            raise Exception("Unable to compose a consistent suite\n"
+                           f"last model state:\n{model.get_status_text() or 'empty'}")
+        return self.out_suite
+
+    def _try_to_fit_in_scenario(self, scenario, model, running_steps=[]):
+        logger.debug(f"Considering scenario {scenario.name}")
+        bup_scenario = copy.deepcopy(scenario)
+        self.flat_suite.scenarios.remove(scenario)
+        scenario.steps = running_steps + scenario.steps
+        if self._scenario_can_execute(scenario, model):
+            self._process_scenario(scenario, model)
+            logger.info(f"Adding scenario {scenario.name}")
+            self.out_suite.scenarios.append(scenario)
+            return True
+        if self._scenario_needs_refinement(scenario, model):
+            if not self.flat_suite.scenarios:
+                logger.debug("Refinement needed, but there are no scenarios left")
+                self.flat_suite.scenarios.append(bup_scenario)
+                return False
+            refinement_attempts_left = MAX_ATTEMPTS
+            ok_steps = self._pop_steps_upto_refinement_point(scenario, model)
+            while refinement_attempts_left:
+                sub_scenario = random.choice(self.flat_suite.scenarios)
+                inserted = self._try_to_fit_in_scenario(sub_scenario, model, ok_steps)
+                if inserted:
+                    # Process remaining steps after refinement
+                    self.flat_suite.scenarios.append(scenario)
+                    return self._try_to_fit_in_scenario(scenario, model)
+                refinement_attempts_left -=1
+
+        self.flat_suite.scenarios.append(bup_scenario)
+        return False
+
+    @staticmethod
+    def _scenario_needs_refinement(scenario, model):
+        m = copy.deepcopy(model)
+        for step in scenario.steps:
+            if 'error' in step.model_info:
+                return False
+            if step.gherkin_kw in ['given', 'when']:
+                for expr in step.model_info['IN']:
+                    try:
+                        if m.process_expression(expr) is False:
+                            return False
+                    except Exception as err:
+                        return False
+            if step.gherkin_kw in ['when', 'then']:
+                for expr in step.model_info['OUT']:
+                    try:
+                        if m.process_expression(expr) is False:
+                            logger.debug(f"Scenario {scenario.name} needs refinement")
+                            return True
+                    except Exception as err:
+                        return False
+        return False
+
+    @staticmethod
+    def _pop_steps_upto_refinement_point(scenario, model):
+        m = copy.deepcopy(model)
+        popped = []
+        while scenario.steps:
+            step = scenario.steps[0]
+            if step.gherkin_kw in ['given', 'when']:
+                for expr in step.model_info['IN']:
+                    m.process_expression(expr)
+            if step.gherkin_kw in ['when', 'then']:
+                for expr in step.model_info['OUT']:
+                    if m.process_expression(expr) is False:
+                        step.model_info['IN'] = []
+                        return popped
+            popped.append(scenario.steps.pop(0))
+        assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"
+
     @staticmethod
     def _process_scenario(scenario, model):
         for step in scenario.steps:
-            for expr in SuiteProcessors.relevant_expressions(step):
+            for expr in SuiteProcessors._relevant_expressions(step):
                 if expr.lower() != 'none':
                     logger.debug(f"processing {expr}")
                 model.process_expression(expr)
@@ -126,7 +190,7 @@ class SuiteProcessors:
             if 'error' in step.model_info:
                 logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
                 return False
-            for expr in SuiteProcessors.relevant_expressions(step):
+            for expr in SuiteProcessors._relevant_expressions(step):
                 try:
                     if m.process_expression(expr) is False:
                         logger.debug(f"Scenario {scenario.name} failed at step {step.keyword}: {expr} is False")
@@ -136,7 +200,8 @@ class SuiteProcessors:
                     return False
         return True
 
-    def relevant_expressions(step):
+    @staticmethod
+    def _relevant_expressions(step):
         expressions = []
         if step.gherkin_kw in ['given', 'when']:
             expressions += step.model_info['IN']

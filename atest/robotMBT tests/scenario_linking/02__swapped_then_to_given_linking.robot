@@ -6,7 +6,7 @@ Documentation     This test suite demonstrates direct one-on-one linking of scen
 ...               test run. It passes when the model figures out the dependency between
 ...               the test cases and swaps their order.
 Suite Setup       Treat this test suite Model-based
-Resource          birthday_cards.resource
+Resource          birthday_cards_flat.resource
 Library           robotmbt
 
 *** Test Cases ***
