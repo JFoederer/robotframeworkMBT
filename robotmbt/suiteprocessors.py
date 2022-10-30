@@ -110,7 +110,14 @@ class SuiteProcessors:
         logger.debug(f"Considering scenario {scenario.name}")
         bup_scenario = copy.deepcopy(scenario)
         self.flat_suite.scenarios.remove(scenario)
-        scenario.steps = running_steps + scenario.steps
+        if running_steps:
+            # running steps indicate that refinement is going on
+            # encapsulate this insert scenario in the higher step's conditions
+            refined_step = running_steps.pop()
+            scenario.steps[0].model_info['IN'] = refined_step.model_info['IN'] +\
+                                                 scenario.steps[0].model_info['IN']
+            scenario.steps[-1].model_info['OUT'] += refined_step.model_info['OUT']
+            scenario.steps = running_steps + scenario.steps
         if self._scenario_can_execute(scenario, model):
             self._process_scenario(scenario, model)
             logger.info(f"Adding scenario {scenario.name}")
@@ -127,7 +134,6 @@ class SuiteProcessors:
                 sub_scenario = random.choice(self.flat_suite.scenarios)
                 inserted = self._try_to_fit_in_scenario(sub_scenario, model, ok_steps)
                 if inserted:
-                    # Process remaining steps after refinement
                     self.flat_suite.scenarios.append(scenario)
                     return self._try_to_fit_in_scenario(scenario, model)
                 refinement_attempts_left -=1
@@ -170,7 +176,8 @@ class SuiteProcessors:
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
                     if m.process_expression(expr) is False:
-                        step.model_info['IN'] = []
+                        popped.append(copy.deepcopy(step))
+                        step.model_info = dict(IN=[], OUT=[])
                         return popped
             popped.append(scenario.steps.pop(0))
         assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"
