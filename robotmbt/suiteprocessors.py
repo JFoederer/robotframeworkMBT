@@ -90,11 +90,16 @@ class SuiteProcessors:
                                            # over from scratch
         while self.flat_suite.scenarios and outer_attempts_left:
             while self.flat_suite.scenarios and inner_attempts_left:
-                scenario = random.choice(self.flat_suite.scenarios)
-                scenario_placed = self._try_to_fit_in_scenario(scenario, model)
-                if not scenario_placed:
+                selected_scenario = random.choice(self.flat_suite.scenarios)
+                self.flat_suite.scenarios.remove(selected_scenario)
+                new_model = self._try_to_fit_in_scenario(selected_scenario, model)
+                if new_model:
+                    model = new_model
+                else:
                     inner_attempts_left -=1
+                    self.flat_suite.scenarios.append(selected_scenario)
             if self.flat_suite.scenarios:
+                logger.debug(f"model state:\n{model.get_status_text()}")
                 logger.info(f"Attempt did not yield a consistent sequence. Retrying...")
                 inner_attempts_left = MAX_ATTEMPTS
                 outer_attempts_left -=1
@@ -106,39 +111,41 @@ class SuiteProcessors:
                            f"last model state:\n{model.get_status_text() or 'empty'}")
         return self.out_suite
 
-    def _try_to_fit_in_scenario(self, scenario, model, running_steps=[]):
+    def _try_to_fit_in_scenario(self, scenario, model):
         logger.debug(f"Considering scenario {scenario.name}")
-        bup_scenario = copy.deepcopy(scenario)
-        self.flat_suite.scenarios.remove(scenario)
-        if running_steps:
-            # running steps indicate that refinement is going on
-            # encapsulate this insert scenario in the higher step's conditions
-            refined_step = running_steps.pop()
-            scenario.steps[0].model_info['IN'] = refined_step.model_info['IN'] +\
-                                                 scenario.steps[0].model_info['IN']
-            scenario.steps[-1].model_info['OUT'] += refined_step.model_info['OUT']
-            scenario.steps = running_steps + scenario.steps
+        bup_model = copy.deepcopy(model)
         if self._scenario_can_execute(scenario, model):
-            self._process_scenario(scenario, model)
+            new_model = self._process_scenario(scenario, model)
             logger.info(f"Adding scenario {scenario.name}")
+            logger.debug(f"model state:\n{new_model.get_status_text()}")
             self.out_suite.scenarios.append(scenario)
-            return True
+            return new_model
         if self._scenario_needs_refinement(scenario, model):
             if not self.flat_suite.scenarios:
                 logger.debug("Refinement needed, but there are no scenarios left")
-                self.flat_suite.scenarios.append(bup_scenario)
+                self.flat_suite.scenarios.append(scenario)
                 return False
             refinement_attempts_left = MAX_ATTEMPTS
-            ok_steps = self._pop_steps_upto_refinement_point(scenario, model)
+            part1, part2 = self._split_refinement_candidate(scenario, model)
+            part1.name = f"Partial {part1.name}"
+            new_model = self._process_scenario(part1, model)
+            logger.info(f"Adding partial scenario {scenario.name}")
+            self.out_suite.scenarios.append(part1)
             while refinement_attempts_left:
                 sub_scenario = random.choice(self.flat_suite.scenarios)
-                inserted = self._try_to_fit_in_scenario(sub_scenario, model, ok_steps)
-                if inserted:
-                    self.flat_suite.scenarios.append(scenario)
-                    return self._try_to_fit_in_scenario(scenario, model)
+                self.flat_suite.scenarios.remove(sub_scenario)
+                m_inserted = self._try_to_fit_in_scenario(sub_scenario, new_model)
+                if m_inserted:
+                    # ToDo: execute refinement condition
+                    m_finished = self._try_to_fit_in_scenario(part2, m_inserted)
+                    if m_finished:
+                        return m_finished
+                    logger.info(f"Reconsidering {sub_scenario.name}, scenario excluded")
+                    self.out_suite.scenarios.pop()
                 refinement_attempts_left -=1
-
-        self.flat_suite.scenarios.append(bup_scenario)
+                self.flat_suite.scenarios.append(sub_scenario)
+            self.out_suite.scenarios.remove(part1)
+            
         return False
 
     @staticmethod
@@ -158,37 +165,54 @@ class SuiteProcessors:
                 for expr in step.model_info['OUT']:
                     try:
                         if m.process_expression(expr) is False:
-                            logger.debug(f"Scenario {scenario.name} needs refinement")
+                            logger.debug(f"Refinement needed for scenario {scenario.name}")
                             return True
                     except Exception as err:
-                        return False
+                        logger.debug(f"Refinement needed for scenario {scenario.name}")
+                        return True
         return False
 
     @staticmethod
-    def _pop_steps_upto_refinement_point(scenario, model):
+    def _split_refinement_candidate(scenario, model):
         m = copy.deepcopy(model)
-        popped = []
-        while scenario.steps:
-            step = scenario.steps[0]
+        front = copy.deepcopy(scenario)
+        front.steps = []
+        back = copy.deepcopy(scenario)
+        while back.steps:
+            step = back.steps[0]
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     m.process_expression(expr)
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
-                    if m.process_expression(expr) is False:
-                        popped.append(copy.deepcopy(step))
-                        step.model_info = dict(IN=[], OUT=[])
-                        return popped
-            popped.append(scenario.steps.pop(0))
+                    refine_here = False
+                    try:
+                        if m.process_expression(expr) is False:
+                             refine_here = True
+                    except Exception as err:
+                        refine_here = True
+                    if refine_here:
+                        edge_step = Step('Log', scenario)
+                        edge_step.args = (f"Refinement follows for step: {step.keyword}",)
+                        edge_step.gherkin_kw = step.gherkin_kw
+                        edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
+                        front.steps.append(edge_step)
+                        edge_step = Step('Log', scenario)
+                        edge_step.args = (f"Refinement completed for step: {step.keyword}",)
+                        edge_step.gherkin_kw = step.gherkin_kw
+                        edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
+                        back.steps[0] = edge_step
+                        return front, back
+            front.steps.append(back.steps.pop(0))
         assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"
 
     @staticmethod
     def _process_scenario(scenario, model):
+        m = copy.deepcopy(model)
         for step in scenario.steps:
             for expr in SuiteProcessors._relevant_expressions(step):
-                if expr.lower() != 'none':
-                    logger.debug(f"processing {expr}")
-                model.process_expression(expr)
+                m.process_expression(expr)
+        return m
 
     @staticmethod
     def _scenario_can_execute(scenario, model):
@@ -200,10 +224,12 @@ class SuiteProcessors:
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
                     if m.process_expression(expr) is False:
-                        logger.debug(f"Scenario {scenario.name} failed at step {step.keyword}: {expr} is False")
+                        logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")
+                        logger.debug(f"last state:\n{m.get_status_text()}")
                         return False
                 except Exception as err:
-                    logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: [{expr}] {err}")
+                    logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: [{expr}] {err}")
+                    logger.debug(f"last state:\n{m.get_status_text()}")
                     return False
         return True
 
