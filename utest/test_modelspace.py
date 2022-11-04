@@ -85,9 +85,19 @@ class TestModelSpace(unittest.TestCase):
         self.assertIs(self.m.process_expression('foo2.bar == 1313'), True)
         self.assertIs(self.m.process_expression('foo1.bar < foo2.bar'), True)
 
+    def test_fail_when_comparing_undefined_name(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar == foobar')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
+
     def test_fail_when_comparing_unknown_property(self):
         self.m.add_prop('foo')
-        self.assertRaises(AttributeError, self.m.process_expression, 'foo.bar == foobar')
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar == foobar')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar.foobar = 13')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
 
     def test_statements_return_exec(self):
         self.m.add_prop('foo')
