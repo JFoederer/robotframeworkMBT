@@ -127,6 +127,7 @@ class SuiteProcessors:
                 return False
             refinement_attempts_left = MAX_ATTEMPTS
             part1, part2 = self._split_refinement_candidate(scenario, model)
+            exit_conditions = part2.steps[0].model_info['OUT']
             part1.name = f"Partial {part1.name}"
             new_model = self._process_scenario(part1, model)
             logger.info(f"Adding partial scenario {scenario.name}")
@@ -136,10 +137,20 @@ class SuiteProcessors:
                 self.flat_suite.scenarios.remove(sub_scenario)
                 m_inserted = self._try_to_fit_in_scenario(sub_scenario, new_model)
                 if m_inserted:
-                    # ToDo: execute refinement condition
-                    m_finished = self._try_to_fit_in_scenario(part2, m_inserted)
-                    if m_finished:
-                        return m_finished
+                    insert_valid_here = True
+                    try:
+                        for expr in exit_conditions:
+                            if m_inserted.process_expression(expr) is False:
+                                 insert_valid_here = False
+                                 break
+                    except Exception:
+                        insert_valid_here = False
+                    if insert_valid_here:
+                        m_finished = self._try_to_fit_in_scenario(part2, m_inserted)
+                        if m_finished:
+                            return m_finished
+                    else:
+                        logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
                     logger.info(f"Reconsidering {sub_scenario.name}, scenario excluded")
                     self.out_suite.scenarios.pop()
                 refinement_attempts_left -=1
@@ -201,7 +212,7 @@ class SuiteProcessors:
                         edge_step.args = (f"Refinement completed for step: {step.keyword}",)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
-                        back.steps[0] = edge_step
+                        back.steps.insert(0, edge_step)
                         return front, back
             front.steps.append(back.steps.pop(0))
         assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"
