@@ -7,6 +7,12 @@ a blank Birthday card
     @{names}=    Create list
     Set suite variable    ${names}
 
+there is a birthday card
+    [Documentation]    *model info*
+    ...    :IN: birthday_card
+    ...    :OUT: birthday_card
+    Variable should exist    ${names}
+
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
     ...    :IN: ${name} in birthday_card.names

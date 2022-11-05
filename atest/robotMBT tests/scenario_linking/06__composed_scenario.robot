@@ -14,10 +14,10 @@ Buying a card
 
 Sending Bahar a birthday card
     Given there is a blank birthday card
-    when 'Johan' writes their name on the birthday card
+    when 'Johan' is written on the birthday card
     and 'Johan' writes Bahar's address on the birthday card
-    and 'Tannaz' writes their name on the birthday card
-    and 'Nicolas' writes their name on the birthday card
+    and 'Tannaz' is written on the birthday card
+    and 'Nicolas' is written on the birthday card
     then 'Johan' puts the birthday card in the mail
 
 Bahar receives the birthday card
@@ -26,22 +26,26 @@ Bahar receives the birthday card
     then 'Bahar' received the birthday card
 
 Johan prefers pen
-    Given 'Johan' writes their name on the birthday card
-    then 'Johan' writes their name in pen on the birthday card
+    Given there is a birthday card
+    when 'Johan' writes their name in pen on the birthday card
+    then the birthday card has 'Johan' written on it
+    and there is text added in ink on the birthday card
 
 Tannaz prefers traditional style
-    Given 'Tannaz' writes their name on the birthday card
+    Given there is a birthday card
     when 'Tannaz' writes their first letter as a piece of art
     and 'Tannaz' writes the other letters in decorative writing
-    then 'Tannaz' is written as calligraphy on the birthday card
+    then the birthday card has 'Tannaz' written on it
+    and there is text added in calligraphy on the birthday card
 
 Nicolas prefers pencil
-    Given 'Nicolas' writes their name on the birthday card
-    when there is a pencil available
-    then 'Nicolas' writes their name in pencil on the birthday card
+    Given there is a birthday card
+    when 'Nicolas' writes their name in pencil on the birthday card
+    then the birthday card has 'Nicolas' written on it
+    and there is text added in pencil on the birthday card
 
-Nicolas' pencil needs sharpening
-    Given 'Nicolas' writes their name in pencil on the birthday card
+The pencil needs sharpening
+    Given a pencil is needed for writing
     but the pencil has a broken tip
     when the tip of the pencil is sharpend
-    then 'Nicolas' writes their name in pencil on the birthday card
+    then the pencil is ready for writing

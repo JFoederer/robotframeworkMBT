@@ -88,7 +88,7 @@ class SuiteProcessors:
                                            # given the already selected scenarios
         outer_attempts_left = MAX_ATTEMPTS # Wipes clean any prior choices and starts
                                            # over from scratch
-        while self.flat_suite.scenarios and outer_attempts_left:
+        while self.flat_suite.scenarios:
             while self.flat_suite.scenarios and inner_attempts_left:
                 selected_scenario = random.choice(self.flat_suite.scenarios)
                 self.flat_suite.scenarios.remove(selected_scenario)
@@ -99,10 +99,13 @@ class SuiteProcessors:
                     inner_attempts_left -=1
                     self.flat_suite.scenarios.append(selected_scenario)
             if self.flat_suite.scenarios:
+                outer_attempts_left -=1
+                if not outer_attempts_left:
+                    break
                 logger.debug(f"model state:\n{model.get_status_text()}")
+                logger.debug(f"Remaining scenarios: {[s.name for s in self.flat_suite.scenarios]}")
                 logger.info(f"Attempt did not yield a consistent sequence. Retrying...")
                 inner_attempts_left = MAX_ATTEMPTS
-                outer_attempts_left -=1
                 self.flat_suite = copy.deepcopy(bup_flat_suite)
                 self.out_suite.scenarios.clear()
                 model = ModelSpace()
@@ -128,6 +131,7 @@ class SuiteProcessors:
             refinement_attempts_left = MAX_ATTEMPTS
             part1, part2 = self._split_refinement_candidate(scenario, model)
             exit_conditions = part2.steps[0].model_info['OUT']
+            part2.steps[0].model_info['OUT'] = []
             part1.name = f"Partial {part1.name}"
             new_model = self._process_scenario(part1, model)
             logger.info(f"Adding partial scenario {scenario.name}")
@@ -212,6 +216,7 @@ class SuiteProcessors:
                         edge_step.args = (f"Refinement completed for step: {step.keyword}",)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
+                        back.steps[0].model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
                         return front, back
             front.steps.append(back.steps.pop(0))
