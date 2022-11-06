@@ -43,14 +43,11 @@ the cargo is loaded
     Log    Loading mail for Royal mail
     Log    Loading painting La Circassienne au Bain for Mauritz Håkan Björnström-Steffansson
 
-the passengers are on board
+all passengers are on board
     [Documentation]    *model info*
     ...    :IN: ship.people_on_board
-    ...    :OUT: ship.people_on_board+=1316
-    Log    Embarking third class
-    Log    Embarking second class
-    Log    Waiting for first class passengers
-    Log    Embarking first class
+    ...    :OUT: ship.people_on_board==2224
+    Log    Checkinig the boarding list for completeness
 
 the crew is on board
     [Documentation]    *model info*
@@ -116,3 +113,30 @@ there are at least ${n} seats available in the lifeboats
     ...    :OUT: ship.lifeboat_seats=${n}
     ${lifeboat_seats}=    Available lifeboats
     Should Be True    ${lifeboat_seats} >= ${n}
+
+No passengers have boarded yet
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board==908
+    ...    :OUT: ship.people_on_board==908
+    Log    Looks rather empty here
+
+Boarding first class passengers
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board
+    ...    :OUT: ship.people_on_board+=116 | ship.people_on_board==2224
+    Log    Waiting for first class passengers, because they are always late
+    Log    Embarking first class
+    
+
+Boarding second class passengers
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board
+    ...    :OUT: ship.people_on_board+=700
+    Log    Embarking second class
+
+Boarding third class passengers
+    [Documentation]    *model info*
+    ...    :IN: ship.people_on_board==908
+    ...    :OUT: ship.people_on_board+=500
+    Log    Third class embarks first
+    Log    Embarking third class

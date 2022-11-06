@@ -73,11 +73,15 @@ class ModelSpace:
             except NameError as missing:
                 self.values.append(missing.name)
                 result = self.process_expression(expr)
+            except AttributeError as err:
+                raise ModellingError(f"{err.name} used before assignment")
         except NameError as missing:
             if missing.name == expr:
                 raise # Putting only a name in an expression can be used as exists check
             self.values.append(missing.name)
             result = self.process_expression(expr)
+        except AttributeError as err:
+            raise ModellingError(f"{err.name} used before assignment")
 
         for p in self.props:
             action = f"self.props['{p}'] = {p}"
