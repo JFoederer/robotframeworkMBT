@@ -1,4 +1,7 @@
 *** Settings ***
+Resource        Titanic_the_ship.resource
+
+*** Settings ***
 Documentation   As a passenger or crew member
 ...             I want to have a seat available on a lifeboat
 ...             so that I can evacuate in case of emergency
