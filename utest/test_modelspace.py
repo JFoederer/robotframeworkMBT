@@ -33,11 +33,6 @@
 import unittest
 from robotmbt.modelspace import ModelSpace, ModellingError
 
-# To run unit tests:
-#   * open a command prompt
-#   * go to the robotframeworkMBT project root folder
-#   * run: python -m unittest discover utest
-
 class TestModelSpace(unittest.TestCase):
     def setUp(self):
         self.m = ModelSpace()
