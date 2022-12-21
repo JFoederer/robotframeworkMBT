@@ -3,11 +3,11 @@ import sys
 import unittest
 import robot
 
-# Usage: python run_test.py [utest] [atest]
+# Usage: python run_tests.py [utest] [atest]
 #
-#        When started without arguments, runs all unit and acceptance test
-#        In place of 'atest' any set of Robot framework command line options can be used
-#        Unit test can also be ran individually as scripts
+#        When started without arguments, runs all unit and acceptance tests
+#        In place of 'atest' any set of Robot Framework command line options can be used
+#        Unit tests can also be executed by running their individually files as script
 
 if __name__ == '__main__':
     THIS_DIR = os.path.dirname(os.path.abspath(__file__))

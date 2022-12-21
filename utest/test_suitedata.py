@@ -33,18 +33,142 @@
 import unittest
 from robotmbt.suitedata import Suite, Scenario, Step
 
+class TestSuites(unittest.TestCase):
+    def setUp(self):
+        self.topsuite = Suite('topsuite')
+        self.topsuite.scenarios = [
+            TestScenarios.create_scenario('scenario top A', self.topsuite),
+            TestScenarios.create_scenario('scenario top B', self.topsuite)]
+        subsuiteA = Suite('suite A', parent=self.topsuite)
+        subsuiteA.scenarios = [TestScenarios.create_scenario('scenario AA', subsuiteA),
+                               TestScenarios.create_scenario('scenario AB', subsuiteA)]
+        subsuiteB = Suite('suite B', parent=self.topsuite)
+        subsuiteB.scenarios = [TestScenarios.create_scenario('scenario BA', subsuiteB),
+                               TestScenarios.create_scenario('scenario BB', subsuiteB)]
+        self.topsuite.suites = [subsuiteA, subsuiteB]
+
+    def test_suite_name(self):
+        self.assertEqual(self.topsuite.name, 'topsuite')
+        self.assertEqual(self.topsuite.suites[0].name, 'suite A')
+
+    def test_longname_without_parent_is_just_the_name(self):
+        self.assertEqual(self.topsuite.longname, self.topsuite.name)
+
+    def test_longname_with_parent_includes_all_parent_names(self):
+        self.assertEqual(self.topsuite.suites[0].scenarios[0].longname,
+                         'topsuite.suite A.scenario AA')
+        self.assertEqual(self.topsuite.suites[-1].scenarios[-1].longname,
+                         'topsuite.suite B.scenario BB')
+
+    def test_error_in_suite_setup_is_detected(self):
+        step = Step('top setup', self.topsuite)
+        step.gherkin_kw = 'given'
+        step.model_info = dict(error='oops')
+        self.topsuite.setup = step
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(errorsteps, [self.topsuite.setup])
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_scenario_is_detected(self):
+        self.topsuite.scenarios[0].steps[1].model_info = dict(error='oops')
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps  = self.topsuite.steps_with_errors()
+        self.assertEqual(len(errorsteps), 1)
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_suite_teardown_is_detected(self):
+        step = Step('top teardown', self.topsuite)
+        step.model_info = dict(error='oops')
+        self.topsuite.teardown = step
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(errorsteps, [self.topsuite.teardown])
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_subsuite_setup_is_detected(self):
+        suite = self.topsuite.suites[0]
+        step = Step('sub suite setup', suite)
+        step.gherkin_kw = 'given'
+        step.model_info = dict(error='oops')
+        suite.setup = step
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(errorsteps, [suite.setup])
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_subsuite_scenario_is_detected(self):
+        self.topsuite.suites[0].scenarios[0].steps[1].model_info = dict(error='oops')
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps  = self.topsuite.steps_with_errors()
+        self.assertEqual(len(errorsteps), 1)
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_subsuite_teardown_is_detected(self):
+        suite = self.topsuite.suites[0]
+        step = Step('sub suite teardown', suite)
+        step.model_info = dict(error='oops')
+        suite.teardown = step
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(errorsteps, [suite.teardown])
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_subscenario_setup_is_detected(self):
+        scenario = self.topsuite.suites[0].scenarios[0]
+        step = Step("sub suite's scenario teardown", scenario)
+        step.model_info = dict(error='oops')
+        scenario.setup = step
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(errorsteps, [scenario.setup])
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_error_in_subscenario_teardown_is_detected(self):
+        scenario = self.topsuite.suites[0].scenarios[1]
+        step = Step("sub suite's scenario teardown", scenario)
+        step.model_info = dict(error='oops')
+        scenario.teardown = step
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(errorsteps, [scenario.teardown])
+        self.assertEqual(errorsteps[0].model_info['error'], 'oops')
+
+    def test_multiple_errors_are_listed(self):
+        step = Step('top setup', self.topsuite)
+        step.gherkin_kw = 'given'
+        step.model_info = dict(error='setup oops')
+        self.topsuite.setup = step
+        self.topsuite.scenarios[0].steps[1].model_info =\
+            dict(error='scenario oops')
+        self.topsuite.suites[0].scenarios[0].steps[1].model_info =\
+            dict(error='sub scenario oops')
+        step = Step('sub teardown', self.topsuite)
+        step.model_info = dict(error='sub teardown oops')
+        self.topsuite.suites[0].scenarios[0].setup = step
+
+        self.assertIs(self.topsuite.has_error(), True)
+        errorsteps = self.topsuite.steps_with_errors()
+        self.assertEqual(len(errorsteps), 4)
+        self.assertEqual(set([e.model_info['error'] for e in errorsteps]),
+            {'setup oops','scenario oops', 'sub scenario oops', 'sub teardown oops'})
+
 class TestScenarios(unittest.TestCase):
     def setUp(self):
-        TestSteps.setUp(self)
-        self.scenario = Scenario('My scenario')
-        self.scenario.steps = self.steps
+        self.scenario = self.create_scenario('My scenario')
+
+    @staticmethod
+    def create_scenario(name, parent=None):
+        scenario = Scenario(name, parent)
+        scenario.steps = TestSteps.create_steps(parent=scenario)
+        return scenario
 
     def test_longname_without_parent_is_just_the_name(self):
         self.assertEqual(self.scenario.longname, self.scenario.name)
 
     def test_longname_with_parent_includes_both_names(self):
         p = lambda:None # Create an object to assign the name attribute to
-        p.name = 'long'
+        p.longname = 'long'
         scenario = Scenario('name', p)
         self.assertEqual(scenario.longname, 'long.name')
 
@@ -102,20 +226,24 @@ class TestScenarios(unittest.TestCase):
 
 class TestSteps(unittest.TestCase):
     def setUp(self):
-        Kw1 = Step('action keyword', None)
-        Gg1 = Step('Given step Gg1', None)
-        Ga1 = Step('and step Ga1', None)
-        Gb1 = Step('but step Gb1', None)
+        self.steps = self.create_steps()
+
+    @staticmethod
+    def create_steps(parent=None):
+        Kw1 = Step('action keyword', parent)
+        Gg1 = Step('Given step Gg1', parent)
+        Ga1 = Step('and step Ga1', parent)
+        Gb1 = Step('but step Gb1', parent)
         Gg1.gherkin_kw= Ga1.gherkin_kw= Gb1.gherkin_kw= 'given'
-        Ww1 = Step('When step Ww1', None)
-        Wa1 = Step('and step Wa1', None)
-        Wb1 = Step('BUT step Wb1', None)
+        Ww1 = Step('When step Ww1', parent)
+        Wa1 = Step('and step Wa1', parent)
+        Wb1 = Step('BUT step Wb1', parent)
         Ww1.gherkin_kw= Wa1.gherkin_kw= Wb1.gherkin_kw= 'when'
-        Tt1 = Step('Then step Tt1', None)
-        Ta1 = Step('And step Ta1', None)
-        Tb1 = Step('but step Tb1', None)
+        Tt1 = Step('Then step Tt1', parent)
+        Ta1 = Step('And step Ta1', parent)
+        Tb1 = Step('but step Tb1', parent)
         Tt1.gherkin_kw= Ta1.gherkin_kw= Tb1.gherkin_kw= 'then'
-        self.steps = [Kw1, Gg1, Ga1, Gb1, Ww1, Wa1, Wb1, Tt1, Ta1, Tb1]
+        return [Kw1, Gg1, Ga1, Gb1, Ww1, Wa1, Wb1, Tt1, Ta1, Tb1]
 
     def test_full_names(self):
         expected = ['action keyword',

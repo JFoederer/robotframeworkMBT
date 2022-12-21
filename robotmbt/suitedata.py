@@ -42,7 +42,7 @@ class Suite:
 
     @property
     def longname(self):
-        return f"{self.parent.name}.{self.name}" if self.parent else self.name
+        return f"{self.parent.longname}.{self.name}" if self.parent else self.name
 
     def has_error(self):
         return (  (self.setup.has_error() if self.setup else False)
@@ -67,7 +67,7 @@ class Scenario:
 
     @property
     def longname(self):
-        return f"{self.parent.name}.{self.name}" if self.parent else self.name
+        return f"{self.parent.longname}.{self.name}" if self.parent else self.name
 
     def has_error(self):
         return ((self.setup.has_error() if self.setup else False)
