@@ -81,6 +81,7 @@ class SuiteProcessors:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
+        self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
         bup_flat_suite = copy.deepcopy(self.flat_suite)
         model = ModelSpace()
@@ -113,6 +114,15 @@ class SuiteProcessors:
             raise Exception("Unable to compose a consistent suite\n"
                            f"last model state:\n{model.get_status_text() or 'empty'}")
         return self.out_suite
+
+    @staticmethod
+    def _fail_on_step_errors(suite):
+        error_list = suite.steps_with_errors()
+        if error_list:
+            err_msg = "Steps with errors in their model info found:\n"
+            err_msg += '\n'.join([f"{s.keyword} [{s.model_info['error']}] used in {s.parent.name}"
+                                      for s in error_list])
+            raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, scenario, model):
         logger.debug(f"Considering scenario {scenario.name}")
@@ -252,6 +262,8 @@ class SuiteProcessors:
     @staticmethod
     def _relevant_expressions(step):
         expressions = []
+        if 'IN' not in step.model_info or 'OUT' not in step.model_info:
+            raise Exception(f"Model info incomplete for step: {step.keyword}")
         if step.gherkin_kw in ['given', 'when']:
             expressions += step.model_info['IN']
         if step.gherkin_kw in ['when', 'then']:

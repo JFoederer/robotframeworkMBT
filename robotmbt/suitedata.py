@@ -40,13 +40,44 @@ class Suite:
         self.setup = None # Can be a single step or None
         self.teardown = None # Can be a single step or None
 
+    @property
+    def longname(self):
+        return f"{self.parent.longname}.{self.name}" if self.parent else self.name
+
+    def has_error(self):
+        return (  (self.setup.has_error() if self.setup else False)
+               or any([s.has_error() for s in self.suites])
+               or any([s.has_error() for s in self.scenarios])
+               or (self.teardown.has_error() if self.teardown else False))
+
+    def steps_with_errors(self):
+        return ( ([self.setup] if self.setup and self.setup.has_error() else [])
+               + [e for s in map(Suite.steps_with_errors, self.suites) for e in s]
+               + [e for s in map(Scenario.steps_with_errors, self.scenarios) for e in s]
+               + ([self.teardown] if self.teardown and self.teardown.has_error() else []))
+
 class Scenario:
     def __init__(self, name, parent=None):
         self.name = name
-        self.parent = parent
-        self.setup = None # Can be a single step or None
+        self.parent = parent # Parent scenario for easy searching, processing and referencing
+                             # after steps and scenarios have been potentially moved around
+        self.setup = None    # Can be a single step or None
         self.teardown = None # Can be a single step or None
         self.steps = []
+
+    @property
+    def longname(self):
+        return f"{self.parent.longname}.{self.name}" if self.parent else self.name
+
+    def has_error(self):
+        return ((self.setup.has_error() if self.setup else False)
+               or any([s.has_error() for s in self.steps])
+               or (self.teardown.has_error() if self.teardown else False))
+
+    def steps_with_errors(self):
+        return ( ([self.setup] if self.setup and self.setup.has_error() else [])
+               +  [s for s in self.steps if s.has_error()]
+               +  ([self.teardown] if self.teardown and self.teardown.has_error() else []))
 
 class Step:
     def __init__(self, name, parent):
@@ -62,6 +93,18 @@ class Step:
                                  # The `vocab.attribute` form can then be used to express relations
                                  # between properties from the domain vocabulaire.
                                  # Custom processors can define their own attributes.
+
+    def __str__(self):
+        return f"Step: {self.keyword}"
+
+    def __repr__(self):
+        return str(self) + f" with model info: {self.model_info}"
+
+    def has_error(self):
+        return 'error' in self.model_info
+
+    def get_error(self):
+        return self.model_info.get('error')
 
     @property
     def gherkin_kw(self):
