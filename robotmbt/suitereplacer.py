@@ -50,10 +50,8 @@ class SuiteReplacer:
         self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite = None
         self.robot_suite = None
-        self.current_step = None
-        suite_processor = SuiteProcessors() if processor_lib is None \
-                                            else Robot.get_library_instance(processor_lib)
-        self.suite_processor = getattr(suite_processor, processor)
+        self.processor_lib = processor_lib
+        self.processor = processor
 
     @keyword(name="Treat this test suite Model-based")
     def treat_model_based(self):
@@ -66,7 +64,10 @@ class SuiteReplacer:
         logger.info(f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
         master_suite = self.__process_robot_suite(self.robot_suite, parent=None)
 
-        modelbased_suite = self.suite_processor(master_suite)
+        processor_lib = SuiteProcessors() if self.processor_lib is None \
+                                            else Robot.get_library_instance(self.processor_lib)
+        processor_method = getattr(processor_lib, self.processor)
+        modelbased_suite = processor_method(master_suite)
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
 
@@ -117,19 +118,17 @@ class SuiteReplacer:
         if step_def.args:
             step.args = step_def.args
         try:
-            self.current_step = step
-            try:
-                step.model_info = self.__parse_model_info(step)
-            except ValueError as err:
-                step.model_info = dict(error=str(err))
-            self.current_step = None
+            step.model_info = self.__parse_model_info(step)
         except Exception as ex:
             step.model_info['error']=str(ex)
         return step
 
     def __parse_model_info(self, step):
         model_info = dict()
-        docu = Robot._namespace.get_runner(step.bare_kw)._handler.doc
+        runner = Robot._namespace.get_runner(step.bare_kw)
+        if hasattr(runner, 'error'):
+            raise ValueError(runner.error)
+        docu = runner._handler.doc
         mi_index = docu.find("*model info*")
         if mi_index == -1:
             return model_info
