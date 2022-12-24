@@ -5,7 +5,7 @@ Library    String
 buying a birthday card
     [Documentation]    *model info*
     ...    :IN: None
-    ...    :OUT: new birthday_card | birthday_card.names=[]
+    ...    :OUT: new birthday_card
     Log    choosing a birthday card with baloons
     @{names}=    Create list
     Set suite variable    ${names}
@@ -13,7 +13,7 @@ buying a birthday card
 there is a blank Birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card.names==[]
-    ...    :OUT: birthday_card.names==[]
+    ...    :OUT: birthday_card.names=[]
     Log    The card has balloons on the front, but the inside looks a bit empy
 
 there is a birthday card
