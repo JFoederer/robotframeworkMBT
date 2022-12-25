@@ -5,7 +5,7 @@ Library    String
 buying a birthday card
     [Documentation]    *model info*
     ...    :IN: None
-    ...    :OUT: new birthday_card | birthday_card.names=[]
+    ...    :OUT: new birthday_card
     Log    choosing a birthday card with baloons
     @{names}=    Create list
     Set suite variable    ${names}
@@ -13,7 +13,7 @@ buying a birthday card
 there is a blank Birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card.names==[]
-    ...    :OUT: birthday_card.names==[]
+    ...    :OUT: birthday_card.names=[]
     Log    The card has balloons on the front, but the inside looks a bit empy
 
 there is a birthday card
@@ -62,6 +62,7 @@ there is text added in ${style} on the birthday card
     ...    :IN: artwork.name
     ...    :OUT: artwork.name+=${name}[1:] | birthday_card.names.append(artwork.name)
     ...          birthday_card.style = calligraphy
+    ...          del artwork
     ${other_letters}=    Get substring    ${name}    1
     Log    ${name} writes ${other_letters} in a matching font
     Set suite variable    @{names}    @{names}    ${name}
@@ -73,6 +74,7 @@ there is text added in ${style} on the birthday card
     ...    :IN: birthday_card | new _pencil
     ...    :OUT: _pencil.tip==sharp | birthday_card.names.append(${name})
     ...          birthday_card.style = pencil
+    ...          del _pencil
     Set suite variable    @{names}    @{names}    ${name}
     Log    ${name} prefers to use a pencil for writing
     Set suite variable    ${writing style}    pencil

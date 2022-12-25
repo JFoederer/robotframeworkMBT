@@ -14,7 +14,7 @@ With this project we aim to get the best of both worlds. Allowing testers to wri
 
 The recommended installation method is using [pip](http://pip-installer.org)
 
-    pip install robotframework-mbt
+    pip install --upgrade robotframework-mbt
 
 After installation include `robotmbt` as library in your robot file to get access to the new functionality.
 
@@ -49,6 +49,11 @@ you have a blank postcard
     [Documentation]    *model info*
     ...    :IN: postcard.wish==None
     ...    :OUT: postcard.wish==None
+
+you write '${your_wish}' on the postcard
+    [Documentation]    *model info*
+    ...    :IN: postcard.wish==None
+    ...    :OUT: postcard.wish=${your_wish}
 ```
 
 The first scenario can be executed directly. It has no dependencies that need to be resolved before going into its first step, as indicated by the `:IN:` expression which is `None`. After completing the step, a new domain term is available with a single property. The term `postcard` with property `wish` is introduced, as stated by the `:OUT:` expressions. This satisfies the condition for the then-step to complete this scenario.
@@ -59,7 +64,7 @@ The second scenario has a dependency to the first scenario, due to the condition
 * when-steps evaluate both the `:IN:` and `:OUT:` expressions
 * then-steps evaluate only the `:OUT:` expressions
 
-If evaluation of any expressions fails or is False, then the scenario is rejected. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. The step implementations use keywords to connect to the system under test to verify the specified behaviour.
+If evaluation of any expression fails or is False, then the scenario is rejected. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. You can keep your models clean by deleting terms (e.g. `del postcard`) that are no longer relevant. The step implementations use keywords to connect to the system under test to verify the specified behaviour.
 
 There are three typical kinds of steps
 

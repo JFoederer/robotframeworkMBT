@@ -46,6 +46,12 @@ class ModelSpace:
         self.props[name] = ModelSpace()
         setattr(self, name, self.props[name])
 
+    def del_prop(self, name):
+        if name not in self.props:
+            raise ModellingError(f"Delete failed, '{name}' is not defined.")
+        self.props.pop(name)
+        delattr(self, name)
+
     def __dir__(self, recurse=True):
         if recurse:
             return [attr for attr in self.__dir__(False) if attr not in self.std_attrs]
@@ -54,8 +60,12 @@ class ModelSpace:
 
     def process_expression(self, expr):
         expr = expr.strip()
-        if self.is_new_vocab_expression(expr):
-            self.add_prop(self.new_vocab_term(expr))
+        if self._is_new_vocab_expression(expr):
+            self.add_prop(self._vocab_term(expr))
+            return 'exec'
+
+        if self._is_del_vocab_expression(expr):
+            self.del_prop(self._vocab_term(expr))
             return 'exec'
 
         for p, obj in self.props.items():
@@ -90,11 +100,15 @@ class ModelSpace:
         return result
 
     @staticmethod
-    def is_new_vocab_expression(expression):
+    def _is_new_vocab_expression(expression):
         return expression.lower().startswith('new ') and len(expression.split()) == 2
 
     @staticmethod
-    def new_vocab_term(expression):
+    def _is_del_vocab_expression(expression):
+        return expression.lower().startswith('del ') and len(expression.split()) == 2
+
+    @staticmethod
+    def _vocab_term(expression):
         return expression.split()[-1]
 
     def get_status_text(self):

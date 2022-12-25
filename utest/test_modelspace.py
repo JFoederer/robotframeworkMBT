@@ -44,6 +44,12 @@ class TestModelSpace(unittest.TestCase):
         self.m.add_prop('foo')
         self.assertIn('foo', dir(self.m))
 
+    def test_delete_property(self):
+        self.m.add_prop('foo')
+        self.assertIn('foo', dir(self.m))
+        self.m.del_prop('foo')
+        self.assertNotIn('foo', dir(self.m))
+
     def test_try_add_same_property(self):
         self.m.add_prop('foo')
         self.assertRaises(ModellingError, self.m.add_prop, 'foo')
@@ -159,6 +165,15 @@ class TestModelSpace(unittest.TestCase):
 
     def test_fail_exists_check_before_using_new_with_stripping(self):
         self.assertRaises(NameError, self.m.process_expression, ' foo ')
+
+    def test_fail_exists_check_after_using_del(self):
+        self.m.process_expression('new foo')
+        self.assertIn('foo', dir(self.m))
+        self.m.process_expression('del foo')
+        self.assertRaises(NameError, self.m.process_expression, 'foo')
+
+    def test_del_fails_if_property_does_not_exist(self):
+        self.assertRaises(ModellingError, self.m.process_expression, 'del foo')
 
 if __name__ == '__main__':
     unittest.main()
