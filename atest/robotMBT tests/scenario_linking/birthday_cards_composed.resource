@@ -62,6 +62,7 @@ there is text added in ${style} on the birthday card
     ...    :IN: artwork.name
     ...    :OUT: artwork.name+=${name}[1:] | birthday_card.names.append(artwork.name)
     ...          birthday_card.style = calligraphy
+    ...          del artwork
     ${other_letters}=    Get substring    ${name}    1
     Log    ${name} writes ${other_letters} in a matching font
     Set suite variable    @{names}    @{names}    ${name}
@@ -73,6 +74,7 @@ there is text added in ${style} on the birthday card
     ...    :IN: birthday_card | new _pencil
     ...    :OUT: _pencil.tip==sharp | birthday_card.names.append(${name})
     ...          birthday_card.style = pencil
+    ...          del _pencil
     Set suite variable    @{names}    @{names}    ${name}
     Log    ${name} prefers to use a pencil for writing
     Set suite variable    ${writing style}    pencil
