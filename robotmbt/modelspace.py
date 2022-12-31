@@ -30,6 +30,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
+
 class ModellingError(Exception):
     pass
 
@@ -39,6 +41,9 @@ class ModelSpace:
         self.props = dict()
         self.values = [] # For using literals without having to use quotes (abc='abc')
         self.std_attrs = dir(self)
+
+    def copy(self):
+        return copy.deepcopy(self)
 
     def add_prop(self, name):
         if name in self.props or name in self.values:
