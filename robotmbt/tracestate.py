@@ -65,9 +65,10 @@ class TraceState:
 
     def confirm_full_scenario(self, index, scenario, model):
         self._c_pool[index] = True
-        self._tried[-1].append(index)
-        self._tried.append([])
-        self._trace.append(index)
+        if index not in self._trace:
+            self._tried[-1].append(index)
+            self._tried.append([])
+            self._trace.append(index)
         self._d_trace.append(index)
         self._tracedict[index] = TraceSnapShot(scenario, model)
 
@@ -87,26 +88,21 @@ class TraceState:
         return len(self._d_trace)
 
     def rewind(self):
-        if self._trace.count(self._d_trace[-1]) == 2:
-            rewind_to = self._d_trace.index(self._d_trace[-1]+.1)
-            result = None
-            for n in range(len(self._d_trace[rewind_to:])):
-                ditch = self._d_trace.pop()
-                index = int(ditch)
-                if ditch == index or ditch - .1 == index:
-                    self._trace.pop()
-                    self._c_pool[index] = False
-                    self._tried.pop()
-                result = self._tracedict.pop(ditch)
-            return result
-        else:
+        ditch = self._d_trace.pop()
+        rewind_including_refinements = isinstance(ditch, int) and ditch != self._trace[-1]
+        if rewind_including_refinements:
+            self._c_pool[ditch] = False
+            self._tracedict.pop(ditch)
+            while self._trace[-1] != ditch:
+                self.rewind()
             ditch = self._d_trace.pop()
-            index = int(ditch)
-            if ditch == index or ditch - .1 == index: # Refactor >>>> 4.1 - .1 != 4
-                self._trace.pop()
-                self._c_pool[index] = False
-                self._tried.pop()
-            return self._tracedict.pop(ditch)
+
+        index = int(ditch)
+        if ditch == index or ditch - .1 == index: # Refactor >>>> 4.1 - .1 != 4
+            self._trace.pop()
+            self._c_pool[index] = False
+            self._tried.pop()
+        return self._tracedict.pop(ditch)
 
 
 class TraceSnapShot:
