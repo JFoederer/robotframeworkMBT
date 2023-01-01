@@ -123,7 +123,7 @@ No passengers have boarded yet
 Boarding first class passengers
     [Documentation]    *model info*
     ...    :IN: ship.people_on_board
-    ...    :OUT: ship.people_on_board+=116 | ship.people_on_board==2224
+    ...    :OUT: ship.people_on_board+=325
     Log    Waiting for first class passengers, because they are always late
     Log    Embarking first class
     
@@ -131,12 +131,12 @@ Boarding first class passengers
 Boarding second class passengers
     [Documentation]    *model info*
     ...    :IN: ship.people_on_board
-    ...    :OUT: ship.people_on_board+=700
+    ...    :OUT: ship.people_on_board+=285
     Log    Embarking second class
 
 Boarding third class passengers
     [Documentation]    *model info*
     ...    :IN: ship.people_on_board==908
-    ...    :OUT: ship.people_on_board+=500
+    ...    :OUT: ship.people_on_board+=706
     Log    Third class embarks first
     Log    Embarking third class
