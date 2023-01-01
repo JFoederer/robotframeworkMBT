@@ -71,14 +71,42 @@ class TraceState:
         self._d_trace.append(index)
         self._tracedict[index] = TraceSnapShot(scenario, model)
 
+    def push_partial_scenario(self, index, scenario, model, remainder):
+        if index in self._trace:
+            mark = max([i for i in self._d_trace if int(i) == index]) + .1
+        else:
+            mark = index + .1
+            self._trace.append(index)
+            self._tried[-1].append(index)
+            self._tried.append([])
+        self._d_trace.append(mark)
+        self._tracedict[mark] = TraceSnapShot(scenario, model)
+        self._tracedict[mark].remainder = remainder
+
     def can_rewind(self):
         return len(self._d_trace)
 
     def rewind(self):
-        ditch = self._trace.pop()
-        self._c_pool[ditch] = False
-        self._tried.pop()
-        return self._tracedict.pop(self._d_trace.pop())
+        if self._trace.count(self._d_trace[-1]) == 2:
+            rewind_to = self._d_trace.index(self._d_trace[-1]+.1)
+            result = None
+            for n in range(len(self._d_trace[rewind_to:])):
+                ditch = self._d_trace.pop()
+                index = int(ditch)
+                if ditch == index or ditch - .1 == index:
+                    self._trace.pop()
+                    self._c_pool[index] = False
+                    self._tried.pop()
+                result = self._tracedict.pop(ditch)
+            return result
+        else:
+            ditch = self._d_trace.pop()
+            index = int(ditch)
+            if ditch == index or ditch - .1 == index: # Refactor >>>> 4.1 - .1 != 4
+                self._trace.pop()
+                self._c_pool[index] = False
+                self._tried.pop()
+            return self._tracedict.pop(ditch)
 
 
 class TraceSnapShot:
