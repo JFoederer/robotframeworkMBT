@@ -69,14 +69,17 @@ class TraceState:
             self._tried[-1].append(index)
             self._tried.append([])
             self._trace.append(index)
-        self._d_trace.append(index)
-        self._tracedict[index] = TraceSnapShot(scenario, model)
+        self._d_trace.append(str(index))
+        self._tracedict[str(index)] = TraceSnapShot(scenario, model)
 
     def push_partial_scenario(self, index, scenario, model, remainder):
         if index in self._trace:
-            mark = max([i for i in self._d_trace if int(i) == index]) + .1
+            highest_part = max([int(s.split('.')[1])
+                                for s in self._d_trace
+                                if s.startswith(f'{index}.')])
+            mark = f"{index}.{highest_part+1}"
         else:
-            mark = index + .1
+            mark = f"{index}.1"
             self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
@@ -89,16 +92,15 @@ class TraceState:
 
     def rewind(self):
         ditch = self._d_trace.pop()
-        rewind_including_refinements = isinstance(ditch, int) and ditch != self._trace[-1]
-        if rewind_including_refinements:
-            self._c_pool[ditch] = False
+        index = int(ditch.split('.')[0])
+        if '.' not in ditch and index != self._trace[-1]:
+            self._c_pool[index] = False
             self._tracedict.pop(ditch)
-            while self._trace[-1] != ditch:
+            while self._trace[-1] != index:
                 self.rewind()
             ditch = self._d_trace.pop()
 
-        index = int(ditch)
-        if ditch == index or ditch - .1 == index: # Refactor >>>> 4.1 - .1 != 4
+        if '.' not in ditch or ditch.split('.')[1] == '1':
             self._trace.pop()
             self._c_pool[index] = False
             self._tried.pop()
