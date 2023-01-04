@@ -65,50 +65,55 @@ class TraceState:
 
     def confirm_full_scenario(self, index, scenario, model):
         self._c_pool[index] = True
-        if index not in self._trace:
+        if index in self._trace:
+            id = f"{index}.0"
+        else:
+            id = str(index)
+            self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
-            self._trace.append(index)
-        self._d_trace.append(str(index))
-        self._tracedict[str(index)] = TraceSnapShot(scenario, model)
+        self._d_trace.append(id)
+        self._tracedict[id] = TraceSnapShot(id, scenario, model)
 
     def push_partial_scenario(self, index, scenario, model, remainder):
         if index in self._trace:
             highest_part = max([int(s.split('.')[1])
                                 for s in self._d_trace
                                 if s.startswith(f'{index}.')])
-            mark = f"{index}.{highest_part+1}"
+            id = f"{index}.{highest_part+1}"
         else:
-            mark = f"{index}.1"
+            id = f"{index}.1"
             self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
-        self._d_trace.append(mark)
-        self._tracedict[mark] = TraceSnapShot(scenario, model)
-        self._tracedict[mark].remainder = remainder
+        self._d_trace.append(id)
+        self._tracedict[id] = TraceSnapShot(id, scenario, model)
+        self._tracedict[id].remainder = remainder
 
     def can_rewind(self):
-        return len(self._d_trace)
+        return len(self._d_trace) > 0
 
     def rewind(self):
-        ditch = self._d_trace.pop()
-        index = int(ditch.split('.')[0])
-        if '.' not in ditch and index != self._trace[-1]:
+        id = self._d_trace.pop()
+        index = int(id.split('.')[0])
+        if id.endswith('.0'):
             self._c_pool[index] = False
-            self._tracedict.pop(ditch)
-            while self._trace[-1] != index:
+            self._tracedict.pop(id)
+            while self._d_trace[-1] != f"{index}.1":
                 self.rewind()
-            ditch = self._d_trace.pop()
+            id = self._d_trace.pop()
 
-        if '.' not in ditch or ditch.split('.')[1] == '1':
+        self._tracedict.pop(id)
+        if '.' not in id or id.endswith('.1'):
             self._trace.pop()
             self._c_pool[index] = False
             self._tried.pop()
-        return self._tracedict.pop(ditch)
+        return self._tracedict[self._d_trace[-1]] if self._d_trace else None
 
 
 class TraceSnapShot:
-    def __init__(self, inserted_scenario, model_state):
+    def __init__(self, id, inserted_scenario, model_state):
+        self.id = id
         self.scenario = inserted_scenario
         self.model = model_state.copy()
         self.remainder = None
