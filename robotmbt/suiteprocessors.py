@@ -271,7 +271,7 @@ class SuiteProcessors:
 
     def _report_tracestate_to_user(self):
         user_trace = "["
-        for id in self.tracestate.id_trace:
+        for id in [s.id for s in self.tracestate]:
             index = int(id.split('.')[0])
             part = f".{id.split('.')[1]}" if '.' in id else ""
             user_trace += f"{self.shufflemap[index]}{part}, "
@@ -281,6 +281,6 @@ class SuiteProcessors:
 
     def _report_tracestate_wrapup(self):
         logger.info("Trace composed:")
-        for step in self.tracestate._tracedict.values():
+        for step in self.tracestate:
             logger.info(step.scenario.name)
             logger.debug(f"model\n{step.model.get_status_text()}\n")

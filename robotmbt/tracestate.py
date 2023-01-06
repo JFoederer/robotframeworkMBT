@@ -37,30 +37,26 @@ from .modelspace import ModelSpace
 class TraceState:
     def __init__(self, n_scenarios):
         self._c_pool = [False] * n_scenarios # coverage pool: True means scenario is in trace
-        self._tried = [[]]  # Keeps track of the scenarios tried at each step in the trace
-        self._trace = []    # choice trace, when was which scenario inserted
-        self._d_trace = []  # Detailed trace, including partial scenarios due to refinement
-        self._tracedict = dict() # Keeps details for elements in d_trace
+        self._tried = [[]]   # Keeps track of the scenarios already tried at each step in the trace
+        self._trace = []     # choice trace, when was which scenario inserted
+        self._d_trace = []   # Detailed trace, including partial scenarios due to refinement
+        self._snapshots = [] # Keeps details for elements in d_trace
 
     @property
     def model(self):
         """returns the model as it is at the end of the current trace"""
-        return self._tracedict[self._d_trace[-1]].model if self._d_trace else ModelSpace()
+        return self._snapshots[-1].model if self._d_trace else ModelSpace()
 
     @property
     def tried(self):
         """returns the indices that were rejected or previously inserted at the current position"""
         return tuple(self._tried[-1])
 
-    @property
-    def id_trace(self):
-        return tuple(self._d_trace)
-
     def coverage_reached(self):
         return all(self._c_pool)
 
     def get_trace(self):
-        return [self._tracedict[t].scenario for t in self._d_trace]
+        return [snap.scenario for snap in self._snapshots]
 
     def next_candidate(self):
         for i in range(len(self._c_pool)):
@@ -87,7 +83,7 @@ class TraceState:
             self._tried[-1].append(index)
             self._tried.append([])
         self._d_trace.append(id)
-        self._tracedict[id] = TraceSnapShot(id, scenario, model)
+        self._snapshots.append(TraceSnapShot(id, scenario, model))
 
     def push_partial_scenario(self, index, scenario, model, remainder):
         if index in self._trace:
@@ -98,8 +94,8 @@ class TraceState:
             self._tried[-1].append(index)
             self._tried.append([])
         self._d_trace.append(id)
-        self._tracedict[id] = TraceSnapShot(id, scenario, model)
-        self._tracedict[id].remainder = remainder
+        self._snapshots.append(TraceSnapShot(id, scenario, model))
+        self._snapshots[-1].remainder = remainder
 
     def can_rewind(self):
         return len(self._d_trace) > 0
@@ -109,17 +105,23 @@ class TraceState:
         index = int(id.split('.')[0])
         if id.endswith('.0'):
             self._c_pool[index] = False
-            self._tracedict.pop(id)
+            self._snapshots.pop()
             while self._d_trace[-1] != f"{index}.1":
                 self.rewind()
             id = self._d_trace.pop()
 
-        self._tracedict.pop(id)
+        self._snapshots.pop()
         if '.' not in id or id.endswith('.1'):
             self._trace.pop()
             self._c_pool[index] = False
             self._tried.pop()
-        return self._tracedict[self._d_trace[-1]] if self._d_trace else None
+        return self._snapshots[-1] if self._snapshots else None
+
+    def __iter__(self):
+        return iter(self._snapshots)
+
+    def __getitem__(self, key):
+        return self._snapshots[key]
 
 
 class TraceSnapShot:

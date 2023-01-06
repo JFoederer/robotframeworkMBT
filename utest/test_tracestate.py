@@ -146,6 +146,67 @@ class TestTraceState(unittest.TestCase):
         self.assertIs(ts.coverage_reached(), True)
         self.assertEqual(ts.get_trace(), [retry_first, retry_second, retry_third])
 
+    def test_highest_part_when_index_not_present(self):
+        ts = TraceState(1)
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_highest_part_for_non_partial_sceanrio(self):
+        ts = TraceState(1)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_create_empty_modelspace_on_empty_trace(self):
+        ts = TraceState(1)
+        self.assertIn('ModelSpace', ts.model.__class__.__name__)
+        self.assertEqual(dir(ts.model), [])
+
+    def test_model__property_takes_model_from_tail(self):
+        ts = TraceState(2)
+        ts.confirm_full_scenario(ts.next_candidate(), 'one', dict(a=1))
+        ts.confirm_full_scenario(ts.next_candidate(), 'two', dict(b=2))
+        self.assertEqual(ts.model, dict(b=2))
+        ts.rewind()
+        self.assertEqual(ts.model, dict(a=1))
+
+    def test_tried_property_starts_empty(self):
+        ts = TraceState(1)
+        self.assertEqual(ts.tried, ())
+
+    def test_rejected_scenarios_are_tried(self):
+        ts = TraceState(1)
+        ts.reject_scenario(0)
+        self.assertEqual(ts.tried, (0,))
+
+    def test_confirmed_scenario_is_tried_and_triggers_next_step(self):
+        ts = TraceState(1)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.tried, ())
+        ts.rewind()
+        self.assertEqual(ts.tried, (0,))
+
+    def test_can_iterate_over_tracestate_snapshots(self):
+        ts = TraceState(3)
+        ts.confirm_full_scenario(ts.next_candidate(), 'one', dict(a=1))
+        ts.confirm_full_scenario(ts.next_candidate(), 'two', dict(b=2))
+        ts.confirm_full_scenario(ts.next_candidate(), 'three', dict(c=3))
+        for act, exp in zip(ts, ['0', '1', '2']):
+            self.assertEqual(act.id, exp)
+        for act, exp in zip(ts, ['one', 'two', 'three']):
+            self.assertEqual(act.scenario, exp)
+        for act, exp in zip(ts, [dict(a=1), dict(b=2), dict(c=3)]):
+            self.assertEqual(act.model, exp)
+
+    def test_can_index_tracestate_snapshots(self):
+        ts = TraceState(3)
+        ts.confirm_full_scenario(ts.next_candidate(), 'one', dict(a=1))
+        ts.confirm_full_scenario(ts.next_candidate(), 'two', dict(b=2))
+        ts.confirm_full_scenario(ts.next_candidate(), 'three', dict(c=3))
+        self.assertEqual(ts[0].id, '0')
+        self.assertEqual(ts[1].scenario, 'two')
+        self.assertEqual(ts[2].model, dict(c=3))
+        self.assertEqual(ts[-1].scenario, 'three')
+        self.assertEqual([s.id for s in ts[1:]], ['1', '2'])
+
 
 class TestPartialScenarios(unittest.TestCase):
     def test_push_partial_does_not_complete_coverage(self):
@@ -232,6 +293,60 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertIs(ts.next_candidate(), None)
         self.assertIs(tail, None)
 
+    def test_highest_part_after_first_part(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part', {}, 'remainder')
+        self.assertEqual(ts.highest_part(0), 1)
+
+    def test_highest_part_after_multiple_parts(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        self.assertEqual(ts.highest_part(0), 3)
+
+    def test_highest_part_after_completing_multiple_parts(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        ts.confirm_full_scenario(0, 'remainder', {})
+        self.assertEqual(ts.highest_part(0), 3)
+
+    def test_highest_part_after_partial_rewind(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        self.assertEqual(ts.highest_part(0), 3)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 2)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 1)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_highest_part_after_full_rewind(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        ts.confirm_full_scenario(0, 'remainder', {})
+        self.assertEqual(ts.highest_part(0), 3)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_push_partial_scenario_is_tried_and_triggers_next_step(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'one', {}, 'remainder')
+        self.assertEqual(ts.tried, ())
+        ts.rewind()
+        self.assertEqual(ts.tried, (0,))
+
+    def test_get_last_snapshot_by_index(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'one', {}, 'remainder')
+        self.assertEqual(ts[-1].remainder, 'remainder')
 
 class TestRefinement(unittest.TestCase):
     def test_single_step_refinement(self):
@@ -408,58 +523,6 @@ class TestRefinement(unittest.TestCase):
         self.assertIs(previous, None)
         self.assertIs(ts.coverage_reached(), False)
         self.assertEqual(ts.get_trace(), [])
-
-    def test_highest_part_when_index_not_present(self):
-        ts = TraceState(1)
-        self.assertEqual(ts.highest_part(0), 0)
-
-    def test_highest_part_for_non_partial_sceanrio(self):
-        ts = TraceState(1)
-        ts.confirm_full_scenario(0, 'one', {})
-        self.assertEqual(ts.highest_part(0), 0)
-
-    def test_highest_part_after_first_part(self):
-        ts = TraceState(1)
-        ts.push_partial_scenario(0, 'part', {}, 'remainder')
-        self.assertEqual(ts.highest_part(0), 1)
-
-    def test_highest_part_after_multiple_parts(self):
-        ts = TraceState(1)
-        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
-        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
-        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
-        self.assertEqual(ts.highest_part(0), 3)
-
-    def test_highest_part_after_completing_multiple_parts(self):
-        ts = TraceState(1)
-        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
-        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
-        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
-        ts.confirm_full_scenario(0, 'remainder', {})
-        self.assertEqual(ts.highest_part(0), 3)
-
-    def test_highest_part_after_partial_rewind(self):
-        ts = TraceState(1)
-        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
-        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
-        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
-        self.assertEqual(ts.highest_part(0), 3)
-        ts.rewind()
-        self.assertEqual(ts.highest_part(0), 2)
-        ts.rewind()
-        self.assertEqual(ts.highest_part(0), 1)
-        ts.rewind()
-        self.assertEqual(ts.highest_part(0), 0)
-
-    def test_highest_part_after_full_rewind(self):
-        ts = TraceState(1)
-        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
-        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
-        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
-        ts.confirm_full_scenario(0, 'remainder', {})
-        self.assertEqual(ts.highest_part(0), 3)
-        ts.rewind()
-        self.assertEqual(ts.highest_part(0), 0)
 
     def test_highest_parts_from_refined_scenario(self):
         ts = TraceState(4)
