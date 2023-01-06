@@ -85,22 +85,25 @@ class SuiteProcessors:
         self.scenarios = self.flat_suite.scenarios[:]
         random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
+        self._init_reporting()
 
         while not self.tracestate.coverage_reached():
             i_candidate = self.tracestate.next_candidate()
             if i_candidate is None:
                 if not self.tracestate.can_rewind():
                     break
-                rewinded = self.tracestate.rewind()
-                logger.info(f"Having to reconsider scenario {rewinded.scenario.name}")
+                tail = self.tracestate.rewind()
+                logger.debug("Having to roll back up to "
+                            f"{tail.scenario.name if tail else 'the beginning'}")
+                self._report_tracestate_to_user()
             else:
                 self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
 
         if not self.tracestate.coverage_reached():
-            raise Exception("Unable to compose a consistent suite\n"
-                           f"last model state:\n{self.tracestate.model.get_status_text() or 'empty'}")
+            raise Exception("Unable to compose a consistent suite")
 
         self.out_suite.scenarios = self.tracestate.get_trace()
+        self._report_tracestate_wrapup()
         return self.out_suite
 
     @staticmethod
@@ -113,27 +116,26 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate):
-        logger.debug(f"Considering scenario {candidate.name}")
         if self._scenario_can_execute(candidate, self.tracestate.model):
-            logger.info(f"Adding scenario {candidate.name}")
             new_model = self._process_scenario(candidate, self.tracestate.model)
-            logger.debug(f"model state:\n{new_model.get_status_text()}")
             self.tracestate.confirm_full_scenario(index, candidate, new_model)
+            self._report_tracestate_to_user()
             return True
 
         if self._scenario_needs_refinement(candidate, self.tracestate.model):
             part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
             exit_conditions = part2.steps[0].model_info['OUT']
             part2.steps[0].model_info['OUT'] = []
-            part1.name = f"Partial {part1.name}"
+            part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
             new_model = self._process_scenario(part1, self.tracestate.model)
-            logger.info(f"Adding partial scenario {candidate.name}")
             self.tracestate.push_partial_scenario(index, part1, new_model, part2)
+            self._report_tracestate_to_user()
 
             i_refine = self.tracestate.next_candidate()
             if i_refine is None:
                 logger.debug("Refinement needed, but there are no scenarios left")
                 self.tracestate.rewind()
+                self._report_tracestate_to_user()
                 return False
             while i_refine is not None:
                 m_inserted = self._try_to_fit_in_scenario(i_refine, self.scenarios[i_refine])
@@ -153,13 +155,16 @@ class SuiteProcessors:
                             return True
                     else:
                         logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
-                    logger.info(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
+                    logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
                     self.tracestate.rewind()
+                    self._report_tracestate_to_user()
                 i_refine = self.tracestate.next_candidate()
             self.tracestate.rewind()
+            self._report_tracestate_to_user()
             return False
 
         self.tracestate.reject_scenario(index)
+        self._report_tracestate_to_user()
         return False
 
     @staticmethod
@@ -258,3 +263,24 @@ class SuiteProcessors:
         if step.gherkin_kw in ['when', 'then']:
             expressions += step.model_info['OUT']
         return expressions
+
+    def _init_reporting(self):
+        self.shufflemap = [self.flat_suite.scenarios.index(s)+1 for s in self.scenarios]
+        logger.debug("Use these numbers to reference scenarios from traces\n\t" +
+                     "\n\t".join([f"{i+1}: {s.name}" for i, s in enumerate(self.flat_suite.scenarios)]))
+
+    def _report_tracestate_to_user(self):
+        user_trace = "["
+        for id in self.tracestate.id_trace:
+            index = int(id.split('.')[0])
+            part = f".{id.split('.')[1]}" if '.' in id else ""
+            user_trace += f"{self.shufflemap[index]}{part}, "
+        user_trace = user_trace[:-2] + "]" if ',' in user_trace else "[]"
+        reject_trace = [self.shufflemap[i] for i in self.tracestate.tried]
+        logger.debug(f"Trace: {user_trace} Reject: {reject_trace}")
+
+    def _report_tracestate_wrapup(self):
+        logger.info("Trace composed:")
+        for step in self.tracestate._tracedict.values():
+            logger.info(step.scenario.name)
+            logger.debug(f"model\n{step.model.get_status_text()}\n")

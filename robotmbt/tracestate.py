@@ -39,13 +39,22 @@ class TraceState:
         self._c_pool = [False] * n_scenarios # coverage pool: True means scenario is in trace
         self._tried = [[]]  # Keeps track of the scenarios tried at each step in the trace
         self._trace = []    # choice trace, when was which scenario inserted
-        self._d_trace = []  # Detailed traced, including partial scenarios due to refinement
+        self._d_trace = []  # Detailed trace, including partial scenarios due to refinement
         self._tracedict = dict() # Keeps details for elements in d_trace
 
     @property
     def model(self):
         """returns the model as it is at the end of the current trace"""
         return self._tracedict[self._d_trace[-1]].model if self._d_trace else ModelSpace()
+
+    @property
+    def tried(self):
+        """returns the indices that were rejected or previously inserted at the current position"""
+        return tuple(self._tried[-1])
+
+    @property
+    def id_trace(self):
+        return tuple(self._d_trace)
 
     def coverage_reached(self):
         return all(self._c_pool)
@@ -58,6 +67,11 @@ class TraceState:
             if i not in self._trace and i not in self._tried[-1]:
                 return i
         return None
+
+    def highest_part(self, index):
+        """Given the current trace and an index, returns the highest part number"""
+        part_list = [int(s.split('.')[1]) for s in self._d_trace if s.startswith(f'{index}.')]
+        return max(part_list) if part_list else 0
 
     def reject_scenario(self, i_scenario):
         """Trying a scenario excludes it from further cadidacy on this level"""
@@ -77,10 +91,7 @@ class TraceState:
 
     def push_partial_scenario(self, index, scenario, model, remainder):
         if index in self._trace:
-            highest_part = max([int(s.split('.')[1])
-                                for s in self._d_trace
-                                if s.startswith(f'{index}.')])
-            id = f"{index}.{highest_part+1}"
+            id = f"{index}.{self.highest_part(index)+1}"
         else:
             id = f"{index}.1"
             self._trace.append(index)

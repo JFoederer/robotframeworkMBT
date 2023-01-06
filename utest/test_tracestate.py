@@ -379,6 +379,22 @@ class TestRefinement(unittest.TestCase):
         self.assertEqual(ts.get_trace(), ['T.1', 'M.1', 'L', 'M.0', 'T.0'])
 
     def test_rewind_nested_refinement_as_one(self):
+        ts = TraceState(4)
+        ts.confirm_full_scenario(ts.next_candidate(), 'head', {})
+        top_level = ts.next_candidate()
+        ts.push_partial_scenario(top_level, 'T.1', {}, 'T.0')
+        middle_level = ts.next_candidate()
+        ts.push_partial_scenario(middle_level, 'M.1', {},'M.0')
+        lower_level = ts.next_candidate()
+        ts.confirm_full_scenario(lower_level, 'L', {})
+        ts.confirm_full_scenario(middle_level, 'M.0', {})
+        self.assertIs(ts.next_candidate(), None)
+        previous = ts.rewind()
+        self.assertIs(ts.next_candidate(), lower_level)
+        self.assertIs(previous.scenario, 'T.1')
+        self.assertEqual(ts.get_trace(), ['head', 'T.1'])
+
+    def test_rewind_scenario_with_nested_refinement_as_one(self):
         ts = TraceState(3)
         top_level = ts.next_candidate()
         ts.push_partial_scenario(top_level, 'T.1', {}, 'T.0')
@@ -392,3 +408,74 @@ class TestRefinement(unittest.TestCase):
         self.assertIs(previous, None)
         self.assertIs(ts.coverage_reached(), False)
         self.assertEqual(ts.get_trace(), [])
+
+    def test_highest_part_when_index_not_present(self):
+        ts = TraceState(1)
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_highest_part_for_non_partial_sceanrio(self):
+        ts = TraceState(1)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_highest_part_after_first_part(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part', {}, 'remainder')
+        self.assertEqual(ts.highest_part(0), 1)
+
+    def test_highest_part_after_multiple_parts(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        self.assertEqual(ts.highest_part(0), 3)
+
+    def test_highest_part_after_completing_multiple_parts(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        ts.confirm_full_scenario(0, 'remainder', {})
+        self.assertEqual(ts.highest_part(0), 3)
+
+    def test_highest_part_after_partial_rewind(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        self.assertEqual(ts.highest_part(0), 3)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 2)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 1)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_highest_part_after_full_rewind(self):
+        ts = TraceState(1)
+        ts.push_partial_scenario(0, 'part1', {}, 'part2..3+remainder')
+        ts.push_partial_scenario(0, 'part2', {}, 'part3+remainder')
+        ts.push_partial_scenario(0, 'part3', {}, 'remainder')
+        ts.confirm_full_scenario(0, 'remainder', {})
+        self.assertEqual(ts.highest_part(0), 3)
+        ts.rewind()
+        self.assertEqual(ts.highest_part(0), 0)
+
+    def test_highest_parts_from_refined_scenario(self):
+        ts = TraceState(4)
+        top_level = ts.next_candidate()
+        ts.push_partial_scenario(top_level, 'T.1', {}, 'T.2, T.0')
+        middle_level_1 = ts.next_candidate()
+        ts.push_partial_scenario(middle_level_1, 'M1.1', {},'M1.0')
+        lower_level = ts.next_candidate()
+        ts.push_partial_scenario(lower_level, 'L.1', {}, 'L.2,3,0')
+        ts.push_partial_scenario(lower_level, 'L.2', {}, 'L.3,0')
+        ts.push_partial_scenario(lower_level, 'L.3', {}, 'L.0')
+        ts.confirm_full_scenario(lower_level, 'L.0', {})
+        ts.confirm_full_scenario(middle_level_1, 'M1.0', {})
+        ts.push_partial_scenario(top_level, 'T.2', {}, 'T.0')
+        ts.confirm_full_scenario(ts.next_candidate(), 'M2', {})
+        ts.confirm_full_scenario(top_level, 'T.0', {})
+        self.assertEqual(ts.highest_part(top_level), 2)
+        self.assertEqual(ts.highest_part(middle_level_1), 1)
+        self.assertEqual(ts.highest_part(lower_level), 3)
