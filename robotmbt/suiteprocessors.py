@@ -30,17 +30,15 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
+import random
+
 from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import not_keyword
 from robot.api import logger
 
 from .suitedata import Suite, Scenario, Step
-from .modelspace import ModelSpace
-
-import copy
-import random
-
-MAX_ATTEMPTS = 20
+from .tracestate import TraceState
 
 class SuiteProcessors:
     @not_keyword
@@ -83,36 +81,29 @@ class SuiteProcessors:
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
-        bup_flat_suite = copy.deepcopy(self.flat_suite)
-        model = ModelSpace()
-        inner_attempts_left = MAX_ATTEMPTS # Tries to find the next suitable scenario,
-                                           # given the already selected scenarios
-        outer_attempts_left = MAX_ATTEMPTS # Wipes clean any prior choices and starts
-                                           # over from scratch
-        while self.flat_suite.scenarios:
-            while self.flat_suite.scenarios and inner_attempts_left:
-                selected_scenario = random.choice(self.flat_suite.scenarios)
-                self.flat_suite.scenarios.remove(selected_scenario)
-                new_model = self._try_to_fit_in_scenario(selected_scenario, model)
-                if new_model:
-                    model = new_model
-                else:
-                    inner_attempts_left -=1
-                    self.flat_suite.scenarios.append(selected_scenario)
-            if self.flat_suite.scenarios:
-                outer_attempts_left -=1
-                if not outer_attempts_left:
+
+        self.scenarios = self.flat_suite.scenarios[:]
+        random.shuffle(self.scenarios)
+        self.tracestate = TraceState(len(self.scenarios))
+        self._init_reporting()
+
+        while not self.tracestate.coverage_reached():
+            i_candidate = self.tracestate.next_candidate()
+            if i_candidate is None:
+                if not self.tracestate.can_rewind():
                     break
-                logger.debug(f"model state:\n{model.get_status_text()}")
-                logger.debug(f"Remaining scenarios: {[s.name for s in self.flat_suite.scenarios]}")
-                logger.info(f"Attempt did not yield a consistent sequence. Retrying...")
-                inner_attempts_left = MAX_ATTEMPTS
-                self.flat_suite = copy.deepcopy(bup_flat_suite)
-                self.out_suite.scenarios.clear()
-                model = ModelSpace()
-        if self.flat_suite.scenarios:
-            raise Exception("Unable to compose a consistent suite\n"
-                           f"last model state:\n{model.get_status_text() or 'empty'}")
+                tail = self.tracestate.rewind()
+                logger.debug("Having to roll back up to "
+                            f"{tail.scenario.name if tail else 'the beginning'}")
+                self._report_tracestate_to_user()
+            else:
+                self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
+
+        if not self.tracestate.coverage_reached():
+            raise Exception("Unable to compose a consistent suite")
+
+        self.out_suite.scenarios = self.tracestate.get_trace()
+        self._report_tracestate_wrapup()
         return self.out_suite
 
     @staticmethod
@@ -124,58 +115,61 @@ class SuiteProcessors:
                                       for s in error_list])
             raise Exception(err_msg)
 
-    def _try_to_fit_in_scenario(self, scenario, model):
-        logger.debug(f"Considering scenario {scenario.name}")
-        bup_model = copy.deepcopy(model)
-        if self._scenario_can_execute(scenario, model):
-            new_model = self._process_scenario(scenario, model)
-            logger.info(f"Adding scenario {scenario.name}")
-            logger.debug(f"model state:\n{new_model.get_status_text()}")
-            self.out_suite.scenarios.append(scenario)
-            return new_model
-        if self._scenario_needs_refinement(scenario, model):
-            if not self.flat_suite.scenarios:
-                logger.debug("Refinement needed, but there are no scenarios left")
-                self.flat_suite.scenarios.append(scenario)
-                return False
-            refinement_attempts_left = MAX_ATTEMPTS
-            part1, part2 = self._split_refinement_candidate(scenario, model)
+    def _try_to_fit_in_scenario(self, index, candidate):
+        if self._scenario_can_execute(candidate, self.tracestate.model):
+            new_model = self._process_scenario(candidate, self.tracestate.model)
+            self.tracestate.confirm_full_scenario(index, candidate, new_model)
+            self._report_tracestate_to_user()
+            return True
+
+        if self._scenario_needs_refinement(candidate, self.tracestate.model):
+            part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
             exit_conditions = part2.steps[0].model_info['OUT']
             part2.steps[0].model_info['OUT'] = []
-            part1.name = f"Partial {part1.name}"
-            new_model = self._process_scenario(part1, model)
-            logger.info(f"Adding partial scenario {scenario.name}")
-            self.out_suite.scenarios.append(part1)
-            while refinement_attempts_left:
-                sub_scenario = random.choice(self.flat_suite.scenarios)
-                self.flat_suite.scenarios.remove(sub_scenario)
-                m_inserted = self._try_to_fit_in_scenario(sub_scenario, new_model)
+            part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
+            new_model = self._process_scenario(part1, self.tracestate.model)
+            self.tracestate.push_partial_scenario(index, part1, new_model, part2)
+            self._report_tracestate_to_user()
+
+            i_refine = self.tracestate.next_candidate()
+            if i_refine is None:
+                logger.debug("Refinement needed, but there are no scenarios left")
+                self.tracestate.rewind()
+                self._report_tracestate_to_user()
+                return False
+            while i_refine is not None:
+                m_inserted = self._try_to_fit_in_scenario(i_refine, self.scenarios[i_refine])
                 if m_inserted:
                     insert_valid_here = True
                     try:
+                        updated_model = self.tracestate.model
                         for expr in exit_conditions:
-                            if m_inserted.process_expression(expr) is False:
+                            if updated_model.process_expression(expr) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
                         insert_valid_here = False
                     if insert_valid_here:
-                        m_finished = self._try_to_fit_in_scenario(part2, m_inserted)
+                        m_finished = self._try_to_fit_in_scenario(index, part2)
                         if m_finished:
-                            return m_finished
+                            return True
                     else:
                         logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
-                    logger.info(f"Reconsidering {sub_scenario.name}, scenario excluded")
-                    self.out_suite.scenarios.pop()
-                refinement_attempts_left -=1
-                self.flat_suite.scenarios.append(sub_scenario)
-            self.out_suite.scenarios.remove(part1)
-            
+                    logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
+                    self.tracestate.rewind()
+                    self._report_tracestate_to_user()
+                i_refine = self.tracestate.next_candidate()
+            self.tracestate.rewind()
+            self._report_tracestate_to_user()
+            return False
+
+        self.tracestate.reject_scenario(index)
+        self._report_tracestate_to_user()
         return False
 
     @staticmethod
     def _scenario_needs_refinement(scenario, model):
-        m = copy.deepcopy(model)
+        m = model.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
                 return False
@@ -199,7 +193,7 @@ class SuiteProcessors:
 
     @staticmethod
     def _split_refinement_candidate(scenario, model):
-        m = copy.deepcopy(model)
+        m = model.copy()
         front = copy.deepcopy(scenario)
         front.steps = []
         back = copy.deepcopy(scenario)
@@ -234,7 +228,7 @@ class SuiteProcessors:
 
     @staticmethod
     def _process_scenario(scenario, model):
-        m = copy.deepcopy(model)
+        m = model.copy()
         for step in scenario.steps:
             for expr in SuiteProcessors._relevant_expressions(step):
                 m.process_expression(expr)
@@ -242,7 +236,7 @@ class SuiteProcessors:
 
     @staticmethod
     def _scenario_can_execute(scenario, model):
-        m = copy.deepcopy(model)
+        m = model.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
                 logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
@@ -269,3 +263,24 @@ class SuiteProcessors:
         if step.gherkin_kw in ['when', 'then']:
             expressions += step.model_info['OUT']
         return expressions
+
+    def _init_reporting(self):
+        self.shufflemap = [self.flat_suite.scenarios.index(s)+1 for s in self.scenarios]
+        logger.debug("Use these numbers to reference scenarios from traces\n\t" +
+                     "\n\t".join([f"{i+1}: {s.name}" for i, s in enumerate(self.flat_suite.scenarios)]))
+
+    def _report_tracestate_to_user(self):
+        user_trace = "["
+        for id in [s.id for s in self.tracestate]:
+            index = int(id.split('.')[0])
+            part = f".{id.split('.')[1]}" if '.' in id else ""
+            user_trace += f"{self.shufflemap[index]}{part}, "
+        user_trace = user_trace[:-2] + "]" if ',' in user_trace else "[]"
+        reject_trace = [self.shufflemap[i] for i in self.tracestate.tried]
+        logger.debug(f"Trace: {user_trace} Reject: {reject_trace}")
+
+    def _report_tracestate_wrapup(self):
+        logger.info("Trace composed:")
+        for step in self.tracestate:
+            logger.info(step.scenario.name)
+            logger.debug(f"model\n{step.model.get_status_text()}\n")

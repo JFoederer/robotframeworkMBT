@@ -175,5 +175,29 @@ class TestModelSpace(unittest.TestCase):
     def test_del_fails_if_property_does_not_exist(self):
         self.assertRaises(ModellingError, self.m.process_expression, 'del foo')
 
+    def test_copies_have_all_data(self):
+        self.m.process_expression('new foo1')
+        self.m.process_expression('foo1.bar = foobar1')
+        self.m.process_expression('new foo2')
+        self.m.process_expression('foo2.bar = foobar2')
+        m_copy = self.m.copy()
+        m_copy.process_expression('foo1.bar = foobar1')
+        m_copy.process_expression('foo2.bar = foobar2')
+
+    def test_copies_are_independent(self):
+        self.m.process_expression('new foo')
+        self.m.process_expression('foo.bar = foobar')
+        m_copy = self.m.copy()
+        m_copy.process_expression('foo.bar = raboof')
+        self.assertIs(self.m.process_expression('foo.bar == foobar'), True)
+        self.assertIs(m_copy.process_expression('foo.bar == raboof'), True)
+
+        self.m.process_expression('new foo2')
+        self.m.process_expression('foo2.bar = foobar2')
+        m_copy.process_expression('new foo3')
+        m_copy.process_expression('foo3.bar = foobar3')
+        self.assertRaises(NameError, m_copy.process_expression, 'foo2')
+        self.assertIs(m_copy.process_expression('foo3.bar == foobar3'), True)
+
 if __name__ == '__main__':
     unittest.main()
