@@ -20,7 +20,7 @@ After installation include `robotmbt` as library in your robot file to get acces
 
 ## Capabilities
 
-To get a feel for what this library can do, have a look at our [Titanic themed demo](https://github.com/JFoederer/robotframeworkMBT/tree/main/demo/Titanic), that his executable as a [Robot framework](https://robotframework.org/) test suite. Current capabilities focus around complete scenarios. When all steps are properly annotated with modelling info, the library can resolve their dependencies to figure out the correct execution order. To be successful, the set of scenarios in the model must be composable into a single complete sequence, without repetitions or leftovers.
+To get a feel for what this library can do, have a look at our [Titanic themed demo](https://github.com/JFoederer/robotframeworkMBT/tree/main/demo/Titanic), that is executable as a [Robot framework](https://robotframework.org/) test suite. Current capabilities focus around complete scenarios. When all steps are properly annotated with modelling info, the library can resolve their dependencies to figure out the correct execution order. To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without repetitions or leftovers.
 
 ## How to model
 
