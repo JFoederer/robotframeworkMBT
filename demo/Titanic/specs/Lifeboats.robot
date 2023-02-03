@@ -1,5 +1,5 @@
 *** Settings ***
-Resource        Titanic_the_ship.resource
+Resource        ../domain_lib/Titanic_the_ship.resource
 
 *** Settings ***
 Documentation   As a passenger or crew member
