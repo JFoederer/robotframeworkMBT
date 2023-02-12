@@ -1,6 +1,5 @@
 *** Settings ***
-Resource          ../domain_lib/Titanic.resource
-
+Resource          step_defs.resource
 *** Test Cases ***
 Titanic hits iceberg
     Given Titanic is on its journey
