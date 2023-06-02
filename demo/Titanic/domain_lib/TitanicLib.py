@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from system.Titanic import Titanic
+from demo.Titanic.system.titanic import Titanic
 
 class TitanicLib(object):
 
