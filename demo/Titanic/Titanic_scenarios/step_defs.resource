@@ -1,17 +1,20 @@
 *** Settings ***
 Resource          ../domain_lib/Titanic.resource
+Library           ../domain_lib/JourneyLib.py
+
 *** Keywords ***
 Titanic is on its journey
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: None
-    Log    Titanic is on its way
+    Spawn titanic at coordinate N41 W39 with a heading of 270 and at speed of 22 knots
 
 Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: None
-    Log    Titanic hits a huge iceberg
+    Spawn iceberg at coordinate N41 W38
+    Pass time
 
 the people are shocked
     [Documentation]    *model info*

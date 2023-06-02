@@ -13,13 +13,13 @@ class JourneyLib():
         self.ocean = Ocean()
 
     @keyword("Spawn titanic at coordinate N${n} W${w} with a heading of ${heading} and at speed of ${speed} knots")
-    def spawn(self, n, w, heading, speed):
+    def spawn(self, n:int , w:int, heading:int, speed:int):
         t = Titanic(speed, "east")
         tio = TitanicInOcean(t, n, w, speed, "west")
         self.ocean.floating_objects.append(tio)
         
     @keyword("Spawn iceberg at coordinate N${n} W${w}")
-    def spawn_iceberg(self, n, w):
+    def spawn_iceberg(self, n:int, w:int):
         iceberg = Iceberg(n, w)
         self.ocean.floating_objects.append(iceberg)
 

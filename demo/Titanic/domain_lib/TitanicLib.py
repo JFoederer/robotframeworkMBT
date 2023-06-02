@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-from demo.Titanic.system.titanic import Titanic
+from system.titanic import Titanic
 
 class TitanicLib(object):
 
     def __init__(self):
-        self.titanic = Titanic()
+        self.titanic = Titanic(None, None)
     
     def hits_a_huge_iceberg(self):
 
