@@ -1,14 +1,12 @@
 #!/usr/bin/env python3
+from robot.api.deco import keyword
 
-from system.titanic import Titanic
+from simulation.titanic_in_ocean import TitanicInOcean
 
-class TitanicLib(object):
 
-    def __init__(self):
-        self.titanic = Titanic(None, None)
-    
-    def hits_a_huge_iceberg(self):
+class TitanicLib:
 
-        print("Hit a huge iceberg!")
+    @keyword("Titanic is sinking")
+    def titanic_is_sinking(self):
+        return TitanicInOcean.instance.sunk
 
-        self.titanic.is_sinking = True

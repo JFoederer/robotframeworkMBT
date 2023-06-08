@@ -1,5 +1,7 @@
-from system.titanic import Titanic
+from simulation.ocean import Ocean
 from enum import Enum
+
+from simulation.titanic_in_ocean import TitanicInOcean
 
 
 class StatusOfJourney(Enum):
@@ -10,6 +12,8 @@ class StatusOfJourney(Enum):
 
 
 class Journey:
+    ocean: Ocean
+
     def __init__(self, ocean):
         self.time_in_journey = 0
         self.status = StatusOfJourney.READY_FOR_DEPARTURE
@@ -20,7 +24,5 @@ class Journey:
 
     def passed_time(self, time_unit):
         for i in range(0, time_unit):
-            for object_in_ocean in self.ocean.floating_objects:
-                object_in_ocean.update_position()
-                print(f"{object_in_ocean}, new position={object_in_ocean.position}")
+            self.ocean.minute_passes()
         self.time_in_journey += time_unit
