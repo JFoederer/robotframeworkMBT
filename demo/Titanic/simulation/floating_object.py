@@ -21,7 +21,6 @@ class FloatingObject:
     def update_coordinates(self, time_passed=10):
         """
         Update longitude/latitude coordinates based on time passed, speed and direction
-
         @param time_passed: time passed in seconds
         """
         # Convert latitude and longitude to radians

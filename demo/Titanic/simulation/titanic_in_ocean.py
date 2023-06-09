@@ -17,6 +17,11 @@ class TitanicInOcean(FloatingObject):
         self.sunk = False
         self.titanic = titanic
 
+    def update_coordinates(self):
+        # TODO Take into account the steering_direction of the titanic
+        # TODO Take into account the throttle of the titanic (i.e.: should start decreasing speed when throttle is 0)
+        return super().update_coordinates()
+
     def collided(self):
         """
         Emulate what happens when Titanic hits another object in the sea.
