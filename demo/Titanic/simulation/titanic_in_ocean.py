@@ -7,20 +7,20 @@ class TitanicInOcean(FloatingObject):
 
     instance: TitanicInOcean = None
 
-    def __new__(cls, titanic, n, w, speed, direction, sunk=False):
+    def __new__(cls, titanic, latitude, longitude, speed, direction, sunk=False):
         if not cls.instance:
             cls.instance = super(TitanicInOcean, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self, titanic, n, w, speed, direction):
-        super().__init__(n, w, speed, direction)
+    def __init__(self, titanic, latitude, longitude, speed, direction):
+        super().__init__(latitude, longitude, speed, direction)
         self.sunk = False
         self.titanic = titanic
 
-    def update_coordinates(self):
+    def update_coordinates(self, time_passed=10):
         # TODO Take into account the steering_direction of the titanic
         # TODO Take into account the throttle of the titanic (i.e.: should start decreasing speed when throttle is 0)
-        return super().update_coordinates()
+        return super().update_coordinates(time_passed)
 
     def collided(self):
         """
