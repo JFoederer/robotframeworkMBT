@@ -7,7 +7,8 @@ Southampton to New York
     When Titanic sails from Southampton to Cherbourg
     and Titanic sails from Cherbourg to Queenstown
     and Titanic sails from Queenstown to New York
-    then Titanic's voyage is complete
+    then Titanic is docked in New York
+    and Titanic's voyage is complete
 
 Southampton to Cherbourg
     Given Titanic is docked in Southampton

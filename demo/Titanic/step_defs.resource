@@ -19,13 +19,6 @@ the date is ${date}
     ...    :OUT: Date.now == '${date}'
     log    The calendar shows that today is ${date}
 
-Titanic sails to New York
-    [Documentation]    *model info*
-    ...    :IN: Titanic.destination == 'New York'
-    ...    :OUT: Titanic.port == 'New York'
-    Should be equal    ${systems check}    All good!
-    Log    That was a wonderful voyage across the Atlantic!
-
 Titanic sails from ${port A} to ${port B}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == '${port A}'
@@ -70,6 +63,7 @@ Titanic crosses Iceberg alley
     ...    :IN: Titanic.location = 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Atlantic ocean'
     log    Brrr, that's a bit chilly
+    Should be equal    ${systems check}    All good!
 
 Titanic is sailing Iceberg alley
     [Documentation]    *model info*
