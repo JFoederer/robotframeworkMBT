@@ -7,11 +7,6 @@ from simulation.titanic_in_ocean import TitanicInOcean
 
 
 class TitanicLib:
-
-    # @keyword("Titanic is docked in ${location}")
-    # def titanic_is_docked_in(self, location):
-    #     return (TitanicInOcean.instance.longitude, TitanicInOcean.instance.latitude) == Ocean.locations[location]
-
     @keyword("Titanic is sinking")
     def titanic_is_sinking(self):
         """

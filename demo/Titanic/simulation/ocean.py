@@ -12,18 +12,6 @@ class Ocean:
     areas: dict[str, AreaOnGrid]
     floating_objects: list[FloatingObject]
 
-    locations = {
-        'South Hampton': (5.0, 5.0),
-        'Cherbourg': (1.0, 1.0)
-    }
-
-    areas = {
-
-    }
-
-    LOCATION_AREA_THRESHOLD = 0.1
-    ATLANTIC_AREA = "Atlantic"
-
     def __init__(self):
         # self.locations = {}
         # self.areas = {}
