@@ -1,16 +1,44 @@
 from typing import List, Any
 
 from simulation.floating_object import FloatingObject
+from simulation.location_on_grid import LocationOnGrid, AreaOnGrid
 
 SECONDS_IN_MINUTE  = 60
 COLLISION_INTERVAL = 10  # Following should hold True; SECONDS_IN_MINUTE % COLLISION_INTERVAL == 0
 
 
 class Ocean:
+    locations: dict[str, LocationOnGrid]
+    areas: dict[str, AreaOnGrid]
     floating_objects: list[FloatingObject]
 
+    locations = {
+        'South Hampton': (5.0, 5.0),
+        'Cherbourg': (1.0, 1.0)
+    }
+
+    areas = {
+
+    }
+
+    LOCATION_AREA_THRESHOLD = 0.1
+    ATLANTIC_AREA = "Atlantic"
+
     def __init__(self):
+        # self.locations = {}
+        # self.areas = {}
         self.floating_objects = []
+
+    def get_area_of_location(self, location: LocationOnGrid):
+        for loc_name, loc in self.locations.items():
+            if loc.distance_to(location) > self.LOCATION_AREA_THRESHOLD:
+                return f"Area of ${loc_name}"
+
+        for area_name, area in self.areas.items():
+            if area.is_location_within_area(location):
+                return area_name
+
+        return self.ATLANTIC_AREA
 
     def minute_passes(self):
         """

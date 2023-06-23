@@ -50,3 +50,20 @@ class JourneyLib:
         """
         self.journey.passed_time(minutes)
 
+    @keyword("Move Titanic out of current area")
+    def move_titanic_out_of_current_area(self):
+        titanic = TitanicInOcean.instance
+        current_area = self.ocean.get_area_of_location(titanic)
+        assert current_area != Ocean.ATLANTIC_AREA
+        while self.ocean.get_area_of_location(titanic) == current_area:
+            assert titanic.speed > 0
+            self.pass_time(1)
+
+    @keyword("'${object_location}' is within the Map area of '${area_name}'")
+    def is_within_area(self, object_location, area_name):
+        if area_name in Ocean.areas:
+            return Ocean.areas[area_name].is_location_within_area(object_location)
+        elif area_name in Ocean.locations:
+            return Ocean.locations[area_name].distance_to(object_location) > Ocean.LOCATION_AREA_THRESHOLD
+        else:
+            raise AttributeError(f"Area {area_name} does not exist")

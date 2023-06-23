@@ -1,5 +1,7 @@
 *** Settings ***
 Library           robotnl
+Library           ../domain_lib/JourneyLib.py
+Library           ../domain_lib/TitanicLib.py
 
 *** Keywords ***
 Titanic is scheduled for the voyage to New York
