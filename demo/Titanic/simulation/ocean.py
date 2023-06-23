@@ -8,25 +8,14 @@ COLLISION_INTERVAL = 10  # Following should hold True; SECONDS_IN_MINUTE % COLLI
 
 
 class Ocean:
-    locations: dict[str, LocationOnGrid]
-    areas: dict[str, AreaOnGrid]
-    floating_objects: list[FloatingObject]
+    _instance = None
 
-    def __init__(self):
-        # self.locations = {}
-        # self.areas = {}
-        self.floating_objects = []
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls, *args, **kwargs)
+        return cls._instance
 
-    def get_area_of_location(self, location: LocationOnGrid):
-        for loc_name, loc in self.locations.items():
-            if loc.distance_to(location) > self.LOCATION_AREA_THRESHOLD:
-                return f"Area of ${loc_name}"
-
-        for area_name, area in self.areas.items():
-            if area.is_location_within_area(location):
-                return area_name
-
-        return self.ATLANTIC_AREA
+    floating_objects: list[FloatingObject] = []
 
     def minute_passes(self):
         """

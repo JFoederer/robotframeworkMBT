@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 from robot.api.deco import keyword
+from robot.libraries.BuiltIn import BuiltIn
 
 from simulation.location_on_grid import LocationOnGrid
-from simulation.ocean import Ocean
 from simulation.titanic_in_ocean import TitanicInOcean
 
 
 class TitanicLib:
+    def __init__(self):
+        self.builtin = BuiltIn()
+
     @keyword("Titanic is sinking")
     def titanic_is_sinking(self):
         """
@@ -18,7 +21,8 @@ class TitanicLib:
     @keyword("Point titanic towards location ${location}")
     def point_titanic_towards(self, location):
         titanic = TitanicInOcean.instance
-        new_direction = titanic.calculate_direction(Ocean.locations[location])
+        port_location = self.builtin.run_keyword(f"Location of port {location}")
+        new_direction = titanic.calculate_direction(port_location)
 
         titanic.direction = new_direction
 
@@ -32,7 +36,7 @@ class TitanicLib:
     def titanic_full_speed(self):
         titanic = TitanicInOcean.instance
         titanic.titanic.throttle = 1
-        titanic.speed = 1  # TODO should happen over time (due to throttle being > 0)
+        titanic.speed = 22  # TODO should happen over time (due to throttle being > 0)
 
     @keyword("Titanic's location")
     def titanic_location(self):

@@ -12,21 +12,21 @@ Southampton to New York
 
 Southampton to Cherbourg
     Given Titanic is docked in the port of Southampton
-    When Titanic departs for the port of Cherbourg
-    and Titanic crosses the English Channel
+    When Titanic departs from port Southampton for the port of Cherbourg
+    and Titanic crosses area the English Channel
     and Titanic arrives in the port of Cherbourg
     then Titanic is docked in the port of Cherbourg
 
 Cherbourg to Queenstown
     Given Titanic is docked in the port of Cherbourg
-    When Titanic departs for the port of Queenstown
-    and Titanic crosses the English Channel
+    When Titanic departs from port Cherbourg for the port of Queenstown
+    and Titanic crosses area the English Channel
     and Titanic arrives in the port of Queenstown
     then Titanic is docked in the port of Queenstown
 
 Queenstown to New York
     Given Titanic is docked in the port of Queenstown
-    When Titanic departs for the port of New York
+    When Titanic departs from port Queenstown for the port of New York
     and Titanic sails the Atlantic
     and Titanic crosses Iceberg alley
     and Titanic sails the Atlantic

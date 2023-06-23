@@ -7,13 +7,13 @@ class TitanicInOcean(FloatingObject):
 
     instance: TitanicInOcean = None
 
-    def __new__(cls, titanic, latitude, longitude, speed, direction, sunk=False):
+    def __new__(cls, titanic, longitude, latitude, speed, direction, sunk=False):
         if not cls.instance:
             cls.instance = super(TitanicInOcean, cls).__new__(cls)
         return cls.instance
 
-    def __init__(self, titanic, latitude, longitude, speed, direction):
-        super().__init__(latitude, longitude, speed, direction)
+    def __init__(self, titanic, longitude, latitude, speed, direction):
+        super().__init__(longitude, latitude, speed, direction)
         self.sunk = False
         self.titanic = titanic
 
@@ -32,6 +32,9 @@ class TitanicInOcean(FloatingObject):
         self.titanic.damaged = True
         # TODO First the titanic will take damage. As time passes it will sink.
         self.sunk = True
+
+    def fell_off_the_earth(self):
+        return self.longitude < -100 or self.longitude > 100 or self.latitude < -100 or self.latitude > 100
 
     def __str__(self):
         return f"Titanic ({'under' if self.sunk else 'in'} the ocean)"

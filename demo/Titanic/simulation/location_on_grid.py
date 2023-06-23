@@ -15,22 +15,7 @@ class LocationOnGrid:
         @param other_object: The FloatingObject to compare
         @return: distance in meters to the other floating object
         """
-        # Convert latitude and longitude to radians
-        lat1 = math.radians(self.latitude)
-        lon1 = math.radians(self.longitude)
-        lat2 = math.radians(other_object.latitude)
-        lon2 = math.radians(other_object.longitude)
-
-        # Calculate the differences in latitudes and longitudes
-        delta_lat = lat2 - lat1
-        delta_lon = lon2 - lon1
-
-        # Use the haversine formula to calculate the distance
-        a = math.sin(delta_lat / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin(delta_lon / 2) ** 2
-        c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-        distance = self.EARTH_RADIUS * c
-
-        return distance
+        return math.sqrt((other_object.longitude - self.longitude) ** 2 + (other_object.latitude - self.latitude) ** 2)
 
     def calculate_direction(self, other_point: 'LocationOnGrid'):
         x1, y1 = (self.longitude, self.latitude)
@@ -61,4 +46,4 @@ class AreaOnGrid:
 
     def is_location_within_area(self, location: LocationOnGrid):
         return self.upper_left_bound.longitude <= location.longitude <= self.lower_right_bound.longitude and \
-            self.lower_right_bound <= location.latitude <= self.upper_left_bound
+            self.lower_right_bound.latitude <= location.latitude <= self.upper_left_bound.latitude

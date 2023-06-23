@@ -20,35 +20,19 @@ class FloatingObject(LocationOnGrid):
         Update longitude/latitude coordinates based on time passed, speed and direction
         @param time_passed: time passed in seconds
         """
-        # Convert latitude and longitude to radians
-        latitude_rad = math.radians(self.latitude)
-        longitude_rad = math.radians(self.longitude)
+        # Convert direction from degrees to radians
+        direction_rad = math.radians(self.direction)
 
-        # Convert speed from knots to meters per second
-        speed_mps = self.speed * 0.514444
+        # Calculate the distance traveled using speed and time
+        distance = (self.speed / self.EARTH_RADIUS) * time_passed
 
-        # Calculate the distance traveled in 10 seconds
-        distance = speed_mps * time_passed
+        # Calculate the horizontal and vertical displacements
+        delta_x = distance * math.cos(direction_rad)
+        delta_y = distance * math.sin(direction_rad)
 
-        # Calculate the new latitude and longitude based on the direction
-        new_latitude_rad = math.asin(math.sin(latitude_rad) * math.cos(distance / self.EARTH_RADIUS) +
-                                     math.cos(latitude_rad) * math.sin(distance / self.EARTH_RADIUS) *
-                                     math.cos(math.radians(self.direction)))
-
-        new_longitude_rad = longitude_rad + math.atan2(math.sin(math.radians(self.direction)) *
-                                                       math.sin(distance / self.EARTH_RADIUS) *
-                                                       math.cos(latitude_rad),
-                                                       math.cos(distance / self.EARTH_RADIUS) -
-                                                       math.sin(latitude_rad) *
-                                                       math.sin(new_latitude_rad))
-
-        # Convert back to degrees
-        new_latitude = math.degrees(new_latitude_rad)
-        new_longitude = math.degrees(new_longitude_rad)
-
-        # Update the object's coordinates
-        self.latitude = new_latitude
-        self.longitude = new_longitude
+        # Update the coordinates of the point
+        self.longitude += delta_x
+        self.latitude += delta_y
 
     def __repr__(self):
         return f"{type(self).__name__} (speed={self.speed}, direction={self.direction}, position={self.longitude}, {self.latitude})"
