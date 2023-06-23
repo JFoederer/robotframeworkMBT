@@ -59,7 +59,7 @@ class JourneyLib:
             assert titanic.speed > 0
             self.pass_time(1)
 
-    @keyword("'${object_location}' is within the Map area of '${area_name}'")
+    @keyword("'${object_location}' is within the Map area of ${area_name}")
     def is_within_area(self, object_location, area_name):
         if area_name in Ocean.areas:
             return Ocean.areas[area_name].is_location_within_area(object_location)

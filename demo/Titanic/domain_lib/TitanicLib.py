@@ -8,9 +8,9 @@ from simulation.titanic_in_ocean import TitanicInOcean
 
 class TitanicLib:
 
-    @keyword("Titanic is docked in ${location}")
-    def titanic_is_docked_in(self, location):
-        return (TitanicInOcean.instance.longitude, TitanicInOcean.instance.latitude) == Ocean.locations[location]
+    # @keyword("Titanic is docked in ${location}")
+    # def titanic_is_docked_in(self, location):
+    #     return (TitanicInOcean.instance.longitude, TitanicInOcean.instance.latitude) == Ocean.locations[location]
 
     @keyword("Titanic is sinking")
     def titanic_is_sinking(self):
@@ -28,13 +28,13 @@ class TitanicLib:
         titanic.direction = new_direction
 
     @keyword("Titanic stops")
-    def titanic_stops(self, location):
+    def titanic_stops(self):
         titanic = TitanicInOcean.instance
         titanic.titanic.throttle = 0
         titanic.speed = 0  # TODO should happen over time (due to throttle being > 0)
 
     @keyword("Titanic moves full speed ahead")
-    def titanic_full_speed(self, location):
+    def titanic_full_speed(self):
         titanic = TitanicInOcean.instance
         titanic.titanic.throttle = 1
         titanic.speed = 1  # TODO should happen over time (due to throttle being > 0)

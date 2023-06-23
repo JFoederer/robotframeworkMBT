@@ -13,7 +13,7 @@ Southampton to New York
 Southampton to Cherbourg
     Given Titanic is docked in Southampton
     When Titanic departs from port Southampton
-    and Titanic crosses the Channel
+    and Titanic crosses Channel
     and Titanic arrives in Cherbourg
     then Titanic is docked in Cherbourg
 

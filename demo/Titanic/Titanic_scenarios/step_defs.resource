@@ -17,6 +17,7 @@ Titanic is docked in ${port}
     ...    :IN: Titanic.port == '${port}'
     ...    :OUT: Titanic.port == '${port}'
     log    Anchored safely in the port of ${port}
+    Check that    'Titanic's Location' is within the Map area of ${port}
 
 the date is ${date}
     [Documentation]    *model info*
@@ -43,18 +44,26 @@ Titanic departs from port ${port}
     ...    :IN: Titanic.port == '${port}'
     ...    :OUT: Titanic.port = None
     log    Good bye, people of ${port}!
+    Point titanic towards location ${port}
+    Titanic moves full speed ahead
+    Move Titanic out of current area
 
 Titanic arrives in ${port}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
     ...    :OUT: Titanic.port = '${port}'
     log    Nice to meet you, people of ${port}.
+    Check that    'Titanic's Location' is within the Map area of ${port}
+    Titanic stops
 
-Titanic crosses the Channel
+Titanic crosses ${area}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
     ...    :OUT: None
     log    A short trip within Europe
+    Check that    'Titanic's Location' is within the Map area of ${area}
+    Check that    Titanic's speed    Is Greater Than    0
+    Move Titanic out of current area
 
 Titanic sails the Atlantic
     [Documentation]    *model info*
@@ -62,13 +71,6 @@ Titanic sails the Atlantic
     ...    :OUT: None
     Should be equal    ${systems check}    All good!
     log    Aahh, the fresh air of the open sea!
-
-Titanic crosses Iceberg alley
-    [Documentation]    *model info*
-    ...    :IN: Titanic.location = 'Iceberg alley'
-    ...    :OUT: Titanic.location == 'Atlantic ocean'
-    log    Brrr, that's a bit chilly
-    Should be equal    ${systems check}    All good!
 
 Titanic is sailing Iceberg alley
     [Documentation]    *model info*
@@ -100,3 +102,10 @@ Titanic starts to sinks
     ...    :IN: None
     ...    :OUT: Titanic.location = 'Atlantic ocean'
     log    Blub blub blub
+
+Titanic crosses Iceberg alley
+    [Documentation]    *model info*
+    ...    :IN: Titanic.location = 'Iceberg alley'
+    ...    :OUT: Titanic.location == 'Atlantic ocean'
+    Log    Brrr, that's a bit chilly
+    Should be equal    ${systems check}    All good!
