@@ -7,7 +7,6 @@ Titanic is scheduled for the voyage to New York
     ...    :IN: new Titanic | Titanic.destination='New York' | Titanic.port=Southampton
     ...    new Date | Date.now='1912-04-10'
     ...    :OUT: None
-    set suite variable    ${systems check}    All good!
     Spawn titanic at location Southampton
     Log    Dear crew, your ship has been assigned to the cross-atlantic. You are due for departure from Southampton port at noon on 1912-04-10.
     Start Journey on 1912-04-10
@@ -18,6 +17,7 @@ Titanic is docked in the port of ${port}
     ...    :OUT: Titanic.port == '${port}'
     log    Anchored safely in the port of ${port}
     Check that    Titanic's Location is within the Map area of ${port}
+    Check that    Titanic's speed    equals    0
 
 the date is ${date}
     [Documentation]    *model info*
@@ -30,14 +30,13 @@ Titanic sails from ${port A} to ${port B}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == '${port A}'
     ...    :OUT: Titanic.port == '${port B}'
-    Should be equal    ${systems check}    All good!
+    Check that    Titanic's Location is within the Map area of ${port B}
     log    Completed the leg from ${port A} to ${port B}
 
 Titanic's voyage is complete
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
-    Should be equal    ${systems check}    All good!
     log    Dear passengers, this is the final port on this journey. Please remember to collect all your personal belongings when disembarking.
 
 Titanic departs from port ${from_port} for the port of ${for_port}
@@ -70,7 +69,6 @@ Titanic sails the Atlantic
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
     ...    :OUT: None
-    Should be equal    ${systems check}    All good!
     Move Titanic out of current area
     log    Aahh, the fresh air of the open sea!
 
@@ -113,5 +111,5 @@ Titanic crosses Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location = 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Atlantic ocean'
+    Check that    Titanic's Location is within the Map area of Atlantic ocean
     Log    Brrr, that's a bit chilly
-    Should be equal    ${systems check}    All good!
