@@ -5,11 +5,12 @@ Library           robotnl
 Titanic is scheduled for the voyage to New York
     [Documentation]    *model info*
     ...    :IN: new Titanic | Titanic.destination='New York' | Titanic.port=Southampton
-    ...    new Date | Date.now='10 April 1912'
+    ...    new Date | Date.now='1912-04-10'
     ...    :OUT: None
     set suite variable    ${systems check}    All good!
     Spawn titanic at location Southampton
-    Log    Dear crew, your ship has been assigned to the cross-atlantic. You are due for departure from Southampton port at noon on 10 April 1912.
+    Log    Dear crew, your ship has been assigned to the cross-atlantic. You are due for departure from Southampton port at noon on 1912-04-10.
+    Start Journey on 1912-04-10
 
 Titanic is docked in the port of ${port}
     [Documentation]    *model info*
@@ -23,6 +24,7 @@ the date is ${date}
     ...    :IN: Date.now == '${date}'
     ...    :OUT: Date.now == '${date}'
     log    The calendar shows that today is ${date}
+    Check that    Current date of Journey    equals    ${date}
 
 Titanic sails from ${port A} to ${port B}
     [Documentation]    *model info*
@@ -34,7 +36,7 @@ Titanic sails from ${port A} to ${port B}
 Titanic's voyage is complete
     [Documentation]    *model info*
     ...    :IN: None
-    ...    :OUT: Date.now='17 April 1912' | Titanic.destination=None
+    ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
     Should be equal    ${systems check}    All good!
     log    Dear passengers, this is the final port on this journey. Please remember to collect all your personal belongings when disembarking.
 
@@ -82,7 +84,8 @@ Titanic barely misses a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    log    Pfew! That was close!
+    Move Titanic out of current area
+    Log    Pfew! That was close!
 
 Titanic continues on its voyage
     [Documentation]    *model info*
@@ -94,19 +97,21 @@ Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    set suite variable    ${systems check}    Whoopsy
+    Comment    set suite variable    ${systems check}    Whoopsy
+    Spawn iceberg at coordinate longitude 45.6119 latitude -45.00114034093499
+    Move Titanic out of current area
     log    Oh darn :-o
 
 Titanic starts to sinks
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: Titanic.location = 'Atlantic ocean'
-    log    Blub blub blub
+    Check that    Titanic's Location is within the Map area of Iceberg alley
+    Check that    Titanic's speed    equals    0
 
 Titanic crosses Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location = 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Atlantic ocean'
     Log    Brrr, that's a bit chilly
-    Move Titanic out of current area
     Should be equal    ${systems check}    All good!

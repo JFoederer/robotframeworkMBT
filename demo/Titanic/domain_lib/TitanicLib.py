@@ -36,7 +36,7 @@ class TitanicLib:
     def titanic_full_speed(self):
         titanic = TitanicInOcean.instance
         titanic.titanic.throttle = 1
-        titanic.speed = 22  # TODO should happen over time (due to throttle being > 0)
+        titanic.speed = 700  # TODO Figure out what this speed means. Does time calculation make sense?!?!
 
     @keyword("Titanic's location")
     def titanic_location(self):

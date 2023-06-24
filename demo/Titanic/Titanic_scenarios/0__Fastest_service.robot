@@ -5,6 +5,6 @@ Resource          step_defs.resource
 Complete cross-Atlantic service within 1 week
     Given Titanic is scheduled for the voyage to New York
     and Titanic is docked in the port of Southampton
-    and the date is 10 April 1912
+    and the date is 1912-04-10
     When Titanic sails from Southampton to New York
-    then the date is 17 April 1912
+    then the date is 1912-04-17

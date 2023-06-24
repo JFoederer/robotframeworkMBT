@@ -2,11 +2,17 @@
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
 
+from simulation.iceberg import Iceberg
 from simulation.location_on_grid import LocationOnGrid, AreaOnGrid
 from simulation.ocean import Ocean
+from simulation.titanic_in_ocean import TitanicInOcean
+from system.titanic import Titanic
 
 
 class MapLib:
+
+    ocean = Ocean()
+
     def __init__(self):
         self.builtin = BuiltIn()
 
@@ -19,13 +25,34 @@ class MapLib:
 
     areas = {
         'the English Channel': AreaOnGrid(LocationOnGrid(49.5, -1.41), LocationOnGrid(51.9, -8.2)),
-        'Iceberg': AreaOnGrid(LocationOnGrid(43, -45), LocationOnGrid(48, -50))
+        'Iceberg alley': AreaOnGrid(LocationOnGrid(43, -45), LocationOnGrid(48, -50))
     }
 
     atlantic_area = AreaOnGrid(LocationOnGrid(51.9, -74), LocationOnGrid(40, -1.41))
 
     LOCATION_AREA_THRESHOLD = 0.1
     ATLANTIC_AREA = 'Atlantic'
+
+    @keyword("Spawn titanic at location ${location}")
+    def spawn_titanic(self, location: str):
+        """
+        Spawns the titanic with given parameters
+        @param location: location of titanic
+        """
+        location = self.builtin.run_keyword(f"Location of port {location}")
+        t = Titanic(0, steering_direction=0)
+        tio = TitanicInOcean(t, location.longitude, location.latitude, 0, 0)
+        self.ocean.floating_objects.append(tio)
+
+    @keyword("Spawn iceberg at coordinate longitude ${long} latitude ${lat}")
+    def spawn_iceberg(self, long: float, lat: float):
+        """
+        Spawns an iceberg with given parameters
+        @param long: longitude of iceberg
+        @param lat: latitude of iceberg
+        """
+        iceberg = Iceberg(long, lat)
+        self.ocean.floating_objects.append(iceberg)
 
     @keyword("Location of port ${harbour}")
     def location_of_(self, harbour):

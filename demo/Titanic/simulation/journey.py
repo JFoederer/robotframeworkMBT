@@ -1,7 +1,4 @@
-from simulation.ocean import Ocean
 from enum import Enum
-
-from simulation.titanic_in_ocean import TitanicInOcean
 
 
 class StatusOfJourney(Enum):
@@ -9,13 +6,19 @@ class StatusOfJourney(Enum):
     ON_THE_WAY = 2
     ARRIVED = 3
     SUNK = 4
-
-
 class Journey:
-    ocean: Ocean
+
+    _instance = None
+
+    def __new__(cls, ocean):
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+
+    start_date = None
+    time_in_journey = 0  # minutes
 
     def __init__(self, ocean):
-        self.time_in_journey = 0  # minutes
         self.status = StatusOfJourney.READY_FOR_DEPARTURE
         self.ocean = ocean
 
