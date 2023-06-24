@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 from robot.libraries.BuiltIn import BuiltIn
-from robot.libraries.DateTime import convert_date
+from robot.api.deco import keyword
 
-from robotide.lib.robot.libraries.DateTime import Date, Time
+from datetime import datetime, timedelta
 
 from domain_lib.MapLib import MapLib
 from simulation.titanic_in_ocean import TitanicInOcean
 from simulation.journey import Journey
-from robot.api.deco import keyword
 
 class JourneyLib:
     _journey = None
@@ -27,13 +26,13 @@ class JourneyLib:
 
     @keyword("Start Journey on ${date}")
     def start_journey(self, date: str):
-        date = Date(date, input_format="%Y-%m-%d")
+        date = datetime.strptime(date, "%Y-%m-%d")
         self.journey.start_date = date
 
     @keyword("Current date of Journey")
     def journey_ondate(self):
-        current_date: Date = self.journey.start_date + Time(self.journey.time_in_journey * 60)
-        return current_date.convert('%Y-%m-%d')
+        current_date: Date = self.journey.start_date + timedelta(minutes=self.journey.time_in_journey)
+        return current_date.strftime('%Y-%m-%d')
 
     @keyword("play out Journey for a duration of ${minutes} minutes")
     def pass_time(self, minutes: int):
