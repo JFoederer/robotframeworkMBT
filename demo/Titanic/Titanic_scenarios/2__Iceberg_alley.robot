@@ -10,4 +10,4 @@ Titanic barely misses an iceberg
 Titanic hits a huge iceberg
     Given Titanic is sailing Iceberg alley
     when Titanic hits a huge iceberg
-    then Titanic starts to sinks
+    then Titanic starts to sink

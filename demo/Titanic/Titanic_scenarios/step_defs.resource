@@ -100,7 +100,7 @@ Titanic hits a huge iceberg
     Move Titanic out of current area
     log    Oh darn :-o
 
-Titanic starts to sinks
+Titanic starts to sink
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: Titanic.location = 'Atlantic ocean'
