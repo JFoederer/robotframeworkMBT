@@ -45,7 +45,7 @@ class JourneyLib:
     @keyword("Move Titanic out of current area")
     def move_titanic_out_of_current_area(self):
         titanic = TitanicInOcean.instance
-        current_area = self.builtin.run_keyword("Area of location Titanic's location")
+        current_area = self.builtin.run_keyword("Area of location Titanic's position")
         self.builtin.log(f"Titanic moving out of {current_area}")
         while (new_area := self.map_lib.get_area_of_location(titanic)) == current_area:
             if not titanic.speed > 0:

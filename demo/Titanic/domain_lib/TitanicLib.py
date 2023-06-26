@@ -38,7 +38,7 @@ class TitanicLib:
         titanic.titanic.throttle = 1
         titanic.speed = 700  # TODO Figure out what this speed means. Does time calculation make sense?!?!
 
-    @keyword("Titanic's location")
+    @keyword("Titanic's position")
     def titanic_location(self):
         titanic = TitanicInOcean.instance
         loc = LocationOnGrid(titanic.longitude, titanic.latitude)

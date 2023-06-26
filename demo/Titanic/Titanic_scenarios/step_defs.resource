@@ -15,9 +15,9 @@ Titanic is docked in the port of ${port}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == '${port}'
     ...    :OUT: Titanic.port == '${port}'
-    log    Anchored safely in the port of ${port}
-    Check that    Titanic's Location is within the Map area of ${port}
+    Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
+    log    Anchored safely in the port of ${port}
 
 the date is ${date}
     [Documentation]    *model info*
@@ -30,7 +30,7 @@ Titanic sails from ${port A} to ${port B}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == '${port A}'
     ...    :OUT: Titanic.port == '${port B}'
-    Check that    Titanic's Location is within the Map area of ${port B}
+    Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
     log    Completed the leg from ${port A} to ${port B}
 
 Titanic's voyage is complete
@@ -53,7 +53,7 @@ Titanic arrives in the port of ${port}
     ...    :IN: Titanic.port == None
     ...    :OUT: Titanic.port = '${port}'
     log    Nice to meet you, people of ${port}.
-    Check that    Titanic's Location is within the Map area of ${port}
+    Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Titanic stops
 
 Titanic crosses area ${area}
@@ -61,7 +61,7 @@ Titanic crosses area ${area}
     ...    :IN: Titanic.port == None
     ...    :OUT: None
     log    A short trip within Europe
-    Check that    Titanic's Location is within the Map area of ${area}
+    Check that    Map area where 'Titanic's position' is located    Equals    ${area}
     Check that    Titanic's speed    Is Greater Than    0
     Move Titanic out of current area
 
@@ -104,12 +104,12 @@ Titanic starts to sink
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: Titanic.location = 'Atlantic ocean'
-    Check that    Titanic's Location is within the Map area of Iceberg alley
+    Check that    Map area where 'Titanic's position' is located    Equals    Iceberg alley
     Check that    Titanic's speed    equals    0
 
 Titanic crosses Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location = 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Atlantic ocean'
-    Check that    Titanic's Location is within the Map area of Atlantic ocean
+    Check that    Map area where 'Titanic's position' is located    Equals    Atlantic ocean
     Log    Brrr, that's a bit chilly

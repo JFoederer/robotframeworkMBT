@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-from robot.api.deco import keyword
+from robotnl import keyword
 from robot.libraries.BuiltIn import BuiltIn
 
 from simulation.iceberg import Iceberg
@@ -60,8 +60,6 @@ class MapLib:
 
     @keyword("Area of location ${location}")
     def get_area_of_location(self, location: LocationOnGrid):
-        if isinstance(location, str):
-            location = self.builtin.run_keyword(location)
         for loc_name, loc in self.locations.items():
             if loc.distance_to(location) < self.LOCATION_AREA_THRESHOLD:
                 return f"Area of ${loc_name}"
@@ -72,13 +70,12 @@ class MapLib:
 
         return self.ATLANTIC_AREA
 
-    @keyword("${object_location} is within the Map area of ${area_name}")
-    def is_within_area(self, object_location, area_name):
-        if isinstance(object_location, str):
-            object_location = self.builtin.run_keyword(object_location)
-        if area_name in self.areas:
-            return self.areas[area_name].is_location_within_area(object_location)
-        elif area_name in self.locations:
-            return self.locations[area_name].distance_to(object_location) < self.LOCATION_AREA_THRESHOLD
-        else:
-            raise AttributeError(f"Area {area_name} does not exist")
+    @keyword("Map area where '${position}' is located")
+    def area_by_position(self, position):
+        for area_name in self.locations:
+            if self.locations[area_name].distance_to(position) < self.LOCATION_AREA_THRESHOLD:
+                return area_name
+        for area_name in self.areas:
+            if self.areas[area_name].is_location_within_area(position):
+                return area_name
+        return 'Atlantic ocean'
