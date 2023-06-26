@@ -39,14 +39,14 @@ Titanic's voyage is complete
     ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
     log    Dear passengers, this is the final port on this journey. Please remember to collect all your personal belongings when disembarking.
 
-Titanic departs from port ${from_port} for the port of ${for_port}
+Titanic departs for the port of ${port}
     [Documentation]    *model info*
-    ...    :IN: Titanic.port == '${from_port}'
+    ...    :IN: Titanic.port is not None
     ...    :OUT: Titanic.port = None
-    log    Good bye, people of ${from_port}!
-    Point titanic towards location ${for_port}
+    Point titanic towards location ${port}
     Titanic moves full speed ahead
     Move Titanic out of current area
+    log    Here we come, people of ${port}!
 
 Titanic arrives in the port of ${port}
     [Documentation]    *model info*
