@@ -95,7 +95,6 @@ Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    Comment    set suite variable    ${systems check}    Whoopsy
     Spawn iceberg at coordinate longitude 45.6119 latitude -45.00114034093499
     Move Titanic out of current area
     log    Oh darn :-o
