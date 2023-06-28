@@ -8,7 +8,7 @@ Titanic is scheduled for the voyage to New York
     ...    new Date | Date.now='1912-04-10'
     ...    :OUT: None
     Spawn titanic at location Southampton
-    Log    Dear crew, your ship has been assigned to the cross-atlantic. You are due for departure from Southampton port at noon on 1912-04-10.
+    Log    Dear crew, your ship has been assigned to the trip to New York. You are due for departure from the port of Southampton at noon on 1912-04-10.
     Start Journey on 1912-04-10
 
 Titanic is docked in the port of ${port}
@@ -17,13 +17,11 @@ Titanic is docked in the port of ${port}
     ...    :OUT: Titanic.port == '${port}'
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
-    log    Anchored safely in the port of ${port}
 
 the date is ${date}
     [Documentation]    *model info*
     ...    :IN: Date.now == '${date}'
     ...    :OUT: Date.now == '${date}'
-    log    The calendar shows that today is ${date}
     Check that    Current date of Journey    equals    ${date}
 
 Titanic sails from ${port A} to ${port B}
@@ -37,7 +35,7 @@ Titanic's voyage is complete
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
-    log    Dear passengers, this is the final port on this journey. Please remember to collect all your personal belongings when disembarking.
+    log    Dear passengers, this is the final destination of this journey. Please remember to collect all your personal belongings when disembarking.
 
 Titanic departs for the port of ${port}
     [Documentation]    *model info*
@@ -46,13 +44,11 @@ Titanic departs for the port of ${port}
     Point titanic towards location ${port}
     Titanic moves full speed ahead
     Move Titanic out of current area
-    log    Here we come, people of ${port}!
 
 Titanic arrives in the port of ${port}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
     ...    :OUT: Titanic.port = '${port}'
-    log    Nice to meet you, people of ${port}.
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Titanic stops
 
@@ -60,7 +56,6 @@ Titanic crosses area ${area}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
     ...    :OUT: None
-    log    A short trip within Europe
     Check that    Map area where 'Titanic's position' is located    Equals    ${area}
     Check that    Titanic's speed    Is Greater Than    0
     Move Titanic out of current area
@@ -69,19 +64,22 @@ Titanic sails the Atlantic
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
     ...    :OUT: None
-    Move Titanic out of current area
     log    Aahh, the fresh air of the open sea!
+    Move Titanic out of current area
 
 Titanic is sailing Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Iceberg alley'
-    log    Iceberg, right ahead!
+    Check that    Map area where 'Titanic's position' is located    Equals    Iceberg alley
+    Log    Brrr, that's a bit chilly
 
 Titanic barely misses a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
+    #Spawn iceberg at coordinate longitude 45.7500 latitude -44.0700
+    #log    Iceberg, just to starboard!
     Move Titanic out of current area
     Log    Pfew! That was close!
 
@@ -89,15 +87,15 @@ Titanic continues on its voyage
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: Titanic.location = 'Atlantic ocean'
-    log    That was quite an adventure!
+    Check that    Titanic's speed    Is Greater Than    0
 
 Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    Spawn iceberg at coordinate longitude 45.6119 latitude -45.00114034093499
+    Spawn iceberg at coordinate longitude 45.6119 latitude -45.0011
+    log    Iceberg, right ahead!
     Move Titanic out of current area
-    log    Oh darn :-o
 
 Titanic starts to sink
     [Documentation]    *model info*
@@ -111,4 +109,3 @@ Titanic crosses Iceberg alley
     ...    :IN: Titanic.location = 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Atlantic ocean'
     Check that    Map area where 'Titanic's position' is located    Equals    Atlantic ocean
-    Log    Brrr, that's a bit chilly

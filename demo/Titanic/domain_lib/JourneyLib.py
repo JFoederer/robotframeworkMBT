@@ -28,7 +28,7 @@ class JourneyLib:
     def start_journey(self, date: str):
         date = datetime.strptime(date, "%Y-%m-%d")
         self.journey.start_date = date
-        self.builtin.log(f"The journey has started at {self.journey.start_date}")
+        self.builtin.log(f"The journey has started at {self.journey.start_date.strftime('%Y-%m-%d')}")
 
     @keyword("Current date of Journey")
     def journey_ondate(self):
