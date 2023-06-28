@@ -2,6 +2,7 @@
 from robotnl import keyword
 from robot.libraries.BuiltIn import BuiltIn
 
+from simulation.map_animation import map_animation
 from simulation.iceberg import Iceberg
 from simulation.location_on_grid import LocationOnGrid, AreaOnGrid
 from simulation.ocean import Ocean
@@ -28,10 +29,16 @@ class MapLib:
         'Iceberg alley': AreaOnGrid(LocationOnGrid(43, -45), LocationOnGrid(48, -50))
     }
 
-    atlantic_area = AreaOnGrid(LocationOnGrid(51.9, -74), LocationOnGrid(40, -1.41))
+    atlantic_area = AreaOnGrid(LocationOnGrid(40, -1.41), LocationOnGrid(51.9, -74))
 
     LOCATION_AREA_THRESHOLD = 0.1
     ATLANTIC_AREA = 'Atlantic'
+
+    @keyword("Enable map animation")
+    def enable_animation(self):
+        draw_areas = self.areas.copy()
+        draw_areas['Atlantic Ocean'] = self.atlantic_area
+        map_animation.plot_static_elements(draw_areas, self.locations)
 
     @keyword("Spawn titanic at location ${location}")
     def spawn_titanic(self, location: str):
