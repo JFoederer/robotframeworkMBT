@@ -9,6 +9,10 @@ class LocationOnGrid:
         self.longitude = longitude
         self.latitude = latitude
 
+    def __str__(self):
+        return f"{'N' if self.longitude >= 0 else 'S'}{abs(self.longitude):08.5f} "\
+               f"{'E' if self.latitude >= 0 else 'W'}{abs(self.latitude):08.5f}"
+
     def distance_to(self, other_object: 'LocationOnGrid'):
         """
         Calculate the distance to another floating object based on its longitude/latitude coordinates
