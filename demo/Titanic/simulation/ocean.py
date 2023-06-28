@@ -29,7 +29,7 @@ class Ocean:
         while seconds_passed < SECONDS_IN_MINUTE:
             for floating_object in floating_objects:
                 floating_object.update_coordinates(time_passed=COLLISION_INTERVAL)
-                objects_collided.update(self.detect_collisions(collision_threshold=100))
+                objects_collided.update(self.detect_collisions(collision_threshold=0.1))
                 if objects_collided:
                     floating_objects.difference(objects_collided)
             seconds_passed += COLLISION_INTERVAL
@@ -37,7 +37,7 @@ class Ocean:
             print(f"{obj} has collided with another object")
             obj.collided()
 
-    def detect_collisions(self, collision_threshold: int, speed_threshold: int = 0):
+    def detect_collisions(self, collision_threshold: float, speed_threshold: int = 0):
         """
         @param collision_threshold: Threshold in meters for when two objects have collided
         @param speed_threshold: Threshold in knots. If 2 items are stationary they do not really collide
