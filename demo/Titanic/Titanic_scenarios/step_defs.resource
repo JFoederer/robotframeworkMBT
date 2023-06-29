@@ -1,5 +1,6 @@
 *** Settings ***
 Library           robotnl
+Resource          ../domain_lib/Titanic.resource
 
 *** Keywords ***
 Titanic is scheduled for the voyage to New York
