@@ -18,24 +18,12 @@ Titanic is docked in the port of ${port}
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
 
-the date is ${date}
-    [Documentation]    *model info*
-    ...    :IN: Date.now == '${date}'
-    ...    :OUT: Date.now == '${date}'
-    Check that    Current date of Journey    equals    ${date}
-
 Titanic sails from ${port A} to ${port B}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == '${port A}'
     ...    :OUT: Titanic.port == '${port B}'
     Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
     log    Completed the leg from ${port A} to ${port B}
-
-Titanic's voyage is complete
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
-    log    Dear passengers, this is the final destination of this journey. Please remember to collect all your personal belongings when disembarking.
 
 Titanic departs for the port of ${port}
     [Documentation]    *model info*
@@ -67,6 +55,12 @@ Titanic sails the Atlantic
     log    Aahh, the fresh air of the open sea!
     Move Titanic out of current area
 
+Titanic crosses Iceberg alley
+    [Documentation]    *model info*
+    ...    :IN: Titanic.location = 'Iceberg alley'
+    ...    :OUT: Titanic.location == 'Atlantic ocean'
+    Check that    Map area where 'Titanic's position' is located    Equals    Atlantic ocean
+
 Titanic is sailing Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
@@ -82,12 +76,6 @@ Titanic barely misses a huge iceberg
     Move Titanic out of current area
     Log    Pfew! That was close!
 
-Titanic continues on its voyage
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: Titanic.location = 'Atlantic ocean'
-    Check that    Titanic's speed    Is Greater Than    0
-
 Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
@@ -96,6 +84,12 @@ Titanic hits a huge iceberg
     log    Iceberg, right ahead!
     Move Titanic out of current area
 
+Titanic continues on its voyage
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: Titanic.location = 'Atlantic ocean'
+    Check that    Titanic's speed    Is Greater Than    0
+
 Titanic starts to sink
     [Documentation]    *model info*
     ...    :IN: None
@@ -103,8 +97,14 @@ Titanic starts to sink
     Check that    Map area where 'Titanic's position' is located    Equals    Iceberg alley
     Check that    Titanic's speed    equals    0
 
-Titanic crosses Iceberg alley
+Titanic's voyage is complete
     [Documentation]    *model info*
-    ...    :IN: Titanic.location = 'Iceberg alley'
-    ...    :OUT: Titanic.location == 'Atlantic ocean'
-    Check that    Map area where 'Titanic's position' is located    Equals    Atlantic ocean
+    ...    :IN: None
+    ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
+    log    Dear passengers, this is the final destination of this journey. Please remember to collect all your personal belongings when disembarking.
+
+the date is ${date}
+    [Documentation]    *model info*
+    ...    :IN: Date.now == '${date}'
+    ...    :OUT: Date.now == '${date}'
+    Check that    Current date of Journey    equals    ${date}
