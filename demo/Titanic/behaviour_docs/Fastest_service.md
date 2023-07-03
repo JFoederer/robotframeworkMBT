@@ -29,7 +29,7 @@ Cherbourg, and finally to Southampton.
 
 ### Example: Olympic-class ocean liners can complete the Atlantic crossing from Southampton to New York in 1 week
 
-![Titanic Maiden Voyage Route](titanic-route.png)
+![Titanic Maiden Voyage Route](Titanic-route.png)
 (Route image made with https://umap.openstreetmap.fr)
 
 > Given Titanic is scheduled for the voyage to New York  
@@ -41,7 +41,7 @@ Cherbourg, and finally to Southampton.
 
 ### Example: Olympic-class ocean liners can complete the Atlantic crossing from New York to Southampton in 1 week
 
-![Titanic Return Voyage Route](titanic-return.png)
+![Titanic Return Voyage Route](Titanic-return.png)
 (Route image made with https://umap.openstreetmap.fr)
 
 > Given Titanic is scheduled for the voyage to Southampton  
