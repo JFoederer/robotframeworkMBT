@@ -111,7 +111,7 @@ to the Tail of the Banks. This area extends approximately from 48 to 43 degrees
 North Latitude at 48 degrees West longitude.  
 (https://tallbloke.wordpress.com/2019/08/06/where-is-iceberg-alley/)</i>
 
-![Iceberg Alley [credit: U.S. Coast Guard]](berg-alley.webp)
+![Iceberg Alley [credit: U.S. Coast Guard]](https://tallbloke.files.wordpress.com/2019/08/berg-alley.jpg)
 
 ### Example: Titanic hits an iceberg and it continues on its voyage
 
