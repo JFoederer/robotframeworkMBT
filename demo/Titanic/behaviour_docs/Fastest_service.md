@@ -98,8 +98,6 @@ safety of the passengers and crew, and cause damage to cargo. Injuries to the
 passengers and crew, or damaged cargo, could have financial implications as the
 shipping company may be held liable.
 
-### Example: Titanic hits an iceberg and it continues on its voyage
-
 In the area of the Altantic ocean known as Iceberg Alley, icebergs may be
 present. The icebergs are a shipping hazard, as they may cause damage to any
 ships that hit them. Any damage to the ship may affect the ship's
@@ -114,6 +112,8 @@ North Latitude at 48 degrees West longitude.
 (https://tallbloke.wordpress.com/2019/08/06/where-is-iceberg-alley/)</i>
 
 ![Iceberg Alley [credit: U.S. Coast Guard]](berg-alley.webp)
+
+### Example: Titanic hits an iceberg and it continues on its voyage
 
 > Given Titanic is sailing Iceberg alley  
 > when Titanic hits a huge iceberg  
