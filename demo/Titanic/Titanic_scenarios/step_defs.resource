@@ -24,7 +24,6 @@ Titanic sails from ${port A} to ${port B}
     ...    :IN: Titanic.port == '${port A}'
     ...    :OUT: Titanic.port == '${port B}'
     Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
-    log    Completed the leg from ${port A} to ${port B}
 
 Titanic departs for the port of ${port}
     [Documentation]    *model info*

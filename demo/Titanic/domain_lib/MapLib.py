@@ -62,7 +62,7 @@ class MapLib:
     def get_area_of_location(self, location: LocationOnGrid):
         for loc_name, loc in self.locations.items():
             if loc.distance_to(location) < self.LOCATION_AREA_THRESHOLD:
-                return f"Area of ${loc_name}"
+                return f"Area of {loc_name}"
 
         for area_name, area in self.areas.items():
             if area.is_location_within_area(location):
