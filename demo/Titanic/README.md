@@ -16,7 +16,7 @@ There are a total of 7 seven scenarios in this demo. Some are very high level, s
 
 ## Why the story of Titanic?
 
-It might seem odd at first, seeing the [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) in a context that is typically used in more technical environments. However, the [BDD](https://en.wikipedia.org/wiki/Behavior-driven_development) process is mostly non-technical and using a topic like Titanic helps to prevent technical bias. Another important point is that we want to stick to writing and maintaining short, to-the-point scenarios. From these we want to compose larger scenarios, describing behaviour of complex systems, start to end, like telling a story. What better use for that than a well known story?
+It might seem odd at first, seeing the [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) in a context that is typically used in more technical environments. However, the [BDD](https://en.wikipedia.org/wiki/Behavior-driven_development) process is mostly non-technical and using a topic like Titanic helps to prevent technical bias. Another important point is that we want to stick to writing and maintaining short, to-the-point scenarios. From these, we want to compose larger scenarios, describing behaviour of complex systems, start to end, like telling a story. What better use for that than a well known story?
 
 The [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) fits these criteria and, since it already happened, there should be little discussion on the specification. It will be interesting to see if the test case generation mechanism from [robotMBT](https://github.com/JFoederer/robotframeworkMBT) can reconstruct the familiar story, and then some variations thereof. After all, the maiden voyage of Titanic was just one example of what could have happened...
 
@@ -32,9 +32,9 @@ The [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) fit
 
 ### Step 2: Installing dependencies
 
-Since this demo is based on the robotMBT library, it needs to be installed to run the demo. The recommended installation method is using [pip](http://pip-installer.org)
+To install the packages needed to run the demo, navigate to your local `demo/Titanic` folder and run:
 
-    pip install --upgrade robotframework-mbt
+    pip install -r requirements.txt
 
 ### Step 3: Run the demo
 
