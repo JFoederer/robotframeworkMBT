@@ -21,7 +21,7 @@ areas = {
     'Iceberg alley': AreaOnGrid(LocationOnGrid(43, -45), LocationOnGrid(48, -50))
 }
 
-atlantic_area = AreaOnGrid(LocationOnGrid(40, -1.41), LocationOnGrid(51.9, -74))
+atlantic_area = AreaOnGrid(LocationOnGrid(35, -1.41), LocationOnGrid(65, -74))
 
 def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
