@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+
 from robot.libraries.BuiltIn import BuiltIn
 from robot.api.deco import keyword
 
 from datetime import datetime, timedelta
 
+from simulation.map_animation import map_animation
 from domain_lib.MapLib import MapLib
 from simulation.titanic_in_ocean import TitanicInOcean
 from simulation.journey import Journey
@@ -13,6 +15,7 @@ class JourneyLib:
 
     def __init__(self):
         self.builtin = BuiltIn()
+        self.call_count = 0
 
     @property
     def journey(self) -> Journey:
@@ -32,7 +35,7 @@ class JourneyLib:
 
     @keyword("Current date of Journey")
     def journey_ondate(self):
-        current_date: Date = self.journey.start_date + timedelta(minutes=self.journey.time_in_journey)
+        current_date = self.journey.start_date + timedelta(minutes=self.journey.time_in_journey)
         return current_date.strftime('%Y-%m-%d')
 
     @keyword("play out Journey for a duration of ${minutes} minutes")
@@ -42,6 +45,9 @@ class JourneyLib:
         @param minutes: amount of minutes to progress the journey with.
         """
         self.journey.passed_time(minutes)
+        if self.call_count % 100 == 0:
+            map_animation.update_floating_objects(self.journey.ocean.floating_objects)
+        self.call_count += 1
 
     @keyword("Move Titanic out of current area")
     def move_titanic_out_of_current_area(self):
@@ -57,3 +63,4 @@ class JourneyLib:
                 raise Exception("Titanic at least did not sink. But where did it go?")
         else:
             self.builtin.log(f"Titanic moved into {new_area}")
+        map_animation.update_floating_objects(self.journey.ocean.floating_objects)

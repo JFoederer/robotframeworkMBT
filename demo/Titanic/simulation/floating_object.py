@@ -27,8 +27,8 @@ class FloatingObject(LocationOnGrid):
         distance = (self.speed / self.EARTH_RADIUS) * time_passed
 
         # Calculate the horizontal and vertical displacements
-        delta_x = distance * math.cos(direction_rad)
-        delta_y = distance * math.sin(direction_rad)
+        delta_x = distance * math.sin(direction_rad)
+        delta_y = distance * math.cos(direction_rad)
 
         # Update the coordinates of the point
         self.longitude += delta_x

@@ -10,8 +10,8 @@ class LocationOnGrid:
         self.latitude = latitude
 
     def __str__(self):
-        return f"{'N' if self.longitude >= 0 else 'S'}{abs(self.longitude):08.5f} "\
-               f"{'E' if self.latitude >= 0 else 'W'}{abs(self.latitude):08.5f}"
+        return f"{'N' if self.latitude >= 0 else 'S'}{abs(self.latitude):08.5f} "\
+               f"{'E' if self.longitude >= 0 else 'W'}{abs(self.longitude):08.5f}"
 
     def distance_to(self, other_object: 'LocationOnGrid'):
         """
@@ -30,7 +30,7 @@ class LocationOnGrid:
         dy = y2 - y1
 
         # Calculate the angle in radians
-        angle = math.atan2(dy, dx)
+        angle = math.atan2(dx, dy)
 
         # Convert the angle to degrees
         degrees = math.degrees(angle)
@@ -49,5 +49,5 @@ class AreaOnGrid:
         self.lower_right_bound = lower_right_bound
 
     def is_location_within_area(self, location: LocationOnGrid):
-        return self.upper_left_bound.longitude <= location.longitude <= self.lower_right_bound.longitude and \
-            self.lower_right_bound.latitude <= location.latitude <= self.upper_left_bound.latitude
+        return self.upper_left_bound.latitude <= location.latitude <= self.lower_right_bound.latitude and \
+            self.lower_right_bound.longitude <= location.longitude <= self.upper_left_bound.longitude

@@ -5,7 +5,7 @@ from simulation.location_on_grid import LocationOnGrid, AreaOnGrid
 
 SECONDS_IN_MINUTE  = 60
 COLLISION_INTERVAL = 10  # Following should hold True; SECONDS_IN_MINUTE % COLLISION_INTERVAL == 0
-
+COLLISION_THRESHOLD = 0.1
 
 class Ocean:
     _instance = None
@@ -29,7 +29,7 @@ class Ocean:
         while seconds_passed < SECONDS_IN_MINUTE:
             for floating_object in floating_objects:
                 floating_object.update_coordinates(time_passed=COLLISION_INTERVAL)
-                objects_collided.update(self.detect_collisions(collision_threshold=0.1))
+                objects_collided.update(self.detect_collisions(collision_threshold=COLLISION_THRESHOLD))
                 if objects_collided:
                     floating_objects.difference(objects_collided)
             seconds_passed += COLLISION_INTERVAL
