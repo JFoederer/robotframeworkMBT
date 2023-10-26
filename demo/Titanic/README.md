@@ -47,7 +47,9 @@ If you choose the `hit` scenario, don't be surprised if you encounter some failu
 
 ### Bonus: Play the demo as game
 
-The demo also contains a playable version of the software under test. To start the game, follow the following instructions
+Can you safely pass iceberg alley and arrive in New York?
+
+To play the game, follow these instructions:
 
 * Install matplotlib: `pip install matplotlib`
 * Based on your system, install curses
@@ -56,6 +58,11 @@ The demo also contains a playable version of the software under test. To start t
 * Navigate to your local `demo/Titanic` folder
 * Run: `python run_game.py`
 * A matplotlib window will appear, change focus back to your terminal to play the game.
+
+If you enjoy the visual feedback, you can also enable it during the automated test runs. To do so, update the suite setup in `Titanic_scenarios` to run a second keyword:
+
+    *** Settings ***
+    Suite Setup       Run keywords    Enable map animation    Treat this test suite model-based
 
 ## Project structure
 
