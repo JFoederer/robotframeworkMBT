@@ -45,7 +45,7 @@ To run the demo execute the `run_demo.py` script in either of the two available 
 
 If you choose the `hit` scenario, don't be surprised if you encounter some failures along the route...
 
-### Step 4: Running the demo game (optional)
+### Bonus: Play the demo as game
 
 The demo also contains a playable version of the software under test. To start the game, follow the following instructions
 
@@ -55,6 +55,7 @@ The demo also contains a playable version of the software under test. To start t
   * for UNIX based systems it should work out of the box
 * Navigate to your local `demo/Titanic` folder
 * Run: `python run_game.py`
+* A matplotlib window will appear, change focus back to your terminal to play the game.
 
 ## Project structure
 

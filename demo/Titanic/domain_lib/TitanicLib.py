@@ -44,7 +44,7 @@ class TitanicLib:
     @keyword("Titanic's position")
     def titanic_location(self):
         titanic = TitanicInOcean.instance
-        loc = LocationOnGrid(titanic.longitude, titanic.latitude)
+        loc = LocationOnGrid(longitude=titanic.longitude, latitude=titanic.latitude)
         self.builtin.log(f"Titanic's current position is: {loc}")
         return loc
 

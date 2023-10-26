@@ -10,18 +10,18 @@ from simulation.titanic_in_ocean import TitanicInOcean
 from system.titanic import Titanic
 
 locations = {
-    'Southampton': LocationOnGrid(50.909698, -1.404351),
-    'Cherbourg': LocationOnGrid(49.630001, -1.620000),
-    'Queenstown': LocationOnGrid(51.850334, -8.294286),
-    'New York': LocationOnGrid(40.730610, -73.935242)
+    'Southampton': LocationOnGrid(latitude=50.909698, longitude=-1.404351),
+    'Cherbourg': LocationOnGrid(latitude=49.630001, longitude=-1.620000),
+    'Queenstown': LocationOnGrid(latitude=51.850334, longitude=-8.294286),
+    'New York': LocationOnGrid(latitude=40.730610, longitude=-73.935242)
 }
 
 areas = {
-    'The English Channel': AreaOnGrid(LocationOnGrid(49.5, -1.41), LocationOnGrid(51.9, -8.2)),
-    'Iceberg alley': AreaOnGrid(LocationOnGrid(43, -45), LocationOnGrid(48, -50))
+    'The English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.41), LocationOnGrid(latitude=51.9, longitude=-8.2)),
+    'Iceberg alley': AreaOnGrid(LocationOnGrid(latitude=43, longitude=-45), LocationOnGrid(latitude=48, longitude=-50))
 }
 
-atlantic_area = AreaOnGrid(LocationOnGrid(35, -1.41), LocationOnGrid(65, -74))
+atlantic_area = AreaOnGrid(LocationOnGrid(latitude=35, longitude=-1.41), LocationOnGrid(latitude=65, longitude=-74))
 
 def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
@@ -56,6 +56,7 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
             # Get user input
             key = stdscr.getch()
+            curses.flushinp()
 
             # Handle different key presses
             if key == ord('q') or key == ord('Q'):  # QUIT
@@ -70,9 +71,11 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
                 if key == ord('w') or key == ord('W'):
                     tio.speed += 10
+                    tio.speed = min(tio.speed, 500)
 
                 if key == ord('s') or key == ord('S'):
                     tio.speed -= 10
+                    tio.speed = max(tio.speed, -300)
 
             if key == ord('0'):
                 tio.speed = 0
@@ -109,10 +112,10 @@ if __name__ == '__main__':
     location = locations["Southampton"]
 
     t = Titanic(0, steering_direction=0)
-    tio = TitanicInOcean(t, location.longitude, location.latitude - 0.1, 0, 0)
+    tio = TitanicInOcean(t, longitude=location.longitude - 1, latitude=location.latitude, speed=0, direction=0)
     ocean.floating_objects.append(tio)
 
-    iceberg = Iceberg(45, -47.5)
+    iceberg = Iceberg(latitude=45, longitude=-47.5)
     ocean.floating_objects.append(iceberg)
 
     journey = Journey(ocean)
