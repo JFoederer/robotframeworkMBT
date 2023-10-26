@@ -72,7 +72,7 @@ Titanic barely misses a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    Spawn iceberg at coordinate latitude 47.0 longitude -48.5
+    Spawn iceberg at coordinate latitude 47.0000 longitude -48.5000
     Move Titanic out of current area
     Log    Pfew! That was close!
 
@@ -80,7 +80,7 @@ Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    Spawn iceberg at coordinate latitude 45.21355561 longitude -47.46187754
+    Spawn iceberg at coordinate latitude 45.2135 longitude -47.4618
     log    Iceberg, right ahead!
     Move Titanic out of current area
 
