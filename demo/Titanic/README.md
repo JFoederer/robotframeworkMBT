@@ -47,9 +47,10 @@ If you choose the `hit` scenario, don't be surprised if you encounter some failu
 
 ### Bonus: Play the demo as game
 
-Can you safely pass iceberg alley and arrive in New York?
+Can you safely cross Iceberg Alley and arrive in New York?  
+Be the manual tester and play the game!
 
-To play the game, follow these instructions:
+Instructions:
 
 * Install matplotlib: `pip install matplotlib`
 * Based on your system, install curses
