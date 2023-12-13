@@ -182,12 +182,13 @@ class SuiteProcessors:
                         return False
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
+                    msg = f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}"
                     try:
                         if m.process_expression(expr) is False:
-                            logger.debug(f"Refinement needed for scenario {scenario.name}")
+                            logger.debug(msg)
                             return True
                     except Exception as err:
-                        logger.debug(f"Refinement needed for scenario {scenario.name}")
+                        logger.debug(msg)
                         return True
         return False
 
