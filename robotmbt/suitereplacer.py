@@ -30,8 +30,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
-
 from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import keyword
 from robot.api import logger
@@ -156,12 +154,8 @@ class SuiteReplacer:
 
     def __fill_in_args(self, step, expressions):
         kw = Robot._namespace.get_runner(step.bare_kw).keyword
-        emb_args = kw.embedded
-        re_pattern = emb_args.name if emb_args else None
-        arg_values = dict()
-        if re_pattern:
-            arg_values = dict(zip(["${%s}"%a for a in emb_args.args],
-                                  re.fullmatch(re_pattern, step.bare_kw).groups()))
+        arg_values = dict() if not kw.embedded else dict(zip(["${%s}"%a for a in kw.embedded.args],
+                                                             kw.embedded.match(step.bare_kw).groups()))
         result = []
         for expr in expressions:
             result.append(expr)
