@@ -30,8 +30,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import re
-
 from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import keyword
 from robot.api import logger
@@ -75,7 +73,7 @@ class SuiteReplacer:
         logger.debug(f"processing test suite: {in_suite.name}")
         out_suite = Suite(in_suite.name, parent)
         out_suite.filename = in_suite.source
-        
+
         if in_suite.setup and parent is not None:
             logger.debug(f"    with setup: {in_suite.setup.name}")
             self.prev_gherkin_kw = None
@@ -128,7 +126,7 @@ class SuiteReplacer:
         runner = Robot._namespace.get_runner(step.bare_kw)
         if hasattr(runner, 'error'):
             raise ValueError(runner.error)
-        docu = runner._handler.doc
+        docu = runner.keyword._doc
         mi_index = docu.find("*model info*")
         if mi_index == -1:
             return model_info
@@ -155,13 +153,9 @@ class SuiteReplacer:
         return model_info
 
     def __fill_in_args(self, step, expressions):
-        kw_def = Robot._namespace.get_runner(step.bare_kw)._handler.name
-        emb_args = EmbeddedArguments.from_name(kw_def)
-        re_pattern = emb_args.name
-        arg_values = dict()
-        if re_pattern:
-            arg_values = dict(zip(["${%s}"%a for a in emb_args.args],
-                                  re.match(re_pattern, step.bare_kw).groups()))
+        kw = Robot._namespace.get_runner(step.bare_kw).keyword
+        arg_values = dict() if not kw.embedded else dict(zip(["${%s}"%a for a in kw.embedded.args],
+                                                             kw.embedded.match(step.bare_kw).groups()))
         result = []
         for expr in expressions:
             result.append(expr)

@@ -7,7 +7,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robotframework-mbt"
-version = "0.3.0"
+version = "0.4.0"
 description = "Model-Based Testing in Robot framework with test case generation"
 readme = "README.md"
 authors = [{ name = "Johan Foederer", email = "github@famfoe.nl" }]
@@ -19,9 +19,9 @@ classifiers = [
 ]
 keywords = ["robotframework", "robot", "mbt", "bdd", "testing"]
 dependencies = [
-    "robotframework >= 6.0",
+    "robotframework >= 7.0",
 ]
-requires-python = ">=3.8"
+requires-python = ">=3.10"
 
 [tool.setuptools]
 packages = ["robotmbt"]
