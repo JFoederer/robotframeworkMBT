@@ -10,12 +10,10 @@ Library           robotmbt
 
 *** Test Cases ***
 leading scenario
-    Given a blank birthday card
-    when 'Johan' writes their name on the birthday card
-    then the birthday card has 'Johan' written on it
+    When buying a birthday card
+    then there is a blank birthday card
 
 trailing scenario
-    Given the birthday card has 'Johan' written on it
-    when 'Tannaz' writes their name on the birthday card
+    Given there is a blank Birthday card
+    when 'Johan' writes their name on the birthday card
     then the birthday card has 'Johan' written on it
-    and the birthday card has 'Tannaz' written on it

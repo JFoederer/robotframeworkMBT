@@ -1,11 +1,17 @@
 *** Keywords ***
-a blank Birthday card
+buying a birthday card
     [Documentation]    *model info*
-    ...    :IN: new birthday_card | birthday_card.names=[]
-    ...    :OUT: None
+    ...    :IN: None
+    ...    :OUT: new birthday_card
     Log    choosing a birthday card with baloons
     @{names}=    Create list
     Set suite variable    ${names}
+
+there is a blank Birthday card
+    [Documentation]    *model info*
+    ...    :IN: birthday_card.names==[]
+    ...    :OUT: birthday_card.names=[]
+    Length should be    ${names}    0
 
 there is a birthday card
     [Documentation]    *model info*
