@@ -6,7 +6,7 @@ Documentation     There are three test cases, one must go first. The other two a
 ...               force the model to reorganise the scenarios.
 Suite Setup       Suite setup
 Suite Teardown    Should be equal    ${test_count}    ${3}
-Task Setup        Test setup
+Test Setup        Test setup
 Resource          birthday_cards_flat.resource
 Library           robotmbt
 
@@ -25,7 +25,7 @@ middle scenario
     [Teardown]    Check order    ${2}
 
 leading scenario
-    When buying a birthday card
+    When Johan buys a birthday card
     then there is a blank birthday card
     [Teardown]    Check order    ${1}
 

@@ -9,7 +9,7 @@ Library           robotmbt
 
 *** Test Cases ***
 Buying a card
-    When buying a birthday card
+    When Johan buys a birthday card
     then there is a blank birthday card
 
 Sending Bahar a birthday card

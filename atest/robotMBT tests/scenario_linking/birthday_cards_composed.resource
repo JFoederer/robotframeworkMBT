@@ -2,7 +2,7 @@
 Library    String
 
 *** Keywords ***
-buying a birthday card
+Johan buys a birthday card
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: new birthday_card

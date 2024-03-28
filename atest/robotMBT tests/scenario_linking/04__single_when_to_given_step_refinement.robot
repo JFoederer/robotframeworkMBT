@@ -23,5 +23,5 @@ low-level scenario
     then 'Johan' is written in ink on the birthday card
 
 leading scenario
-    When buying a birthday card
+    When Johan buys a birthday card
     then there is a blank birthday card
