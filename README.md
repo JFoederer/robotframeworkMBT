@@ -56,7 +56,7 @@ you write '${your_wish}' on the postcard
     ...    :OUT: postcard.wish=${your_wish}
 ```
 
-The first scenario has no dependencies and can be executed at any time. This is evident from the fact that the scenario does not have any given-steps. From the `*model info*` we see that no dependencies need to be resolved before going into the first step: _When you buy a new postcard_. This is indicated by the `:IN:` expression which is `None`. After completing the step, a new domain term is available, `postcard`, as a result of the `:OUT:` statement `new postcard`. The following then-step adds detail to the postcard by adding a property. Setting `postcard.wish=None` in the `:OUT:` statement indicates that _you have a blank postcard_.
+The first scenario has no dependencies and can be executed at any time. This is evident from the fact that the scenario does not have any given-steps. From the `*model info*` we see that no dependencies need to be resolved before going into the first step: _When you buy a new postcard_. This is indicated by the `:IN:` condition which is `None`. After completing the step, a new domain term is available, `postcard`, as a result of the `:OUT:` statement `new postcard`. The following then-step adds detail to the postcard by adding a property. Setting `postcard.wish=None` in the `:OUT:` statement indicates that _you have a blank postcard_.
 
 The second scenario has a dependency to the first scenario, due to the given-step: _Given you have a blank postcard_. This is expressed by the `:IN:` expression stating that you need a postcard, that does not have a wish on it yet. How this works, is by evaluating the expressions according to this schema:
 
@@ -64,7 +64,7 @@ The second scenario has a dependency to the first scenario, due to the given-ste
 * when-steps evaluate both the `:IN:` and `:OUT:` expressions
 * then-steps evaluate only the `:OUT:` expressions
 
-If evaluation of any expression fails or is False, then the scenario is rejected. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. The step implementations use keywords to connect to the system under test. The keywords perform actions or verify the specified behaviour.
+If evaluation of any expression fails or is False, then the scenario cannot be executed at the current time. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. The step implementations use keywords to connect to the system under test. The keywords perform actions or check the specified behaviour.
 
 You can keep your models clean by deleting domain terms that are no longer relevant (e.g. `del postcard`). If multiple expressions are needed you can separate them in the `*model info*` by using the pipe symbol (`|`) or starting the next expression on a new line. A single expression cannot be split over multiple lines.
 
