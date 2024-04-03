@@ -121,7 +121,7 @@ a birthday card for ${recepient} was put in the mail
     ...    :OUT: birthday_card.is_mailed | birthday_card.recepient == ${recepient}
     Log    a birthday card for ${recepient} was put in the mail
 
-the birthcard is is delivered to ${recepient}'s mailbox
+the postal service delivers the birthday card to ${recepient}'s mailbox
     [Documentation]    *model info*
     ...    :IN: birthday_card.is_mailed
     ...    :OUT: birthday_card.is_delivered = True | birthday_card.mailbox = ${recepient}

@@ -22,7 +22,7 @@ Sending Bahar a birthday card
 
 Bahar receives the birthday card
     Given a birthday card for Bahar was put in the mail
-    when the birthcard is is delivered to Bahar's mailbox
+    when the postal service delivers the birthday card to Bahar's mailbox
     then 'Bahar' received the birthday card
 
 Johan prefers pen
