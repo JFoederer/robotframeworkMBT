@@ -1,5 +1,5 @@
 *** Keywords ***
-Johan buys a birthday card
+someone buys a birthday card
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: new birthday_card
@@ -7,7 +7,7 @@ Johan buys a birthday card
     @{names}=    Create list
     Set suite variable    ${names}
 
-there is a blank Birthday card
+there is a blank birthday card available
     [Documentation]    *model info*
     ...    :IN: birthday_card.names==[]
     ...    :OUT: birthday_card.names=[]
