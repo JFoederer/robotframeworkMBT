@@ -38,7 +38,7 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
         objective = 1
         iceberg_alley_reached = False
-        stdscr.addstr(objective, 0, "Objective 1: Safely cross Icebeg Alley")
+        stdscr.addstr(objective, 0, "Objective 1: Safely cross Iceberg Alley")
 
         while True:
             journey.passed_time(100)
@@ -54,7 +54,7 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
                 if areas['Iceberg alley'].is_location_within_area(tio):
                     iceberg_alley_reached = True
                 elif iceberg_alley_reached:
-                    stdscr.addstr(objective, 0, "Objective 1: Safely cross Icebeg Alley  [Achieved]")
+                    stdscr.addstr(objective, 0, "Objective 1: Safely cross Iceberg Alley  [Achieved]")
                     objective = 2
                     stdscr.addstr(objective, 0, "Objective 2: Sail to New York")
             elif objective == 2:
@@ -62,7 +62,7 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
                     tio.speed = 0
                     stdscr.addstr(objective, 0, "Objective 2: Sail to New York           [Achieved]")
                     objective = 4
-                    stdscr.addstr(objective, 0, "You made it to NY!!  Press Q to exit.")
+                    stdscr.addstr(objective, 0, "You made it to New York!!  Press Q to exit.")
 
             if tio.sunk:
                 stdscr.addstr(objective+2, 0,
