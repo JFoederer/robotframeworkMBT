@@ -4,7 +4,7 @@ Documentation     This is a composed scenario where there is a sequence of three
 ...               has multiple steps that require refinement. One of those refinement
 ...               steps needs refinement of it own, yielding double-layerd refinement.
 Suite Setup       Treat this test suite Model-based
-Resource          birthday_cards_composed.resource
+Resource          ../../resources/birthday_cards_composed.resource
 Library           robotmbt
 
 *** Test Cases ***

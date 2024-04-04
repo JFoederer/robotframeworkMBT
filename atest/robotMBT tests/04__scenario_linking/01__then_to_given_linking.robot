@@ -5,7 +5,7 @@ Documentation     This test suite demonstrates direct one-on-one linking of scen
 ...
 ...               Note that this test suite would also pass when run in Robot Framework without additional processing.
 Suite Setup       Treat this test suite Model-based
-Resource          birthday_cards_flat.resource
+Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 
 *** Test Cases ***

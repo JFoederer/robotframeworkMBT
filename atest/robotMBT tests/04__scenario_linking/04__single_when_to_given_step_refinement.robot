@@ -8,7 +8,7 @@ Documentation     This suite demonstrates step refinement in its simplest form. 
 ...               high-level scenario must match the _GIVEN_ step of the refinement
 ...               scenario.
 Suite Setup       Treat this test suite Model-based
-Resource          birthday_cards_layered.resource
+Resource          ../../resources/birthday_cards_layered.resource
 Library           robotmbt
 
 *** Test Cases ***
