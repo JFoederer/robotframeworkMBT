@@ -5,7 +5,7 @@ Library           robotmbt    processor_lib=MyProcessor
 
 *** Test cases ***
 consise model info
-    consise model info
+    concise model info
 
 trailing model info
     trailing model info
@@ -23,7 +23,7 @@ model info with altenative spacing
     model info with altenative spacing
 
 *** Keywords ***
-consise model info
+concise model info
     [Documentation]    *model info*
     ...    :IN: Alfa
     ...    :OUT: Beta | Gamma delta | Epsilon
