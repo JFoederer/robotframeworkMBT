@@ -13,12 +13,15 @@ Library           robotmbt
 
 *** Test Cases ***
 high-level scenario
-    Given a blank birthday card
-    when 'Johan' is written on the birthday card
+    Given there is a blank birthday card available
+    when 'Johan' writes their name on the birthday card
     then the birthday card has 'Johan' written on it
 
 low-level scenario
     Given there is a birthday card
     when 'Johan' writes their name in pen on the birthday card
-    then the birthday card has 'Johan' written on it
-    and 'Johan' is written in ink on the birthday card
+    then 'Johan' is written in ink on the birthday card
+
+leading scenario
+    When someone buys a birthday card
+    then there is a blank birthday card available
