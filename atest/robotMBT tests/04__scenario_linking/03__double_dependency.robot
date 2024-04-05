@@ -7,7 +7,7 @@ Documentation     There are three test cases, one must go first. The other two a
 Suite Setup       Suite setup
 Suite Teardown    Should be equal    ${test_count}    ${3}
 Test Setup        Test setup
-Resource          birthday_cards_flat.resource
+Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 
 *** Test Cases ***

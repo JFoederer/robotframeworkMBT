@@ -8,7 +8,7 @@ Documentation     This suite demonstrates step refinement in its simplest form. 
 ...               high-level scenario must match the _GIVEN_ step of the refinement
 ...               scenario.
 Suite Setup       Treat this test suite Model-based
-Resource          birthday_cards_layered.resource
+Resource          ../../resources/birthday_cards_composed.resource
 Library           robotmbt
 
 *** Test Cases ***
@@ -20,8 +20,9 @@ high-level scenario
 low-level scenario
     Given there is a birthday card
     when 'Johan' writes their name in pen on the birthday card
-    then 'Johan' is written in ink on the birthday card
+    then the birthday card has 'Johan' written on it
+    and there is text added in ink on the birthday card
 
 leading scenario
-    When someone buys a birthday card
+    When 'Johan' buys a birthday card
     then there is a blank birthday card available

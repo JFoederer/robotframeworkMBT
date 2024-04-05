@@ -19,6 +19,13 @@ there is a birthday card
     ...    :OUT: birthday_card
     Variable should exist    ${names}
 
+'${name}' writes their name on the birthday card
+    [Documentation]    *model info*
+    ...    :IN: birthday_card
+    ...    :OUT: birthday_card.names.append(${name})
+    Log    Writing '${name}' on the birthday card
+    Set suite variable    @{names}    @{names}    ${name}
+
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
     ...    :IN: ${name} in birthday_card.names
