@@ -4,7 +4,7 @@ Library           MyProcessor.py
 Library           robotmbt    processor_lib=MyProcessor
 
 *** Test cases ***
-consise model info
+concise model info
     concise model info
 
 trailing model info
@@ -13,14 +13,14 @@ trailing model info
 leading model info
     leading model info
 
-sandwitched model info
-    sandwitched model info
+sandwiched model info
+    sandwiched model info
 
 model info on multiple lines
     model info on multiple lines
 
-model info with altenative spacing
-    model info with altenative spacing
+model info with alternative spacing
+    model info with alternative spacing
 
 *** Keywords ***
 concise model info
@@ -45,7 +45,7 @@ leading model info
     ...    text after model info
     Log    Hello world!
 
-sandwitched model info
+sandwiched model info
     [Documentation]    Text
     ...    before model info
     ...
@@ -65,7 +65,7 @@ model info on multiple lines
     ...    | Epsilon |
     Log    Hello world!
 
-model info with altenative spacing
+model info with alternative spacing
     [Documentation]    Text
     ...    before model info
     ...
