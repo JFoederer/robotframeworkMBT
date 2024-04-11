@@ -5,8 +5,13 @@ Documentation     The divergent bogey suite is similar to the identity bogey sui
 ...               will cause the model to keep growing without ever reaching the entry
 ...               condition for the other scenario.
 Suite Setup       Treat this test suite Model-based
+Suite Teardown    Should be equal    ${test_count}    ${5}
+Test Teardown     Increase test count
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
+
+*** Variables ***
+${test_count}     ${0}
 
 *** Test Cases ***
 Buying a card
@@ -27,3 +32,10 @@ At least 4 people can write their name on the card
     Given the birthday card has 3 names written on it
     when 'Someone' writes their name on the birthday card
     then the birthday card has 4 names written on it
+
+*** Keywords ***
+Increase test count
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
+    Set suite variable    ${test_count}    ${test_count+1}
