@@ -223,6 +223,8 @@ class SuiteProcessors:
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
                         back.steps[0].model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
+                        front.partial = True
+                        back.partial = True
                         return front, back
             front.steps.append(back.steps.pop(0))
         assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"

@@ -62,6 +62,11 @@ class TraceState:
         for i in range(len(self._c_pool)):
             if i not in self._trace and i not in self._tried[-1]:
                 return i
+        # if there are no new scenarios to try,
+        # also try scenarios that are already in the trace.
+        for i in range(len(self._c_pool)):
+            if i not in self._tried[-1]:
+                return i
         return None
 
     def highest_part(self, index):
@@ -75,7 +80,7 @@ class TraceState:
 
     def confirm_full_scenario(self, index, scenario, model):
         self._c_pool[index] = True
-        if index in self._trace:
+        if index in self._trace and scenario.partial:
             id = f"{index}.0"
         else:
             id = str(index)

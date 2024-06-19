@@ -25,7 +25,7 @@ middle scenario
     [Teardown]    Check order    ${2}
 
 leading scenario
-    When someone buys a birthday card
+    When 'Johan' buys a birthday card
     then there is a blank birthday card available
     [Teardown]    Check order    ${1}
 

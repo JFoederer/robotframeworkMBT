@@ -64,6 +64,7 @@ class Scenario:
         self.setup = None    # Can be a single step or None
         self.teardown = None # Can be a single step or None
         self.steps = []
+        self.partial = False
 
     @property
     def longname(self):

@@ -10,7 +10,7 @@ Library           robotmbt
 
 *** Test Cases ***
 leading scenario
-    When someone buys a birthday card
+    When 'Johan' buys a birthday card
     then there is a blank birthday card available
 
 trailing scenario
