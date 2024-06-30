@@ -4,14 +4,11 @@ Documentation     The divergent bogey suite is similar to the identity bogey sui
 ...               difference is that inserting the repeating scenario at the wrong time
 ...               will cause the model to keep growing without ever reaching the entry
 ...               condition for the other scenario.
-Suite Setup       Treat this test suite Model-based
+Suite Setup       Enter test suite
 Suite Teardown    Should be equal    ${test_count}    ${5}
 Test Teardown     Increase test count
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
-
-*** Variables ***
-${test_count}     ${0}
 
 *** Test Cases ***
 Buying a card
@@ -34,6 +31,10 @@ At least 4 people can write their name on the card
     then the birthday card has 4 names written on it
 
 *** Keywords ***
+Enter test suite
+    Set Suite Variable    ${test_count}    ${0}
+    Treat this test suite Model-based
+
 Increase test count
     [Documentation]    *model info*
     ...    :IN: None

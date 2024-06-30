@@ -31,14 +31,14 @@ leading scenario
 
 *** Keywords ***
 Suite setup
-    Set Global Variable    ${test_count}    ${0}
+    Set Suite Variable    ${test_count}    ${0}
     Treat this test suite Model-based
 
 Test setup
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: None
-    Set Global Variable    ${test_count}    ${test_count+1}
+    Set Suite Variable    ${test_count}    ${test_count+1}
 
 Check order
     [Arguments]    ${order}
