@@ -83,12 +83,26 @@ class SuiteProcessors:
         self.flat_suite = self.flatten(in_suite)
 
         self.scenarios = self.flat_suite.scenarios[:]
+        # a short trace without the need for repeating scenarios is preferred
+        self.try_to_reach_full_coverage(allow_duplicate_scenarios=False)
+
+        if not self.tracestate.coverage_reached():
+            logger.debug("Direct trace not available. Allowing repetition of scenarios")
+            self.try_to_reach_full_coverage(allow_duplicate_scenarios=True)
+            if not self.tracestate.coverage_reached():
+                raise Exception("Unable to compose a consistent suite")
+
+        self.out_suite.scenarios = self.tracestate.get_trace()
+        self._report_tracestate_wrapup()
+        return self.out_suite
+
+    def try_to_reach_full_coverage(self, allow_duplicate_scenarios):
         random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
         self._init_reporting()
 
         while not self.tracestate.coverage_reached():
-            i_candidate = self.tracestate.next_candidate()
+            i_candidate = self.tracestate.next_candidate(retry=allow_duplicate_scenarios)
             if i_candidate is None:
                 if not self.tracestate.can_rewind():
                     break
@@ -97,14 +111,18 @@ class SuiteProcessors:
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
-                self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
+                inserted = self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
+                if inserted and self.__last_candidate_changed_nothing():
+                    logger.debug("Repeated scenario did not change the model's state. Stop trying.")
+                    self.tracestate.rewind()
+                    self._report_tracestate_to_user()
 
-        if not self.tracestate.coverage_reached():
-            raise Exception("Unable to compose a consistent suite")
-
-        self.out_suite.scenarios = self.tracestate.get_trace()
-        self._report_tracestate_wrapup()
-        return self.out_suite
+    def __last_candidate_changed_nothing(self):
+        if len(self.tracestate) < 2:
+            return False
+        if self.tracestate[-1].id != self.tracestate[-2].id:
+            return False
+        return self.tracestate[-1].model == self.tracestate[-2].model
 
     @staticmethod
     def _fail_on_step_errors(suite):

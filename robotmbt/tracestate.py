@@ -58,21 +58,36 @@ class TraceState:
     def get_trace(self):
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self):
+    def next_candidate(self, retry=False):
         for i in range(len(self._c_pool)):
             if i not in self._trace and i not in self._tried[-1]:
                 return i
-        # if there are no new scenarios to try,
-        # also try scenarios that are already in the trace.
+        if not retry:
+            return None
         for i in range(len(self._c_pool)):
-            if i not in self._tried[-1]:
+            if i not in self._tried[-1] and not self.__is_repeatfest(i):
                 return i
         return None
 
+    def __is_repeatfest(self, i):
+        REPEAT_LIMIT = 50
+        if len(self._d_trace) < REPEAT_LIMIT:
+            return False
+        # ToDo: Needs feedback to user
+        return self._d_trace[-1] == str(i) and len(set(self._d_trace[-REPEAT_LIMIT:-1])) == 1
+
     def highest_part(self, index):
-        """Given the current trace and an index, returns the highest part number"""
-        part_list = [int(s.split('.')[1]) for s in self._d_trace if s.startswith(f'{index}.')]
-        return max(part_list) if part_list else 0
+        """Given the current trace and an index, returns the highest part number of an ongoing
+        refinement for the related scenario. Returns 0 when there is no refinement active."""
+        for i in range(1, len(self._d_trace)+1):
+            if self._d_trace[-i] == f'{index}':
+                return 0
+            if self._d_trace[-i].startswith(f'{index}.'):
+                return int(self._d_trace[-i].split('.')[1])
+        return 0
+
+    def is_new_partial_scenario(self, index):
+        return self.highest_part(index) == 0
 
     def reject_scenario(self, i_scenario):
         """Trying a scenario excludes it from further cadidacy on this level"""
@@ -91,13 +106,13 @@ class TraceState:
         self._snapshots.append(TraceSnapShot(id, scenario, model))
 
     def push_partial_scenario(self, index, scenario, model, remainder):
-        if index in self._trace:
-            id = f"{index}.{self.highest_part(index)+1}"
-        else:
+        if self.is_new_partial_scenario(index):
             id = f"{index}.1"
             self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
+        else:
+            id = f"{index}.{self.highest_part(index)+1}"
         self._d_trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
         self._snapshots[-1].remainder = remainder
@@ -109,16 +124,16 @@ class TraceState:
         id = self._d_trace.pop()
         index = int(id.split('.')[0])
         if id.endswith('.0'):
-            self._c_pool[index] = False
             self._snapshots.pop()
             while self._d_trace[-1] != f"{index}.1":
                 self.rewind()
-            id = self._d_trace.pop()
+            return self.rewind()
 
         self._snapshots.pop()
         if '.' not in id or id.endswith('.1'):
             self._trace.pop()
-            self._c_pool[index] = False
+            if index not in self._trace:
+                self._c_pool[index] = False
             self._tried.pop()
         return self._snapshots[-1] if self._snapshots else None
 
@@ -128,6 +143,8 @@ class TraceState:
     def __getitem__(self, key):
         return self._snapshots[key]
 
+    def __len__(self):
+        return len(self._snapshots)
 
 class TraceSnapShot:
     def __init__(self, id, inserted_scenario, model_state):

@@ -45,6 +45,9 @@ class ModelSpace:
     def copy(self):
         return copy.deepcopy(self)
 
+    def __eq__(self, other):
+        return self.get_status_text() == other.get_status_text()
+
     def add_prop(self, name):
         if name in self.props or name in self.values:
             raise ModellingError(f"Naming conflict, '{name}' already in use.")
