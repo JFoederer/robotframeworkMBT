@@ -105,7 +105,7 @@ class TraceState:
         self._d_trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
 
-    def push_partial_scenario(self, index, scenario, model, remainder):
+    def push_partial_scenario(self, index, scenario, model):
         if self.is_new_partial_scenario(index):
             id = f"{index}.1"
             self._trace.append(index)
@@ -115,7 +115,6 @@ class TraceState:
             id = f"{index}.{self.highest_part(index)+1}"
         self._d_trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
-        self._snapshots[-1].remainder = remainder
 
     def can_rewind(self):
         return len(self._d_trace) > 0
@@ -151,4 +150,3 @@ class TraceSnapShot:
         self.id = id
         self.scenario = inserted_scenario
         self.model = model_state.copy()
-        self.remainder = None

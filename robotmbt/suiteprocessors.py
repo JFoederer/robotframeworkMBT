@@ -146,7 +146,7 @@ class SuiteProcessors:
             part2.steps[0].model_info['OUT'] = []
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
             new_model = self._process_scenario(part1, self.tracestate.model)
-            self.tracestate.push_partial_scenario(index, part1, new_model, part2)
+            self.tracestate.push_partial_scenario(index, part1, new_model)
             self._report_tracestate_to_user()
 
             i_refine = self.tracestate.next_candidate()
@@ -213,11 +213,8 @@ class SuiteProcessors:
     @staticmethod
     def _split_refinement_candidate(scenario, model):
         m = model.copy()
-        front = copy.deepcopy(scenario)
-        front.steps = []
-        back = copy.deepcopy(scenario)
-        while back.steps:
-            step = back.steps[0]
+        for i in range(len(scenario.steps)):
+            step = scenario.steps[i]
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     m.process_expression(expr)
@@ -230,6 +227,7 @@ class SuiteProcessors:
                     except Exception as err:
                         refine_here = True
                     if refine_here:
+                        front, back = scenario.split_at_step(i)
                         edge_step = Step('Log', scenario)
                         edge_step.args = (f"Refinement follows for step: {step.keyword}",)
                         edge_step.gherkin_kw = step.gherkin_kw
@@ -241,11 +239,8 @@ class SuiteProcessors:
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
                         back.steps[0].model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
-                        front.partial = True
-                        back.partial = True
                         return front, back
-            front.steps.append(back.steps.pop(0))
-        assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"
+        assert False, "_split_refinement_candidate() called on non-refineable scenario"
 
     @staticmethod
     def _process_scenario(scenario, model):
