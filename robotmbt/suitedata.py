@@ -30,8 +30,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import copy
-
 class Suite:
     def __init__(self, name, parent=None):
         self.name = name
@@ -88,14 +86,14 @@ class Scenario:
         With stepindex 0 the first part has no steps and all steps are in the last part. With
         stepindex 1 the first step is in the first part, the other in the last part, and so on.
         """
-        assert len(self.steps) >= stepindex, "split index out of range. Not enough steps in scenario"
-        front = copy.deepcopy(self)
-        front.teardown = None
-        front.steps = front.steps[:stepindex]
+        assert stepindex <= len(self.steps), "Split index out of range. Not enough steps in scenario"
+        front = Scenario(self.name, self.parent)
+        front.setup = self.setup
+        front.steps = self.steps[:stepindex]
         front.partial = True
-        back = copy.deepcopy(self)
-        back.setup = None
-        back.steps = back.steps[stepindex:]
+        back = Scenario(self.name, self.parent)
+        back.steps = self.steps[stepindex:]
+        back.teardown = self.teardown
         back.partial = True
         return front, back
 

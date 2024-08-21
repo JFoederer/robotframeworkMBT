@@ -237,6 +237,7 @@ class SuiteProcessors:
                         edge_step.args = (f"Refinement completed for step: {step.keyword}",)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
+                        back.steps[0] = copy.deepcopy(back.steps[0])
                         back.steps[0].model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
                         return front, back

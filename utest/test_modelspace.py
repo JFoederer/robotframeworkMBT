@@ -199,5 +199,17 @@ class TestModelSpace(unittest.TestCase):
         self.assertRaises(NameError, m_copy.process_expression, 'foo2')
         self.assertIs(m_copy.process_expression('foo3.bar == foobar3'), True)
 
+    def test_equal_operator(self):
+        m1 = ModelSpace()
+        m2 = ModelSpace()
+        self.assertTrue(m1 == m2)
+        for action in ['new foo1', 'foo1.bar1 = foobar1', 'foo1.bar2 = foobar2',
+                       'new foo2', 'foo2.bar1 = foobar1', 'foo2.bar2 = foobar2', 'del foo2']:
+            m1.process_expression(action)
+            m2.process_expression(action)
+            self.assertTrue(m1 == m2)
+        m2.process_expression('foo1.bar1 = 13')
+        self.assertFalse(m1 == m2)
+
 if __name__ == '__main__':
     unittest.main()
