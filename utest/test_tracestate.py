@@ -69,6 +69,66 @@ class TestTraceState(unittest.TestCase):
         ts.rewind()
         self.assertIs(ts.next_candidate(), None)
 
+    def test_candidates_come_in_order_when_accepted(self):
+        ts = TraceState(3)
+        candidates = []
+        for scenario in  range(3):
+            candidates.append(ts.next_candidate())
+            ts.confirm_full_scenario(candidates[-1], scenario, {})
+        candidates.append(ts.next_candidate())
+        self.assertEqual(candidates, [0, 1, 2, None])
+
+    def test_candidates_come_in_order_when_rejected(self):
+        ts = TraceState(3)
+        candidates = []
+        for _ in  range(3):
+            candidates.append(ts.next_candidate())
+            ts.reject_scenario(candidates[-1])
+        candidates.append(ts.next_candidate())
+        self.assertEqual(candidates, [0, 1, 2, None])
+
+    def test_rejected_scenarios_are_candidates_for_new_positions(self):
+        ts = TraceState(3)
+        candidates = []
+        ts.reject_scenario(0)
+        for scenario in  range(3):
+            candidates.append(ts.next_candidate())
+            ts.confirm_full_scenario(candidates[-1], scenario, {})
+        candidates.append(ts.next_candidate())
+        self.assertEqual(candidates, [1, 0, 2, None])
+
+    def test_previously_confirmed_scenarios_can_be_retried_if_no_new_candidates_exist(self):
+        ts = TraceState(3)
+        one = Scenario('one')
+        two = Scenario('two')
+        three = Scenario('three')
+        first_candidate = ts.next_candidate(retry=True)
+        ts.confirm_full_scenario(first_candidate, one, {})
+        ts.reject_scenario(ts.next_candidate(retry=True))
+        ts.reject_scenario(ts.next_candidate(retry=True))
+        retry_candidate = ts.next_candidate(retry=True)
+        self.assertEqual(first_candidate, retry_candidate)
+        ts.confirm_full_scenario(retry_candidate, one, {})
+        ts.confirm_full_scenario(ts.next_candidate(retry=True), two, {})
+        self.assertFalse(ts.coverage_reached())
+        ts.confirm_full_scenario(ts.next_candidate(retry=True), three, {})
+        self.assertTrue(ts.coverage_reached())
+        self.assertEqual(ts.get_trace(), [one, one, two, three])
+
+    def test_retry_can_continue_once_coverage_is_reached(self):
+        ts = TraceState(3)
+        one = Scenario('one')
+        two = Scenario('two')
+        three = Scenario('three')
+        ts.confirm_full_scenario(ts.next_candidate(retry=True), one, {})
+        ts.confirm_full_scenario(ts.next_candidate(retry=True), two, {})
+        ts.confirm_full_scenario(ts.next_candidate(retry=True), three, {})
+        self.assertTrue(ts.coverage_reached())
+        self.assertEqual(ts.next_candidate(retry=True), 0)
+        ts.reject_scenario(0)
+        self.assertEqual(ts.next_candidate(retry=True), 1)
+        self.assertEqual(ts.next_candidate(retry=False), None)
+
     def test_rewind_single_available_scenario(self):
         ts = TraceState(1)
         ts.confirm_full_scenario(0, 'one', {})
@@ -599,3 +659,6 @@ class TestRefinement(unittest.TestCase):
         ts.confirm_full_scenario(top_level, t0, {})
         self.assertEqual(ts.highest_part(top_level), 0)
         self.assertEqual(ts.get_trace(), [self.t1, m11, b1, b0, m10, t2, m21, m22, m23, m20, t0])
+
+if __name__ == '__main__':
+    unittest.main()
