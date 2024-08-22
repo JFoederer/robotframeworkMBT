@@ -65,16 +65,9 @@ class TraceState:
         if not retry:
             return None
         for i in range(len(self._c_pool)):
-            if i not in self._tried[-1] and not self.__is_repeatfest(i):
+            if i not in self._tried[-1]:
                 return i
         return None
-
-    def __is_repeatfest(self, i):
-        REPEAT_LIMIT = 50
-        if len(self._d_trace) < REPEAT_LIMIT:
-            return False
-        # ToDo: Needs feedback to user
-        return self._d_trace[-1] == str(i) and len(set(self._d_trace[-REPEAT_LIMIT:-1])) == 1
 
     def highest_part(self, index):
         """Given the current trace and an index, returns the highest part number of an ongoing

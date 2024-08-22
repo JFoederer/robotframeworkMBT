@@ -76,6 +76,7 @@ class SuiteProcessors:
 
     @not_keyword
     def process_test_suite(self, in_suite, coverage='*'):
+        self.REPEAT_LIMIT = 50
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -112,9 +113,15 @@ class SuiteProcessors:
                 self._report_tracestate_to_user()
             else:
                 inserted = self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
-                if inserted and self.__last_candidate_changed_nothing():
-                    logger.debug("Repeated scenario did not change the model's state. Stop trying.")
-                    self.tracestate.rewind()
+                if inserted:
+                    if self.__last_candidate_changed_nothing():
+                        logger.debug("Repeated scenario did not change the model's state. Stop trying.")
+                        self.tracestate.rewind()
+                    elif self.__is_repeatfest():
+                        logger.debug(f"Same scenario repeated too often ({self.REPEAT_LIMIT}x). "
+                                     "Keep 1, then try something else.")
+                        for i in range(self.REPEAT_LIMIT):
+                            self.tracestate.rewind()
                     self._report_tracestate_to_user()
 
     def __last_candidate_changed_nothing(self):
@@ -123,6 +130,15 @@ class SuiteProcessors:
         if self.tracestate[-1].id != self.tracestate[-2].id:
             return False
         return self.tracestate[-1].model == self.tracestate[-2].model
+
+    def __is_repeatfest(self):
+        if len(self.tracestate) < self.REPEAT_LIMIT:
+            return False
+        last_id = self.tracestate[-1].id
+        for i in range(2, self.REPEAT_LIMIT+2):
+            if self.tracestate[-i].id != last_id:
+                return False
+        return True
 
     @staticmethod
     def _fail_on_step_errors(suite):
