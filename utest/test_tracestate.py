@@ -129,6 +129,16 @@ class TestTraceState(unittest.TestCase):
         self.assertEqual(ts.next_candidate(retry=True), 1)
         self.assertEqual(ts.next_candidate(retry=False), None)
 
+    def test_count_scenario_repetitions(self):
+        ts = TraceState(2)
+        one = Scenario('one')
+        first = ts.next_candidate()
+        self.assertEqual(ts.count(first), 0)
+        ts.confirm_full_scenario(first, one, {})
+        self.assertEqual(ts.count(first), 1)
+        ts.confirm_full_scenario(first, one, {})
+        self.assertEqual(ts.count(first), 2)
+
     def test_rewind_single_available_scenario(self):
         ts = TraceState(1)
         ts.confirm_full_scenario(0, 'one', {})
@@ -401,6 +411,24 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.highest_part(0), 0)
         ts.rewind()
         self.assertEqual(ts.highest_part(0), 0)
+
+    def test_count_scenario_repetitions_with_partials(self):
+        ts = TraceState(2)
+        first = ts.next_candidate()
+        self.assertEqual(ts.count(first), 0)
+        ts.confirm_full_scenario(first, self.scenario, {})
+        self.assertEqual(ts.count(first), 1)
+        ts.push_partial_scenario(first, self.part1, {})
+        ts.push_partial_scenario(first, self.part2, {})
+        self.assertEqual(ts.count(first), 1)
+        ts.confirm_full_scenario(first, self.remainder, {})
+        self.assertEqual(ts.count(first), 2)
+        second = ts.next_candidate()
+        ts.push_partial_scenario(second, self.part1, {})
+        self.assertEqual(ts.count(second), 0)
+        ts.push_partial_scenario(second, self.part2, {})
+        ts.confirm_full_scenario(second, self.remainder, {})
+        self.assertEqual(ts.count(second), 1)
 
     def test_partial_scenario_is_tried_without_finishing(self):
         ts = TraceState(1)

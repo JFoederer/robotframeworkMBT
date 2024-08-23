@@ -69,6 +69,11 @@ class TraceState:
                 return i
         return None
 
+    def count(self, index):
+        """Count the number of times the index is present in the trace.
+        unfinished partial scenarios are excluded."""
+        return self._d_trace.count(str(index)) + self._d_trace.count(str(f"{index}.0"))
+
     def highest_part(self, index):
         """Given the current trace and an index, returns the highest part number of an ongoing
         refinement for the related scenario. Returns 0 when there is no refinement active."""

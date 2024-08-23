@@ -269,6 +269,17 @@ class TestScenarios(unittest.TestCase):
     def test_split_fails_on_invlaid_stepindex(self):
         self.assertRaises(AssertionError, self.scenario.split_at_step, 11)
 
+    def test_copies_are_independent(self):
+        dup = self.scenario.copy()
+        dup.name = "other name"
+        dup.steps.append('extra step')
+        self.assertIs(dup.parent, self.scenario.parent)
+        self.assertEqual(dup.setup, self.scenario.setup)
+        self.assertEqual(dup.teardown, self.scenario.teardown)
+        self.assertNotEqual(dup.name, self.scenario.name)
+        self.assertIs(dup.steps[0], self.scenario.steps[0])
+        self.assertIsNot(dup.steps[-1], self.scenario.steps[-1])
+
 class TestSteps(unittest.TestCase):
     def setUp(self):
         self.steps = self.create_steps()

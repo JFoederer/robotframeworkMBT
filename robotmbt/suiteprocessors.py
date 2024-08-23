@@ -112,7 +112,12 @@ class SuiteProcessors:
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
-                inserted = self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
+                candidate = self.scenarios[i_candidate]
+                rep_count = self.tracestate.count(i_candidate)
+                if rep_count:
+                    candidate = candidate.copy()
+                    candidate.name = f"{candidate.name} (rep {rep_count+1})"
+                inserted = self._try_to_fit_in_scenario(i_candidate, candidate)
                 if inserted:
                     if self.__last_candidate_changed_nothing():
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
