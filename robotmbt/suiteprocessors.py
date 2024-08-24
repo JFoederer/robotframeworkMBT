@@ -203,8 +203,6 @@ class SuiteProcessors:
                     logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
                     self.tracestate.rewind()
                     self._report_tracestate_to_user()
-                else:
-                    self.tracestate.reject_scenario(i_refine)
                 i_refine = self.tracestate.next_candidate(retry=retry_flag)
             self.tracestate.rewind()
             self._report_tracestate_to_user()
