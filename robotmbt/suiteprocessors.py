@@ -112,22 +112,17 @@ class SuiteProcessors:
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
-                candidate = self.scenarios[i_candidate]
-                rep_count = self.tracestate.count(i_candidate)
-                if rep_count:
-                    candidate = candidate.copy()
-                    candidate.name = f"{candidate.name} (rep {rep_count+1})"
-                inserted = self._try_to_fit_in_scenario(i_candidate, candidate)
+                inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
+                                                        retry_flag=allow_duplicate_scenarios)
                 if inserted:
                     if self.__last_candidate_changed_nothing():
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
                         self.tracestate.rewind()
                     elif self.__is_repeatfest():
-                        logger.debug(f"Same scenario repeated too often ({self.REPEAT_LIMIT}x). "
+                        logger.debug(f"Same scenario repeated too often (>{self.REPEAT_LIMIT}x). "
                                      "Keep 1, then try something else.")
                         for i in range(self.REPEAT_LIMIT):
                             self.tracestate.rewind()
-                    self._report_tracestate_to_user()
 
     def __last_candidate_changed_nothing(self):
         if len(self.tracestate) < 2:
@@ -145,6 +140,16 @@ class SuiteProcessors:
                 return False
         return True
 
+    def _scenario_with_repeat_counter(self, index):
+        """Fetches the scenario by index and, if this scenario is already used in the trace,
+        adds a repetition counter to its name."""
+        candidate = self.scenarios[index]
+        rep_count = self.tracestate.count(index)
+        if rep_count:
+            candidate = candidate.copy()
+            candidate.name = f"{candidate.name} (rep {rep_count+1})"
+        return candidate
+
     @staticmethod
     def _fail_on_step_errors(suite):
         error_list = suite.steps_with_errors()
@@ -154,7 +159,7 @@ class SuiteProcessors:
                                       for s in error_list])
             raise Exception(err_msg)
 
-    def _try_to_fit_in_scenario(self, index, candidate):
+    def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
         if self._scenario_can_execute(candidate, self.tracestate.model):
             new_model = self._process_scenario(candidate, self.tracestate.model)
             self.tracestate.confirm_full_scenario(index, candidate, new_model)
@@ -169,15 +174,16 @@ class SuiteProcessors:
             new_model = self._process_scenario(part1, self.tracestate.model)
             self.tracestate.push_partial_scenario(index, part1, new_model)
             self._report_tracestate_to_user()
+            self.tracestate.reject_scenario(index) # Scenario cannot refine itself
 
-            i_refine = self.tracestate.next_candidate()
+            i_refine = self.tracestate.next_candidate(retry=retry_flag)
             if i_refine is None:
                 logger.debug("Refinement needed, but there are no scenarios left")
                 self.tracestate.rewind()
                 self._report_tracestate_to_user()
                 return False
             while i_refine is not None:
-                m_inserted = self._try_to_fit_in_scenario(i_refine, self.scenarios[i_refine])
+                m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
                 if m_inserted:
                     insert_valid_here = True
                     try:
@@ -189,7 +195,7 @@ class SuiteProcessors:
                     except Exception:
                         insert_valid_here = False
                     if insert_valid_here:
-                        m_finished = self._try_to_fit_in_scenario(index, part2)
+                        m_finished = self._try_to_fit_in_scenario(index, part2, retry_flag)
                         if m_finished:
                             return True
                     else:
@@ -197,7 +203,9 @@ class SuiteProcessors:
                     logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
                     self.tracestate.rewind()
                     self._report_tracestate_to_user()
-                i_refine = self.tracestate.next_candidate()
+                else:
+                    self.tracestate.reject_scenario(i_refine)
+                i_refine = self.tracestate.next_candidate(retry=retry_flag)
             self.tracestate.rewind()
             self._report_tracestate_to_user()
             return False
