@@ -76,6 +76,7 @@ class SuiteProcessors:
 
     @not_keyword
     def process_test_suite(self, in_suite, coverage='*'):
+        self.REPEAT_LIMIT = 50
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -83,12 +84,26 @@ class SuiteProcessors:
         self.flat_suite = self.flatten(in_suite)
 
         self.scenarios = self.flat_suite.scenarios[:]
+        # a short trace without the need for repeating scenarios is preferred
+        self.try_to_reach_full_coverage(allow_duplicate_scenarios=False)
+
+        if not self.tracestate.coverage_reached():
+            logger.debug("Direct trace not available. Allowing repetition of scenarios")
+            self.try_to_reach_full_coverage(allow_duplicate_scenarios=True)
+            if not self.tracestate.coverage_reached():
+                raise Exception("Unable to compose a consistent suite")
+
+        self.out_suite.scenarios = self.tracestate.get_trace()
+        self._report_tracestate_wrapup()
+        return self.out_suite
+
+    def try_to_reach_full_coverage(self, allow_duplicate_scenarios):
         random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
         self._init_reporting()
 
         while not self.tracestate.coverage_reached():
-            i_candidate = self.tracestate.next_candidate()
+            i_candidate = self.tracestate.next_candidate(retry=allow_duplicate_scenarios)
             if i_candidate is None:
                 if not self.tracestate.can_rewind():
                     break
@@ -97,14 +112,43 @@ class SuiteProcessors:
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
-                self._try_to_fit_in_scenario(i_candidate, self.scenarios[i_candidate])
+                inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
+                                                        retry_flag=allow_duplicate_scenarios)
+                if inserted:
+                    if self.__last_candidate_changed_nothing():
+                        logger.debug("Repeated scenario did not change the model's state. Stop trying.")
+                        self.tracestate.rewind()
+                    elif self.__is_repeatfest():
+                        logger.debug(f"Same scenario repeated too often (>{self.REPEAT_LIMIT}x). "
+                                     "Keep 1, then try something else.")
+                        for i in range(self.REPEAT_LIMIT):
+                            self.tracestate.rewind()
 
-        if not self.tracestate.coverage_reached():
-            raise Exception("Unable to compose a consistent suite")
+    def __last_candidate_changed_nothing(self):
+        if len(self.tracestate) < 2:
+            return False
+        if self.tracestate[-1].id != self.tracestate[-2].id:
+            return False
+        return self.tracestate[-1].model == self.tracestate[-2].model
 
-        self.out_suite.scenarios = self.tracestate.get_trace()
-        self._report_tracestate_wrapup()
-        return self.out_suite
+    def __is_repeatfest(self):
+        if len(self.tracestate) < self.REPEAT_LIMIT:
+            return False
+        last_id = self.tracestate[-1].id
+        for i in range(2, self.REPEAT_LIMIT+2):
+            if self.tracestate[-i].id != last_id:
+                return False
+        return True
+
+    def _scenario_with_repeat_counter(self, index):
+        """Fetches the scenario by index and, if this scenario is already used in the trace,
+        adds a repetition counter to its name."""
+        candidate = self.scenarios[index]
+        rep_count = self.tracestate.count(index)
+        if rep_count:
+            candidate = candidate.copy()
+            candidate.name = f"{candidate.name} (rep {rep_count+1})"
+        return candidate
 
     @staticmethod
     def _fail_on_step_errors(suite):
@@ -115,7 +159,7 @@ class SuiteProcessors:
                                       for s in error_list])
             raise Exception(err_msg)
 
-    def _try_to_fit_in_scenario(self, index, candidate):
+    def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
         if self._scenario_can_execute(candidate, self.tracestate.model):
             new_model = self._process_scenario(candidate, self.tracestate.model)
             self.tracestate.confirm_full_scenario(index, candidate, new_model)
@@ -128,17 +172,18 @@ class SuiteProcessors:
             part2.steps[0].model_info['OUT'] = []
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
             new_model = self._process_scenario(part1, self.tracestate.model)
-            self.tracestate.push_partial_scenario(index, part1, new_model, part2)
+            self.tracestate.push_partial_scenario(index, part1, new_model)
             self._report_tracestate_to_user()
+            self.tracestate.reject_scenario(index) # Scenario cannot refine itself
 
-            i_refine = self.tracestate.next_candidate()
+            i_refine = self.tracestate.next_candidate(retry=retry_flag)
             if i_refine is None:
                 logger.debug("Refinement needed, but there are no scenarios left")
                 self.tracestate.rewind()
                 self._report_tracestate_to_user()
                 return False
             while i_refine is not None:
-                m_inserted = self._try_to_fit_in_scenario(i_refine, self.scenarios[i_refine])
+                m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
                 if m_inserted:
                     insert_valid_here = True
                     try:
@@ -150,7 +195,7 @@ class SuiteProcessors:
                     except Exception:
                         insert_valid_here = False
                     if insert_valid_here:
-                        m_finished = self._try_to_fit_in_scenario(index, part2)
+                        m_finished = self._try_to_fit_in_scenario(index, part2, retry_flag)
                         if m_finished:
                             return True
                     else:
@@ -158,7 +203,7 @@ class SuiteProcessors:
                     logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
                     self.tracestate.rewind()
                     self._report_tracestate_to_user()
-                i_refine = self.tracestate.next_candidate()
+                i_refine = self.tracestate.next_candidate(retry=retry_flag)
             self.tracestate.rewind()
             self._report_tracestate_to_user()
             return False
@@ -195,11 +240,8 @@ class SuiteProcessors:
     @staticmethod
     def _split_refinement_candidate(scenario, model):
         m = model.copy()
-        front = copy.deepcopy(scenario)
-        front.steps = []
-        back = copy.deepcopy(scenario)
-        while back.steps:
-            step = back.steps[0]
+        for i in range(len(scenario.steps)):
+            step = scenario.steps[i]
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     m.process_expression(expr)
@@ -212,6 +254,7 @@ class SuiteProcessors:
                     except Exception as err:
                         refine_here = True
                     if refine_here:
+                        front, back = scenario.split_at_step(i)
                         edge_step = Step('Log', scenario)
                         edge_step.args = (f"Refinement follows for step: {step.keyword}",)
                         edge_step.gherkin_kw = step.gherkin_kw
@@ -221,11 +264,11 @@ class SuiteProcessors:
                         edge_step.args = (f"Refinement completed for step: {step.keyword}",)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
+                        back.steps[0] = copy.deepcopy(back.steps[0])
                         back.steps[0].model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
                         return front, back
-            front.steps.append(back.steps.pop(0))
-        assert False, "pop_steps_upto_refinement_point() called on non-refineable scenario"
+        assert False, "_split_refinement_candidate() called on non-refineable scenario"
 
     @staticmethod
     def _process_scenario(scenario, model):

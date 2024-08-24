@@ -30,9 +30,16 @@ the birthday card has '${name}' written on it
 
 '${person}' writes their name on the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card
+    ...    :IN: birthday_card | new stepscope | stepscope.count = len(birthday_card.names)
     ...    :OUT: ${person} in birthday_card.names
+    ...          len(birthday_card.names) == stepscope.count+1 | del stepscope
     Should Contain    ${names}    ${person}
+
+the birthday card has ${n} name${plural} written on it
+    [Documentation]    *model info*
+    ...    :IN: len(birthday_card.names) == ${n}
+    ...    :OUT: len(birthday_card.names) == ${n}
+    Length should be    ${names}    ${{int(${n})}}
 
 there is text added in ${style} on the birthday card
     [Documentation]    *model info*
@@ -42,8 +49,10 @@ there is text added in ${style} on the birthday card
 
 '${person}' writes their name in pen on the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card
+    ...    :IN: birthday_card | stepscope
     ...    :OUT: birthday_card.names.append(${person}) | birthday_card.style = ink
+    ...
+    ...    Using stepscope is a trick to force this step into a refinement
     Log    Writing '${person}' on the birthday card
     Set suite variable    @{names}    @{names}    ${person}
     Log    ${person} prefers to use a pen for writing

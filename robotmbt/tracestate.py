@@ -58,16 +58,34 @@ class TraceState:
     def get_trace(self):
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self):
+    def next_candidate(self, retry=False):
         for i in range(len(self._c_pool)):
             if i not in self._trace and i not in self._tried[-1]:
                 return i
+        if not retry:
+            return None
+        for i in range(len(self._c_pool)):
+            if i not in self._tried[-1]:
+                return i
         return None
 
+    def count(self, index):
+        """Count the number of times the index is present in the trace.
+        unfinished partial scenarios are excluded."""
+        return self._d_trace.count(str(index)) + self._d_trace.count(str(f"{index}.0"))
+
     def highest_part(self, index):
-        """Given the current trace and an index, returns the highest part number"""
-        part_list = [int(s.split('.')[1]) for s in self._d_trace if s.startswith(f'{index}.')]
-        return max(part_list) if part_list else 0
+        """Given the current trace and an index, returns the highest part number of an ongoing
+        refinement for the related scenario. Returns 0 when there is no refinement active."""
+        for i in range(1, len(self._d_trace)+1):
+            if self._d_trace[-i] == f'{index}':
+                return 0
+            if self._d_trace[-i].startswith(f'{index}.'):
+                return int(self._d_trace[-i].split('.')[1])
+        return 0
+
+    def is_new_partial_scenario(self, index):
+        return self.highest_part(index) == 0
 
     def reject_scenario(self, i_scenario):
         """Trying a scenario excludes it from further cadidacy on this level"""
@@ -75,7 +93,7 @@ class TraceState:
 
     def confirm_full_scenario(self, index, scenario, model):
         self._c_pool[index] = True
-        if index in self._trace:
+        if index in self._trace and scenario.partial:
             id = f"{index}.0"
         else:
             id = str(index)
@@ -85,17 +103,16 @@ class TraceState:
         self._d_trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
 
-    def push_partial_scenario(self, index, scenario, model, remainder):
-        if index in self._trace:
-            id = f"{index}.{self.highest_part(index)+1}"
-        else:
+    def push_partial_scenario(self, index, scenario, model):
+        if self.is_new_partial_scenario(index):
             id = f"{index}.1"
             self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
+        else:
+            id = f"{index}.{self.highest_part(index)+1}"
         self._d_trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
-        self._snapshots[-1].remainder = remainder
 
     def can_rewind(self):
         return len(self._d_trace) > 0
@@ -104,16 +121,16 @@ class TraceState:
         id = self._d_trace.pop()
         index = int(id.split('.')[0])
         if id.endswith('.0'):
-            self._c_pool[index] = False
             self._snapshots.pop()
             while self._d_trace[-1] != f"{index}.1":
                 self.rewind()
-            id = self._d_trace.pop()
+            return self.rewind()
 
         self._snapshots.pop()
         if '.' not in id or id.endswith('.1'):
             self._trace.pop()
-            self._c_pool[index] = False
+            if index not in self._trace:
+                self._c_pool[index] = False
             self._tried.pop()
         return self._snapshots[-1] if self._snapshots else None
 
@@ -123,10 +140,11 @@ class TraceState:
     def __getitem__(self, key):
         return self._snapshots[key]
 
+    def __len__(self):
+        return len(self._snapshots)
 
 class TraceSnapShot:
     def __init__(self, id, inserted_scenario, model_state):
         self.id = id
         self.scenario = inserted_scenario
         self.model = model_state.copy()
-        self.remainder = None

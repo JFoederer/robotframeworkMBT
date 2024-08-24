@@ -218,11 +218,67 @@ class TestScenarios(unittest.TestCase):
         self.assertIs(self.scenario.has_error(), True)
         errorsteps  = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 4)
-        self.assertEqual([e.model_info['error'] for e 
+        self.assertEqual([e.model_info['error'] for e
                           in self.scenario.steps_with_errors()],
                          ['oops in setup',
                           'oops in scenario 1', 'oops in scenario 2',
                           'oops in teardown'])
+
+    def test_scenarios_can_be_split(self):
+        head, tail = self.scenario.split_at_step(4)
+        self.assertEqual(head.steps, self.scenario.steps[:4])
+        self.assertEqual(tail.steps, self.scenario.steps[4:])
+
+    def test_split_scenarios_are_marked_partial(self):
+        head, tail = self.scenario.split_at_step(4)
+        self.assertTrue(head.partial)
+        self.assertTrue(tail.partial)
+
+    def test_split_keeps_setup_and_teardown_at_the_edges(self):
+        self.scenario.setup = 'before'
+        self.scenario.teardown = 'after'
+        head, tail = self.scenario.split_at_step(4)
+        self.assertIs(head.setup, 'before')
+        self.assertIs(head.teardown, None)
+        self.assertIs(tail.setup, None)
+        self.assertIs(tail.teardown, 'after')
+
+    def test_split_scenarios_keep_their_parent(self):
+        head, tail = self.scenario.split_at_step(4)
+        self.assertIs(head.parent, self.scenario.parent)
+        self.assertIs(tail.parent, self.scenario.parent)
+
+    def test_scenarios_can_be_split_before_first_step(self):
+        head, tail = self.scenario.split_at_step(0)
+        self.assertEqual(head.steps, [])
+        self.assertEqual(tail.steps, self.scenario.steps)
+
+    def test_scenarios_can_be_split_after_last_step(self):
+        head, tail = self.scenario.split_at_step(10)
+        self.assertEqual(head.steps, self.scenario.steps)
+        self.assertEqual(tail.steps, [])
+
+    def test_split_scenario_from_the_back(self):
+        head, tail = self.scenario.split_at_step(-2)
+        self.assertEqual(head.steps, self.scenario.steps[:8])
+        self.assertEqual(tail.steps, self.scenario.steps[8:])
+        head, tail = self.scenario.split_at_step(-8)
+        self.assertEqual(head.steps, self.scenario.steps[:2])
+        self.assertEqual(tail.steps, self.scenario.steps[2:])
+
+    def test_split_fails_on_invlaid_stepindex(self):
+        self.assertRaises(AssertionError, self.scenario.split_at_step, 11)
+
+    def test_copies_are_independent(self):
+        dup = self.scenario.copy()
+        dup.name = "other name"
+        dup.steps.append('extra step')
+        self.assertIs(dup.parent, self.scenario.parent)
+        self.assertEqual(dup.setup, self.scenario.setup)
+        self.assertEqual(dup.teardown, self.scenario.teardown)
+        self.assertNotEqual(dup.name, self.scenario.name)
+        self.assertIs(dup.steps[0], self.scenario.steps[0])
+        self.assertIsNot(dup.steps[-1], self.scenario.steps[-1])
 
 class TestSteps(unittest.TestCase):
     def setUp(self):

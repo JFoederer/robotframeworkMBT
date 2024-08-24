@@ -30,6 +30,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import copy
+
 class Suite:
     def __init__(self, name, parent=None):
         self.name = name
@@ -64,6 +66,7 @@ class Scenario:
         self.setup = None    # Can be a single step or None
         self.teardown = None # Can be a single step or None
         self.steps = []
+        self.partial = False
 
     @property
     def longname(self):
@@ -78,6 +81,28 @@ class Scenario:
         return ( ([self.setup] if self.setup and self.setup.has_error() else [])
                +  [s for s in self.steps if s.has_error()]
                +  ([self.teardown] if self.teardown and self.teardown.has_error() else []))
+
+    def copy(self):
+        duplicate = copy.copy(self)
+        duplicate.steps = self.steps[:]
+        return duplicate
+
+    def split_at_step(self, stepindex):
+        """Returns 2 partial scenarios.
+
+        With stepindex 0 the first part has no steps and all steps are in the last part. With
+        stepindex 1 the first step is in the first part, the other in the last part, and so on.
+        """
+        assert stepindex <= len(self.steps), "Split index out of range. Not enough steps in scenario."
+        front = Scenario(self.name, self.parent)
+        front.setup = self.setup
+        front.steps = self.steps[:stepindex]
+        front.partial = True
+        back = Scenario(self.name, self.parent)
+        back.steps = self.steps[stepindex:]
+        back.teardown = self.teardown
+        back.partial = True
+        return front, back
 
 class Step:
     def __init__(self, name, parent):
