@@ -34,11 +34,9 @@ from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import keyword
 from robot.api import logger
 import robot.running.model as rmodel
-from robot.running.arguments import EmbeddedArguments
 
 from .suiteprocessors import SuiteProcessors
 from .suitedata import Suite, Scenario, Step
-from .modelspace import ModelSpace
 
 class SuiteReplacer:
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'

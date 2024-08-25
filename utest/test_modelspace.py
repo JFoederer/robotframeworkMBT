@@ -124,6 +124,24 @@ class TestModelSpace(unittest.TestCase):
                                                    "foo2:\n"
                                                    "    bar=1313\n")
 
+    def test_list_attribute(self):
+        self.m.add_prop('foo')
+        self.m.process_expression('foo.bar = [1, 2, 3]')
+        self.m.process_expression('foo.bar.append(4)')
+        self.assertEqual(self.m.get_status_text(), "foo:\n"
+                                                   "    bar=[1, 2, 3, 4]\n")
+
+    def test_list_attribute_with_model_references(self):
+        self.m.add_prop('foo1')
+        self.m.add_prop('foo2')
+        self.m.add_prop('foolist')
+        self.m.process_expression('foolist.bar = [foo1]')
+        self.m.process_expression('foolist.bar.append(foo2)')
+        self.assertEqual(self.m.get_status_text(), "foo1:\n"
+                                                   "foo2:\n"
+                                                   "foolist:\n"
+                                                   "    bar=[foo1, foo2]\n")
+
     def test_string_attributes(self):
         self.m.process_expression('new foo')
         self.m.process_expression('foo.bar = "foobar"')

@@ -36,11 +36,15 @@ class ModellingError(Exception):
     pass
 
 class ModelSpace:
-    def __init__(self):
+    def __init__(self, reference_id=None):
+        self.ref_id = str(reference_id)
         self.std_attrs = []
         self.props = dict()
         self.values = [] # For using literals without having to use quotes (abc='abc')
         self.std_attrs = dir(self)
+
+    def __repr__(self):
+        return self.ref_id if self.ref_id else super().__repr__()
 
     def copy(self):
         return copy.deepcopy(self)
@@ -51,7 +55,7 @@ class ModelSpace:
     def add_prop(self, name):
         if name in self.props or name in self.values:
             raise ModellingError(f"Naming conflict, '{name}' already in use.")
-        self.props[name] = ModelSpace()
+        self.props[name] = ModelSpace(name)
         setattr(self, name, self.props[name])
 
     def del_prop(self, name):
@@ -121,7 +125,7 @@ class ModelSpace:
 
     def get_status_text(self):
         status = str()
-        for p, v in self.props.items():
+        for p in self.props:
             status += f"{p}:\n"
             for attr in dir(self.props[p]):
                 status += f"    {attr}={getattr(self.props[p], attr)}\n"
