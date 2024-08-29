@@ -229,11 +229,6 @@ class TestScenarios(unittest.TestCase):
         self.assertEqual(head.steps, self.scenario.steps[:4])
         self.assertEqual(tail.steps, self.scenario.steps[4:])
 
-    def test_split_scenarios_are_marked_partial(self):
-        head, tail = self.scenario.split_at_step(4)
-        self.assertTrue(head.partial)
-        self.assertTrue(tail.partial)
-
     def test_split_keeps_setup_and_teardown_at_the_edges(self):
         self.scenario.setup = 'before'
         self.scenario.teardown = 'after'

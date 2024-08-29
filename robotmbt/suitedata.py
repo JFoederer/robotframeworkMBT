@@ -66,7 +66,6 @@ class Scenario:
         self.setup = None    # Can be a single step or None
         self.teardown = None # Can be a single step or None
         self.steps = []
-        self.partial = False
 
     @property
     def longname(self):
@@ -97,11 +96,9 @@ class Scenario:
         front = Scenario(self.name, self.parent)
         front.setup = self.setup
         front.steps = self.steps[:stepindex]
-        front.partial = True
         back = Scenario(self.name, self.parent)
         back.steps = self.steps[stepindex:]
         back.teardown = self.teardown
-        back.partial = True
         return front, back
 
 class Step:

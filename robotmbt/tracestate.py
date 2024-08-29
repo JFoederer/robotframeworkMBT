@@ -30,22 +30,19 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import copy
-
 from .modelspace import ModelSpace
 
 class TraceState:
     def __init__(self, n_scenarios):
         self._c_pool = [False] * n_scenarios # coverage pool: True means scenario is in trace
         self._tried = [[]]   # Keeps track of the scenarios already tried at each step in the trace
-        self._trace = []     # choice trace, when was which scenario inserted
-        self._d_trace = []   # Detailed trace, including partial scenarios due to refinement
-        self._snapshots = [] # Keeps details for elements in d_trace
+        self._trace = []     # Choice trace, when was which scenario inserted (e.g. ['1', '2.1', '3', '2.0'])
+        self._snapshots = [] # Keeps details for elements in trace
 
     @property
     def model(self):
         """returns the model as it is at the end of the current trace"""
-        return self._snapshots[-1].model if self._d_trace else ModelSpace()
+        return self._snapshots[-1].model if self._trace else ModelSpace()
 
     @property
     def tried(self):
@@ -60,7 +57,7 @@ class TraceState:
 
     def next_candidate(self, retry=False):
         for i in range(len(self._c_pool)):
-            if i not in self._trace and i not in self._tried[-1]:
+            if i not in self._tried[-1] and self.count(i) == 0 and not self._is_refinement_active(i):
                 return i
         if not retry:
             return None
@@ -72,20 +69,20 @@ class TraceState:
     def count(self, index):
         """Count the number of times the index is present in the trace.
         unfinished partial scenarios are excluded."""
-        return self._d_trace.count(str(index)) + self._d_trace.count(str(f"{index}.0"))
+        return self._trace.count(str(index)) + self._trace.count(str(f"{index}.0"))
 
     def highest_part(self, index):
         """Given the current trace and an index, returns the highest part number of an ongoing
         refinement for the related scenario. Returns 0 when there is no refinement active."""
-        for i in range(1, len(self._d_trace)+1):
-            if self._d_trace[-i] == f'{index}':
+        for i in range(1, len(self._trace)+1):
+            if self._trace[-i] == f'{index}':
                 return 0
-            if self._d_trace[-i].startswith(f'{index}.'):
-                return int(self._d_trace[-i].split('.')[1])
+            if self._trace[-i].startswith(f'{index}.'):
+                return int(self._trace[-i].split('.')[1])
         return 0
 
-    def is_new_partial_scenario(self, index):
-        return self.highest_part(index) == 0
+    def _is_refinement_active(self, index):
+        return self.highest_part(index) != 0
 
     def reject_scenario(self, i_scenario):
         """Trying a scenario excludes it from further cadidacy on this level"""
@@ -93,43 +90,40 @@ class TraceState:
 
     def confirm_full_scenario(self, index, scenario, model):
         self._c_pool[index] = True
-        if index in self._trace and scenario.partial:
+        if self._is_refinement_active(index):
             id = f"{index}.0"
         else:
             id = str(index)
-            self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
-        self._d_trace.append(id)
+        self._trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
 
     def push_partial_scenario(self, index, scenario, model):
-        if self.is_new_partial_scenario(index):
+        if self._is_refinement_active(index):
+            id = f"{index}.{self.highest_part(index)+1}"
+        else:
             id = f"{index}.1"
-            self._trace.append(index)
             self._tried[-1].append(index)
             self._tried.append([])
-        else:
-            id = f"{index}.{self.highest_part(index)+1}"
-        self._d_trace.append(id)
+        self._trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model))
 
     def can_rewind(self):
-        return len(self._d_trace) > 0
+        return len(self._trace) > 0
 
     def rewind(self):
-        id = self._d_trace.pop()
+        id = self._trace.pop()
         index = int(id.split('.')[0])
         if id.endswith('.0'):
             self._snapshots.pop()
-            while self._d_trace[-1] != f"{index}.1":
+            while self._trace[-1] != f"{index}.1":
                 self.rewind()
             return self.rewind()
 
         self._snapshots.pop()
         if '.' not in id or id.endswith('.1'):
-            self._trace.pop()
-            if index not in self._trace:
+            if self.count(index) == 0:
                 self._c_pool[index] = False
             self._tried.pop()
         return self._snapshots[-1] if self._snapshots else None
