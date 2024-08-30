@@ -270,6 +270,45 @@ class TestTraceState(unittest.TestCase):
         self.assertEqual(ts[-1].scenario, 'three')
         self.assertEqual([s.id for s in ts[1:]], ['1', '2'])
 
+    def test_adding_coverage_prevents_drought(self):
+        ts = TraceState(3)
+        ts.confirm_full_scenario(ts.next_candidate(), 'one', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(ts.next_candidate(), 'two', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(ts.next_candidate(), 'three', {})
+        self.assertEqual(ts.coverage_drought, 0)
+
+    def test_repeated_scenarios_increases_drought(self):
+        ts = TraceState(2)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 2)
+
+    def test_drought_is_reset_with_new_coverage(self):
+        ts = TraceState(2)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.confirm_full_scenario(1, 'two', {})
+        self.assertEqual(ts.coverage_drought, 0)
+
+    def test_rewind_includes_drought_update(self):
+        ts = TraceState(2)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.confirm_full_scenario(1, 'two', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.rewind()
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.rewind()
+        self.assertEqual(ts.coverage_drought, 0)
 
 class TestPartialScenarios(unittest.TestCase):
     def test_push_partial_does_not_complete_coverage(self):
@@ -426,11 +465,25 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts[-1].id, '0.1')
         self.assertEqual(ts[-1].scenario, 'part1')
         self.assertEqual(ts[-1].model, dict(a=1))
+        self.assertEqual(ts[-1].coverage_drought, 0)
         ts.push_partial_scenario(0, 'part2', dict(b=2))
         ts.confirm_full_scenario(0, 'remainder', dict(c=3))
         self.assertEqual(ts[-1].id, '0.0')
         self.assertEqual(ts[-1].scenario, 'remainder')
         self.assertEqual(ts[-1].model, dict(c=3))
+        self.assertEqual(ts[-1].coverage_drought, 0)
+
+    def test_only_completed_scenarios_affect_drought(self):
+        ts = TraceState(2)
+        ts.confirm_full_scenario(0, 'one full', {})
+        ts.push_partial_scenario(0, 'one part1', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(0, 'one remainder', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.push_partial_scenario(1, 'two part1', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.confirm_full_scenario(1, 'two remainder', {})
+        self.assertEqual(ts.coverage_drought, 0)
 
 class TestRefinement(unittest.TestCase):
     def test_single_step_refinement(self):
@@ -641,6 +694,22 @@ class TestRefinement(unittest.TestCase):
         self.assertEqual(ts.highest_part(top_level), 0)
         self.assertEqual(ts.get_trace(), ['T1.1', 'M1.1', 'B1.1', 'B1.0', 'M1.0',
                                           'T1.2', 'M2.1', 'M2.2', 'M2.3', 'M2.0', 'T1.0'])
+
+    def test_refinement_can_resolve_drought(self):
+        ts = TraceState(2)
+        candidate1 = ts.next_candidate()
+        ts.confirm_full_scenario(candidate1, 'T1', {})
+        ts.confirm_full_scenario(candidate1, 'T1', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.push_partial_scenario(candidate1, 'T1.1', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        candidate2 = ts.next_candidate()
+        ts.confirm_full_scenario(candidate2, 'B1', {})
+        self.assertEqual(ts.coverage_drought, 0)
+        ts.confirm_full_scenario(candidate1, 'T1.0', {})
+        self.assertEqual(ts.coverage_drought, 1)
+        ts.confirm_full_scenario(candidate2, 'B1', {})
+        self.assertEqual(ts.coverage_drought, 2)
 
 if __name__ == '__main__':
     unittest.main()
