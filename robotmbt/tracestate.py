@@ -52,6 +52,11 @@ class TraceState:
     def coverage_reached(self):
         return all(self._c_pool)
 
+    @property
+    def coverage_drought(self):
+        """Number of scenarios since last new coverage"""
+        return self._snapshots[-1].coverage_drought if self._snapshots else 0
+
     def get_trace(self):
         return [snap.scenario for snap in self._snapshots]
 
@@ -89,7 +94,11 @@ class TraceState:
         self._tried[-1].append(i_scenario)
 
     def confirm_full_scenario(self, index, scenario, model):
-        self._c_pool[index] = True
+        if not self._c_pool[index]:
+            self._c_pool[index] = True
+            c_drought = 0
+        else:
+            c_drought = self.coverage_drought+1
         if self._is_refinement_active(index):
             id = f"{index}.0"
         else:
@@ -97,7 +106,7 @@ class TraceState:
             self._tried[-1].append(index)
             self._tried.append([])
         self._trace.append(id)
-        self._snapshots.append(TraceSnapShot(id, scenario, model))
+        self._snapshots.append(TraceSnapShot(id, scenario, model, c_drought))
 
     def push_partial_scenario(self, index, scenario, model):
         if self._is_refinement_active(index):
@@ -107,7 +116,7 @@ class TraceState:
             self._tried[-1].append(index)
             self._tried.append([])
         self._trace.append(id)
-        self._snapshots.append(TraceSnapShot(id, scenario, model))
+        self._snapshots.append(TraceSnapShot(id, scenario, model, self.coverage_drought))
 
     def can_rewind(self):
         return len(self._trace) > 0
@@ -138,7 +147,8 @@ class TraceState:
         return len(self._snapshots)
 
 class TraceSnapShot:
-    def __init__(self, id, inserted_scenario, model_state):
+    def __init__(self, id, inserted_scenario, model_state, drought=0):
         self.id = id
         self.scenario = inserted_scenario
         self.model = model_state.copy()
+        self.coverage_drought = drought
