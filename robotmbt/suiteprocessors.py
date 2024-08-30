@@ -76,7 +76,6 @@ class SuiteProcessors:
 
     @not_keyword
     def process_test_suite(self, in_suite, coverage='*'):
-        self.REPEAT_LIMIT = 50
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -115,13 +114,14 @@ class SuiteProcessors:
                 inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
                                                         retry_flag=allow_duplicate_scenarios)
                 if inserted:
+                    self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing():
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
                         self.tracestate.rewind()
-                    elif self.__is_repeatfest():
-                        logger.debug(f"Same scenario repeated too often (>{self.REPEAT_LIMIT}x). "
-                                     "Keep 1, then try something else.")
-                        for i in range(self.REPEAT_LIMIT):
+                    elif self.tracestate.coverage_drought > self.DROUGHT_LIMIT:
+                        logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
+                                     "Roll back to last coverage increase and try something else.")
+                        for i in range(self.DROUGHT_LIMIT+1):
                             self.tracestate.rewind()
 
     def __last_candidate_changed_nothing(self):
@@ -130,15 +130,6 @@ class SuiteProcessors:
         if self.tracestate[-1].id != self.tracestate[-2].id:
             return False
         return self.tracestate[-1].model == self.tracestate[-2].model
-
-    def __is_repeatfest(self):
-        if len(self.tracestate) < self.REPEAT_LIMIT:
-            return False
-        last_id = self.tracestate[-1].id
-        for i in range(2, self.REPEAT_LIMIT+2):
-            if self.tracestate[-i].id != last_id:
-                return False
-        return True
 
     def _scenario_with_repeat_counter(self, index):
         """Fetches the scenario by index and, if this scenario is already used in the trace,
