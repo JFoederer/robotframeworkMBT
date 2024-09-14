@@ -123,6 +123,7 @@ class SuiteProcessors:
                                      "Roll back to last coverage increase and try something else.")
                         for i in range(self.DROUGHT_LIMIT+1):
                             self.tracestate.rewind()
+                        self._report_tracestate_to_user()
 
     def __last_candidate_changed_nothing(self):
         if len(self.tracestate) < 2:
