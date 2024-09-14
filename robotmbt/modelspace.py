@@ -80,17 +80,15 @@ class ModelSpace:
             self.del_prop(self._vocab_term(expr))
             return 'exec'
 
-        for p, obj in self.props.items():
-            action = f"{p} = self.props['{p}']"
-            exec(action)
+        for p in self.props:
+            exec(f"{p} = self.props['{p}']")
         for v in self.values:
-            action = f"{v} = '{v}'"
-            exec(action)
+            exec(f"{v} = '{v}'")
         try:
-            result = eval(expr)
+            result = eval(expr, locals())
         except SyntaxError:
             try:
-                exec(expr)
+                exec(expr, locals())
                 result = 'exec'
             except NameError as missing:
                 self.values.append(missing.name)
@@ -106,8 +104,7 @@ class ModelSpace:
             raise ModellingError(f"{err.name} used before assignment")
 
         for p in self.props:
-            action = f"self.props['{p}'] = {p}"
-            exec(action)
+            exec(f"self.props['{p}'] = {p}")
 
         return result
 
