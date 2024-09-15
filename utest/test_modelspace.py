@@ -178,6 +178,19 @@ class TestModelSpace(unittest.TestCase):
         self.m.process_expression('foo1.bar = foo2')
         self.assertRaises(ModellingError, self.m.process_expression, 'new foo2')
 
+    def test_list_comprehension_name_error(self):
+        """
+        Some weird quirk in Python causes list comprehensions which are used as a
+        generator expression to be executed in their own local scope. The scenario
+        in this test would cause a NameError on A, due to the underlying code using
+        Python's eval() and exec() functions, without passing the scope explicitly.
+
+        https://docs.python.org/3/reference/executionmodel.html#interaction-with-dynamic-features
+        """
+        self.m.process_expression('new foo')
+        self.m.process_expression("foo.bar = ['A', 'B', 'C']")
+        self.assertIs(self.m.process_expression("any(elm == A for elm in foo.bar)"), True)
+
     def test_fail_exists_check_before_using_new(self):
         self.assertRaises(NameError, self.m.process_expression, 'foo')
 

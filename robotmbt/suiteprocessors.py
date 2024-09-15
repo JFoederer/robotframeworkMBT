@@ -123,6 +123,7 @@ class SuiteProcessors:
                                      "Roll back to last coverage increase and try something else.")
                         for i in range(self.DROUGHT_LIMIT+1):
                             self.tracestate.rewind()
+                        self._report_tracestate_to_user()
 
     def __last_candidate_changed_nothing(self):
         if len(self.tracestate) < 2:
@@ -214,18 +215,23 @@ class SuiteProcessors:
                     try:
                         if m.process_expression(expr) is False:
                             return False
-                    except Exception as err:
+                    except Exception:
                         return False
             if step.gherkin_kw in ['when', 'then']:
+                step_completes = False
                 for expr in step.model_info['OUT']:
-                    msg = f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}"
                     try:
                         if m.process_expression(expr) is False:
-                            logger.debug(msg)
-                            return True
-                    except Exception as err:
-                        logger.debug(msg)
+                            break
+                    except Exception:
+                        break
+                else:
+                    step_completes = True
+                if not step_completes:
+                    if step.gherkin_kw == 'when':
+                        logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
                         return True
+                    return False
         return False
 
     @staticmethod
@@ -242,7 +248,7 @@ class SuiteProcessors:
                     try:
                         if m.process_expression(expr) is False:
                              refine_here = True
-                    except Exception as err:
+                    except Exception:
                         refine_here = True
                     if refine_here:
                         front, back = scenario.split_at_step(i)
