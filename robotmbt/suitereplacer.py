@@ -113,19 +113,22 @@ class SuiteReplacer:
         step.gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then'] else self.prev_gherkin_kw
         if step_def.args:
             step.args = step_def.args
-        self.__add_embedded_args_to_step(step)
         try:
-            step.model_info = self.__parse_model_info(step)
+            runner = Robot._namespace.get_runner(step.keyword)
+            if hasattr(runner, 'error'):
+                raise ValueError(runner.error)
+            kw = runner.keyword
+            step.kw_w_args = kw.name
+            step.emb_args = dict() if not kw.embedded else dict(zip(["${%s}" % a for a in kw.embedded.args],
+                                                                    kw.embedded.match(step.kw_wo_gherkin).groups()))
+            step.model_info = SuiteReplacer.__parse_model_info(step, kw._doc)
         except Exception as ex:
             step.model_info['error']=str(ex)
         return step
 
-    def __parse_model_info(self, step):
+    @staticmethod
+    def __parse_model_info(step, docu):
         model_info = dict()
-        runner = Robot._namespace.get_runner(step.keyword)
-        if hasattr(runner, 'error'):
-            raise ValueError(runner.error)
-        docu = runner.keyword._doc
         mi_index = docu.find("*model info*")
         if mi_index == -1:
             return model_info
@@ -145,20 +148,14 @@ class SuiteReplacer:
             values = [e.strip() for e in elms[-1].split("|") if e]
             while lines and not lines[0].startswith(":"):
                 values.extend([e.strip() for e in lines.pop(0).split("|") if e])
-            values = self.__fill_in_args(step, values)
+            values = SuiteReplacer.__fill_in_args(step, values)
             model_info[key] = values
         if not model_info:
             raise ValueError("When present, *model info* cannot be empty")
         return model_info
 
     @staticmethod
-    def __add_embedded_args_to_step(step):
-        kw = Robot._namespace.get_runner(step.keyword).keyword
-        step.kw_w_args = kw.name
-        step.emb_args = dict() if not kw.embedded else dict(zip(["${%s}"%a for a in kw.embedded.args],
-                                                                kw.embedded.match(step.kw_wo_gherkin).groups()))
-
-    def __fill_in_args(self, step, expressions):
+    def __fill_in_args(step, expressions):
         result = []
         for expr in expressions:
             result.append(expr)
