@@ -24,6 +24,11 @@ Argument with spaces
     when 'Gert Jan' writes their name on the birthday card
     then the birthday card has 'Gert Jan' written on it
 
+Argument with apostrophe
+    Given there is a birthday card
+    when 'Jeanne d'Arc' writes their name on the birthday card
+    then the birthday card has 'Jeanne d'Arc' written on it
+
 Argument with Python operator
     Given there is a birthday card
     when 'Gert-Jan' writes their name on the birthday card

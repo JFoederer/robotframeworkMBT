@@ -159,7 +159,8 @@ class SuiteReplacer:
                         try:
                             float(value)
                         except:
-                            value = f"'{value}'"
+                            escaped_value = value.replace("'", r"\'")
+                            value = f"'{escaped_value}'"
                 result[-1] = result[-1].replace(arg, value)
         return result
 
