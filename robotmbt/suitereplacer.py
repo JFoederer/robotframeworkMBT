@@ -74,43 +74,35 @@ class SuiteReplacer:
 
         if in_suite.setup and parent is not None:
             logger.debug(f"    with setup: {in_suite.setup.name}")
-            self.prev_gherkin_kw = None
-            step_info = self.__process_step(in_suite.setup, parent=out_suite)
-            out_suite.setup = step_info
+            out_suite.setup = self.__process_step(in_suite.setup, parent=out_suite)
         if in_suite.teardown and parent is not None:
             logger.debug(f"    with teardown: {in_suite.teardown.name}")
-            self.prev_gherkin_kw = None
-            step_info = self.__process_step(in_suite.teardown, parent=out_suite)
-            out_suite.teardown = step_info
+            out_suite.teardown = self.__process_step(in_suite.teardown, parent=out_suite)
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
             scenario = Scenario(tc.name, parent=out_suite)
-            prev_gherkin_kw = None
             logger.debug(f"  test case: {tc.name}")
             if tc.setup:
                 logger.debug(f"    with setup: {tc.setup.name}")
-                self.prev_gherkin_kw = None
-                step_info = self.__process_step(tc.setup, parent=scenario)
-                scenario.setup = step_info
+                scenario.setup = self.__process_step(tc.setup, parent=scenario)
             if tc.teardown:
                 logger.debug(f"    with teardown: {tc.teardown.name}")
-                self.prev_gherkin_kw = None
-                step_info = self.__process_step(tc.teardown, parent=scenario)
-                scenario.teardown = step_info
+                scenario.teardown = self.__process_step(tc.teardown, parent=scenario)
             logger.debug('    ' + '\n    '.join([st.name + " " + " ".join([str(s) for s in st.args]) for st in tc.body]))
-            self.prev_gherkin_kw = None
+            last_gwt = None
             for step_def in tc.body:
-                step_info = self.__process_step(step_def, parent=scenario)
+                step_info = self.__process_step(step_def, parent=scenario, prev_gherkin_kw=last_gwt)
                 scenario.steps.append(step_info)
+                last_gwt = step_info.gherkin_kw
 
             out_suite.scenarios.append(scenario)
         return out_suite
 
-    def __process_step(self, step_def, parent):
+    @staticmethod
+    def __process_step(step_def, parent, prev_gherkin_kw=None):
         step = Step(step_def.name, parent)
-        self.prev_gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then', 'none'] else self.prev_gherkin_kw
-        step.gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then'] else self.prev_gherkin_kw
+        step.gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then', 'none'] else prev_gherkin_kw
         if step_def.args:
             step.args = step_def.args
         try:
