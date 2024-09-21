@@ -17,18 +17,18 @@ fail when colon syntax is used incorrectly
 empty model info
     [Documentation]    *model info*
     @{errors}=    Reported errors
-    Should be equal    ${errors[0].bare_kw}    empty model info
+    Should be equal    ${errors[0].kw_wo_gherkin}    empty model info
 
 non-colon model info
     [Documentation]    *model info*
     ...    *IN* Alfa
     ...    *OUT* Beta | Gamma delta | Epsilon
     @{errors}=    Reported errors
-    Should be equal    ${errors[1].bare_kw}    non-colon model info
+    Should be equal    ${errors[1].kw_wo_gherkin}    non-colon model info
 
 forgotten opening colon
     [Documentation]    *model info*
     ...    IN: Alfa
     ...    OUT: Beta | Gamma delta | Epsilon
     @{errors}=    Reported errors
-    Should be equal    ${errors[2].bare_kw}    forgotten opening colon
+    Should be equal    ${errors[2].kw_wo_gherkin}    forgotten opening colon

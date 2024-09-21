@@ -23,3 +23,18 @@ Argument with spaces
     Given there is a birthday card
     when 'Gert Jan' writes their name on the birthday card
     then the birthday card has 'Gert Jan' written on it
+
+Argument with Python operator
+    Given there is a birthday card
+    when 'Gert-Jan' writes their name on the birthday card
+    then the birthday card has 'Gert-Jan' written on it
+
+Argument with Python builtin function
+    Given there is a birthday card
+    when 'max' writes their name on the birthday card
+    then the birthday card has 'max' written on it
+
+Argument with Python keyword
+    Given there is a birthday card
+    when 'elif' writes their name on the birthday card
+    then the birthday card has 'elif' written on it

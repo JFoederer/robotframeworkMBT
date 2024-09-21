@@ -113,6 +113,7 @@ class SuiteReplacer:
         step.gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then'] else self.prev_gherkin_kw
         if step_def.args:
             step.args = step_def.args
+        self.__add_embedded_args_to_step(step)
         try:
             step.model_info = self.__parse_model_info(step)
         except Exception as ex:
@@ -121,7 +122,7 @@ class SuiteReplacer:
 
     def __parse_model_info(self, step):
         model_info = dict()
-        runner = Robot._namespace.get_runner(step.bare_kw)
+        runner = Robot._namespace.get_runner(step.keyword)
         if hasattr(runner, 'error'):
             raise ValueError(runner.error)
         docu = runner.keyword._doc
@@ -150,14 +151,26 @@ class SuiteReplacer:
             raise ValueError("When present, *model info* cannot be empty")
         return model_info
 
+    @staticmethod
+    def __add_embedded_args_to_step(step):
+        kw = Robot._namespace.get_runner(step.keyword).keyword
+        step.kw_w_args = kw.name
+        step.emb_args = dict() if not kw.embedded else dict(zip(["${%s}"%a for a in kw.embedded.args],
+                                                                kw.embedded.match(step.kw_wo_gherkin).groups()))
+
     def __fill_in_args(self, step, expressions):
-        kw = Robot._namespace.get_runner(step.bare_kw).keyword
-        arg_values = dict() if not kw.embedded else dict(zip(["${%s}"%a for a in kw.embedded.args],
-                                                             kw.embedded.match(step.bare_kw).groups()))
         result = []
         for expr in expressions:
             result.append(expr)
-            for arg, value in arg_values.items():
+            for arg, value in step.emb_args.items():
+                if isinstance(value, str):
+                    if value.title() in ['None', 'True', 'False']:
+                        value = value.title()
+                    else:
+                        try:
+                            float(value)
+                        except:
+                            value = f"'{value}'"
                 result[-1] = result[-1].replace(arg, value)
         return result
 

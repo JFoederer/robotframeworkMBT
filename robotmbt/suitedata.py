@@ -106,7 +106,8 @@ class Step:
         self.keyword = name      # first cell of the Robot line, including step_kw, excluding args
         self.parent = parent     # Parent scenario for easy searching and processing
         self._gherkin_kw = None  # 'given', 'when', 'then' or None for non-bdd keywords
-        self.args = ()           # Comes directly from Robot
+        self.args = ()           # positional arguments taken directly from Robot
+        self.emb_args = dict()   # embedded arguments in format self.emb_args["${arg}"] = value
         self.model_info = dict() # Modelling information is available as a dictionary.
                                  # The standard format is dict(IN=[], OUT=[]) and can
                                  # optionally contain an error field.
@@ -142,6 +143,6 @@ class Step:
         return first_word if first_word.lower() in ['given','when','then','and','but'] else None
 
     @property
-    def bare_kw(self):
+    def kw_wo_gherkin(self):
         """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
         return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword

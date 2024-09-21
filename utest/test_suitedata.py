@@ -332,12 +332,12 @@ class TestSteps(unittest.TestCase):
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.step_kw, e)
 
-    def test_bare_keywords_are_stripped_from_their_gherkin_keyword(self):
+    def test_keywords_are_available_without_their_gherkin_keyword(self):
         expected = ['action keyword', 'step Gg1', 'step Ga1', 'step Gb1',
                                       'step Ww1', 'step Wa1', 'step Wb1',
                                       'step Tt1', 'step Ta1', 'step Tb1']
         for s, e in zip(self.steps, expected):
-            self.assertEqual(s.bare_kw, e)
+            self.assertEqual(s.kw_wo_gherkin, e)
 
     def test_arguments_can_be_stored(self):
         self.assertEqual(self.steps[0].args, ())
