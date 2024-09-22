@@ -8,38 +8,43 @@ leading scenario
     When 'Johan' buys a birthday card
     then there is a blank birthday card available
 
-Simple argument
+simple argument
     Given there is a birthday card
-    when 'Johan' writes their name on the birthday card
-    then the birthday card has 'Johan' written on it
+    when 'Gertjan' writes their name on the birthday card
+    then the birthday card has 'Gertjan' written on it
 
-Argument data is case sensitive
+argument data is case sensitive
     Given there is a birthday card
-    when 'Johan' writes their name on the birthday card
-    then the birthday card has 'Johan' written on it
-    but the birthday card does not have 'JOHAN' written on it
+    when 'GertJan' writes their name on the birthday card
+    then the birthday card has 'GertJan' written on it
+    but the birthday card does not have 'GERTJAN' written on it
 
-Argument with spaces
+argument with spaces
     Given there is a birthday card
     when 'Gert Jan' writes their name on the birthday card
     then the birthday card has 'Gert Jan' written on it
 
-Argument with apostrophe
-    Given there is a birthday card
-    when 'Jeanne d'Arc' writes their name on the birthday card
-    then the birthday card has 'Jeanne d'Arc' written on it
-
-Argument with Python operator
+argument with Python operator
     Given there is a birthday card
     when 'Gert-Jan' writes their name on the birthday card
     then the birthday card has 'Gert-Jan' written on it
 
-Argument with Python builtin function
+argument with apostrophe
+    Given there is a birthday card
+    when 'Jeanne d'Arc' writes their name on the birthday card
+    then the birthday card has 'Jeanne d'Arc' written on it
+
+argument in unicode
+    Given there is a birthday card
+    when '藤原拓海' writes their name on the birthday card
+    then the birthday card has '藤原拓海' written on it
+
+argument with Python builtin function
     Given there is a birthday card
     when 'max' writes their name on the birthday card
     then the birthday card has 'max' written on it
 
-Argument with Python keyword
+argument with Python keyword
     Given there is a birthday card
     when 'elif' writes their name on the birthday card
     then the birthday card has 'elif' written on it
