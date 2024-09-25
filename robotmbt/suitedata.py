@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
+from robot.libraries.BuiltIn import BuiltIn
 
 class Suite:
     def __init__(self, name, parent=None):
@@ -102,11 +103,13 @@ class Scenario:
         return front, back
 
 class Step:
-    def __init__(self, name, parent):
-        self.keyword = name      # first cell of the Robot line, including step_kw, excluding args
+    def __init__(self, steptext, *args, parent, prev_gherkin_kw=None):
+        self.keyword = steptext  # first cell of the Robot line, including step_kw, excluding args
         self.parent = parent     # Parent scenario for easy searching and processing
-        self._gherkin_kw = None  # 'given', 'when', 'then' or None for non-bdd keywords
-        self.args = ()           # positional arguments taken directly from Robot
+        self.args = args         # positional and named arguments taken directly from Robot
+        self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
+                                 # 'given', 'when', 'then' or None for non-bdd keywords
+        self.signature = None    # Robot keyword with its embedded arguments in ${...} notation
         self.emb_args = dict()   # embedded arguments in format self.emb_args["${arg}"] = value
         self.model_info = dict() # Modelling information is available as a dictionary.
                                  # The standard format is dict(IN=[], OUT=[]) and can
@@ -116,6 +119,7 @@ class Step:
                                  # The `vocab.attribute` form can then be used to express relations
                                  # between properties from the domain vocabulaire.
                                  # Custom processors can define their own attributes.
+        self.__extract_data_from_robot()
 
     def __str__(self):
         return f"Step: {self.keyword}"
@@ -146,3 +150,60 @@ class Step:
     def kw_wo_gherkin(self):
         """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
         return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword
+
+    def __extract_data_from_robot(self):
+        try:
+            runner = BuiltIn()._namespace.get_runner(self.keyword)
+            if hasattr(runner, 'error'):
+                raise ValueError(runner.error)
+            kw = runner.keyword
+            self.signature = kw.name
+            self.emb_args = dict() if not kw.embedded else dict(zip(["${%s}" % a for a in kw.embedded.args],
+                                                                    kw.embedded.match(self.kw_wo_gherkin).groups()))
+            self.model_info = self.__parse_model_info(kw._doc)
+        except Exception as ex:
+            self.model_info['error']=str(ex)
+
+    def __parse_model_info(self, docu):
+        model_info = dict()
+        mi_index = docu.find("*model info*")
+        if mi_index == -1:
+            return model_info
+        lines = docu[mi_index:].split('\n')
+        lines = [line.strip() for line in lines][1:]
+        if "" in lines:
+            lines = lines[:lines.index("")]
+        format_msg = "*model info* expected format: :<attr>: <expr>|<expr>"
+        while lines:
+            line = lines.pop(0)
+            if not line.startswith(":"):
+                raise ValueError(format_msg)
+            elms = line.split(":", 2)
+            if len(elms) != 3:
+                raise ValueError(format_msg)
+            key = elms[1].strip()
+            values = [e.strip() for e in elms[-1].split("|") if e]
+            while lines and not lines[0].startswith(":"):
+                values.extend([e.strip() for e in lines.pop(0).split("|") if e])
+            values = self.__fill_in_args(values)
+            model_info[key] = values
+        if not model_info:
+            raise ValueError("When present, *model info* cannot be empty")
+        return model_info
+
+    def __fill_in_args(self, expressions):
+        result = []
+        for expr in expressions:
+            result.append(expr)
+            for arg, value in self.emb_args.items():
+                if isinstance(value, str):
+                    if value.title() in ['None', 'True', 'False']:
+                        value = value.title()
+                    else:
+                        try:
+                            float(value)
+                        except:
+                            escaped_value = value.replace("'", r"\'")
+                            value = f"'{escaped_value}'"
+                result[-1] = result[-1].replace(arg, value)
+        return result

@@ -252,13 +252,11 @@ class SuiteProcessors:
                         refine_here = True
                     if refine_here:
                         front, back = scenario.split_at_step(i)
-                        edge_step = Step('Log', scenario)
-                        edge_step.args = (f"Refinement follows for step: {step.keyword}",)
+                        edge_step = Step('Log', f"Refinement follows for step: {step.keyword}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', scenario)
-                        edge_step.args = (f"Refinement completed for step: {step.keyword}",)
+                        edge_step = Step('Log', f"Refinement completed for step: {step.keyword}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
                         back.steps[0] = copy.deepcopy(back.steps[0])
