@@ -14,15 +14,15 @@ Titanic is scheduled for the voyage to New York
 
 Titanic is docked in the port of ${port}
     [Documentation]    *model info*
-    ...    :IN: Titanic.port == '${port}'
-    ...    :OUT: Titanic.port == '${port}'
+    ...    :IN: Titanic.port == ${port}
+    ...    :OUT: Titanic.port == ${port}
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
 
 Titanic sails from ${port A} to ${port B}
     [Documentation]    *model info*
-    ...    :IN: Titanic.port == '${port A}'
-    ...    :OUT: Titanic.port == '${port B}'
+    ...    :IN: Titanic.port == ${port A}
+    ...    :OUT: Titanic.port == ${port B}
     Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
 
 Titanic departs for the port of ${port}
@@ -36,7 +36,7 @@ Titanic departs for the port of ${port}
 Titanic arrives in the port of ${port}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
-    ...    :OUT: Titanic.port = '${port}'
+    ...    :OUT: Titanic.port = ${port}
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Titanic stops
 
@@ -105,6 +105,6 @@ Titanic's voyage is complete
 
 the date is ${date}
     [Documentation]    *model info*
-    ...    :IN: Date.now == '${date}'
-    ...    :OUT: Date.now == '${date}'
+    ...    :IN: Date.now == ${date}
+    ...    :OUT: Date.now == ${date}
     Check that    Current date of Journey    equals    ${date}

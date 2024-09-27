@@ -74,92 +74,30 @@ class SuiteReplacer:
 
         if in_suite.setup and parent is not None:
             logger.debug(f"    with setup: {in_suite.setup.name}")
-            self.prev_gherkin_kw = None
-            step_info = self.__process_step(in_suite.setup, parent=out_suite)
-            out_suite.setup = step_info
+            out_suite.setup = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
         if in_suite.teardown and parent is not None:
             logger.debug(f"    with teardown: {in_suite.teardown.name}")
-            self.prev_gherkin_kw = None
-            step_info = self.__process_step(in_suite.teardown, parent=out_suite)
-            out_suite.teardown = step_info
+            out_suite.teardown = Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
             scenario = Scenario(tc.name, parent=out_suite)
-            prev_gherkin_kw = None
             logger.debug(f"  test case: {tc.name}")
             if tc.setup:
                 logger.debug(f"    with setup: {tc.setup.name}")
-                self.prev_gherkin_kw = None
-                step_info = self.__process_step(tc.setup, parent=scenario)
-                scenario.setup = step_info
+                scenario.setup = Step(tc.setup.name, *tc.setup.args, parent=scenario)
             if tc.teardown:
                 logger.debug(f"    with teardown: {tc.teardown.name}")
-                self.prev_gherkin_kw = None
-                step_info = self.__process_step(tc.teardown, parent=scenario)
-                scenario.teardown = step_info
+                scenario.teardown = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
             logger.debug('    ' + '\n    '.join([st.name + " " + " ".join([str(s) for s in st.args]) for st in tc.body]))
-            self.prev_gherkin_kw = None
+            last_gwt = None
             for step_def in tc.body:
-                step_info = self.__process_step(step_def, parent=scenario)
+                step_info = Step(step_def.name, *step_def.args, parent=scenario, prev_gherkin_kw=last_gwt)
                 scenario.steps.append(step_info)
+                last_gwt = step_info.gherkin_kw
 
             out_suite.scenarios.append(scenario)
         return out_suite
-
-    def __process_step(self, step_def, parent):
-        step = Step(step_def.name, parent)
-        self.prev_gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then', 'none'] else self.prev_gherkin_kw
-        step.gherkin_kw = step.step_kw if str(step.step_kw).lower() in ['given','when','then'] else self.prev_gherkin_kw
-        if step_def.args:
-            step.args = step_def.args
-        try:
-            step.model_info = self.__parse_model_info(step)
-        except Exception as ex:
-            step.model_info['error']=str(ex)
-        return step
-
-    def __parse_model_info(self, step):
-        model_info = dict()
-        runner = Robot._namespace.get_runner(step.bare_kw)
-        if hasattr(runner, 'error'):
-            raise ValueError(runner.error)
-        docu = runner.keyword._doc
-        mi_index = docu.find("*model info*")
-        if mi_index == -1:
-            return model_info
-        lines = docu[mi_index:].split('\n')
-        lines = [line.strip() for line in lines][1:]
-        if "" in lines:
-            lines = lines[:lines.index("")]
-        format_msg = "*model info* expected format: :<attr>: <expr>|<expr>"
-        while lines:
-            line = lines.pop(0)
-            if not line.startswith(":"):
-                raise ValueError(format_msg)
-            elms = line.split(":", 2)
-            if len(elms) != 3:
-                raise ValueError(format_msg)
-            key = elms[1].strip()
-            values = [e.strip() for e in elms[-1].split("|") if e]
-            while lines and not lines[0].startswith(":"):
-                values.extend([e.strip() for e in lines.pop(0).split("|") if e])
-            values = self.__fill_in_args(step, values)
-            model_info[key] = values
-        if not model_info:
-            raise ValueError("When present, *model info* cannot be empty")
-        return model_info
-
-    def __fill_in_args(self, step, expressions):
-        kw = Robot._namespace.get_runner(step.bare_kw).keyword
-        arg_values = dict() if not kw.embedded else dict(zip(["${%s}"%a for a in kw.embedded.args],
-                                                             kw.embedded.match(step.bare_kw).groups()))
-        result = []
-        for expr in expressions:
-            result.append(expr)
-            for arg, value in arg_values.items():
-                result[-1] = result[-1].replace(arg, value)
-        return result
 
     def __clearTestSuite(self, suite):
         suite.tests.clear()

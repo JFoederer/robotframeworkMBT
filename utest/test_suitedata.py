@@ -31,6 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+from unittest import mock
+
 from robotmbt.suitedata import Suite, Scenario, Step
 
 class TestSuites(unittest.TestCase):
@@ -61,7 +63,7 @@ class TestSuites(unittest.TestCase):
                          'topsuite.suite B.scenario BB')
 
     def test_error_in_suite_setup_is_detected(self):
-        step = Step('top setup', self.topsuite)
+        step = Step('top setup', parent=self.topsuite)
         step.gherkin_kw = 'given'
         step.model_info = dict(error='oops')
         self.topsuite.setup = step
@@ -78,7 +80,7 @@ class TestSuites(unittest.TestCase):
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
     def test_error_in_suite_teardown_is_detected(self):
-        step = Step('top teardown', self.topsuite)
+        step = Step('top teardown', parent=self.topsuite)
         step.model_info = dict(error='oops')
         self.topsuite.teardown = step
         self.assertIs(self.topsuite.has_error(), True)
@@ -88,7 +90,7 @@ class TestSuites(unittest.TestCase):
 
     def test_error_in_subsuite_setup_is_detected(self):
         suite = self.topsuite.suites[0]
-        step = Step('sub suite setup', suite)
+        step = Step('sub suite setup', parent=suite)
         step.gherkin_kw = 'given'
         step.model_info = dict(error='oops')
         suite.setup = step
@@ -106,7 +108,7 @@ class TestSuites(unittest.TestCase):
 
     def test_error_in_subsuite_teardown_is_detected(self):
         suite = self.topsuite.suites[0]
-        step = Step('sub suite teardown', suite)
+        step = Step('sub suite teardown', parent=suite)
         step.model_info = dict(error='oops')
         suite.teardown = step
         self.assertIs(self.topsuite.has_error(), True)
@@ -116,7 +118,7 @@ class TestSuites(unittest.TestCase):
 
     def test_error_in_subscenario_setup_is_detected(self):
         scenario = self.topsuite.suites[0].scenarios[0]
-        step = Step("sub suite's scenario teardown", scenario)
+        step = Step("sub suite's scenario teardown", parent=scenario)
         step.model_info = dict(error='oops')
         scenario.setup = step
         self.assertIs(self.topsuite.has_error(), True)
@@ -126,7 +128,7 @@ class TestSuites(unittest.TestCase):
 
     def test_error_in_subscenario_teardown_is_detected(self):
         scenario = self.topsuite.suites[0].scenarios[1]
-        step = Step("sub suite's scenario teardown", scenario)
+        step = Step("sub suite's scenario teardown", parent=scenario)
         step.model_info = dict(error='oops')
         scenario.teardown = step
         self.assertIs(self.topsuite.has_error(), True)
@@ -135,7 +137,7 @@ class TestSuites(unittest.TestCase):
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
     def test_multiple_errors_are_listed(self):
-        step = Step('top setup', self.topsuite)
+        step = Step('top setup', parent=self.topsuite)
         step.gherkin_kw = 'given'
         step.model_info = dict(error='setup oops')
         self.topsuite.setup = step
@@ -143,7 +145,7 @@ class TestSuites(unittest.TestCase):
             dict(error='scenario oops')
         self.topsuite.suites[0].scenarios[0].steps[1].model_info =\
             dict(error='sub scenario oops')
-        step = Step('sub teardown', self.topsuite)
+        step = Step('sub teardown', parent=self.topsuite)
         step.model_info = dict(error='sub teardown oops')
         self.topsuite.suites[0].scenarios[0].setup = step
 
@@ -193,24 +195,24 @@ class TestScenarios(unittest.TestCase):
         self.assertIs(self.scenario.teardown, None)
 
     def test_setup_errors(self):
-        step = Step('my setup', self.scenario)
+        step = Step('my setup', parent=self.scenario)
         step.model_info = dict(error='oops')
         self.scenario.setup = step
         self.assertIs(self.scenario.has_error(), True)
         self.assertEqual(self.scenario.steps_with_errors(), [self.scenario.setup])
 
     def test_teardown_errors(self):
-        step = Step('my teardown', self.scenario)
+        step = Step('my teardown', parent=self.scenario)
         step.model_info = dict(error='oops')
         self.scenario.teardown = step
         self.assertIs(self.scenario.has_error(), True)
         self.assertEqual(self.scenario.steps_with_errors(), [self.scenario.teardown])
 
     def test_combined_errors(self):
-        setup_step = Step('my setup', self.scenario)
+        setup_step = Step('my setup', parent=self.scenario)
         setup_step.model_info = dict(error='oops in setup')
         self.scenario.setup = setup_step
-        teardown_step = Step('my teardown', self.scenario)
+        teardown_step = Step('my teardown', parent=self.scenario)
         teardown_step.model_info = dict(error='oops in teardown')
         self.scenario.teardown = teardown_step
         self.scenario.steps[0].model_info = dict(error='oops in scenario 1')
@@ -279,20 +281,21 @@ class TestSteps(unittest.TestCase):
     def setUp(self):
         self.steps = self.create_steps()
 
+    @mock.patch.object(Step, '_Step__extract_data_from_robot')
     @staticmethod
-    def create_steps(parent=None):
-        Kw1 = Step('action keyword', parent)
-        Gg1 = Step('Given step Gg1', parent)
-        Ga1 = Step('and step Ga1', parent)
-        Gb1 = Step('but step Gb1', parent)
+    def create_steps(mock, parent=None):
+        Kw1 = Step('action keyword', parent=parent)
+        Gg1 = Step('Given step Gg1', parent=parent)
+        Ga1 = Step('and step Ga1', parent=parent)
+        Gb1 = Step('but step Gb1', parent=parent)
         Gg1.gherkin_kw= Ga1.gherkin_kw= Gb1.gherkin_kw= 'given'
-        Ww1 = Step('When step Ww1', parent)
-        Wa1 = Step('and step Wa1', parent)
-        Wb1 = Step('BUT step Wb1', parent)
+        Ww1 = Step('When step Ww1', parent=parent)
+        Wa1 = Step('and step Wa1', parent=parent)
+        Wb1 = Step('BUT step Wb1', parent=parent)
         Ww1.gherkin_kw= Wa1.gherkin_kw= Wb1.gherkin_kw= 'when'
-        Tt1 = Step('Then step Tt1', parent)
-        Ta1 = Step('And step Ta1', parent)
-        Tb1 = Step('but step Tb1', parent)
+        Tt1 = Step('Then step Tt1', parent=parent)
+        Ta1 = Step('And step Ta1', parent=parent)
+        Tb1 = Step('but step Tb1', parent=parent)
         Tt1.gherkin_kw= Ta1.gherkin_kw= Tb1.gherkin_kw= 'then'
         return [Kw1, Gg1, Ga1, Gb1, Ww1, Wa1, Wb1, Tt1, Ta1, Tb1]
 
@@ -332,12 +335,12 @@ class TestSteps(unittest.TestCase):
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.step_kw, e)
 
-    def test_bare_keywords_are_stripped_from_their_gherkin_keyword(self):
+    def test_keywords_are_available_without_their_gherkin_keyword(self):
         expected = ['action keyword', 'step Gg1', 'step Ga1', 'step Gb1',
                                       'step Ww1', 'step Wa1', 'step Wb1',
                                       'step Tt1', 'step Ta1', 'step Tb1']
         for s, e in zip(self.steps, expected):
-            self.assertEqual(s.bare_kw, e)
+            self.assertEqual(s.kw_wo_gherkin, e)
 
     def test_arguments_can_be_stored(self):
         self.assertEqual(self.steps[0].args, ())
