@@ -104,21 +104,21 @@ class Scenario:
 
 class Step:
     def __init__(self, steptext, *args, parent, prev_gherkin_kw=None):
-        self.keyword = steptext  # first cell of the Robot line, including step_kw, excluding args
-        self.parent = parent     # Parent scenario for easy searching and processing
-        self.args = args         # positional and named arguments taken directly from Robot
+        self.org_step = steptext  # first cell of the Robot line, including step_kw, excluding args
+        self.parent = parent      # Parent scenario for easy searching and processing
+        self.args = args          # positional and named arguments taken directly from Robot
         self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
-                                 # 'given', 'when', 'then' or None for non-bdd keywords
-        self.signature = None    # Robot keyword with its embedded arguments in ${...} notation
-        self.emb_args = dict()   # embedded arguments in format self.emb_args["${arg}"] = value
-        self.model_info = dict() # Modelling information is available as a dictionary.
-                                 # The standard format is dict(IN=[], OUT=[]) and can
-                                 # optionally contain an error field.
-                                 # IN and OUT are lists of Python evaluatable expressions.
-                                 # The `new vocab` form can be used to create new domain objects.
-                                 # The `vocab.attribute` form can then be used to express relations
-                                 # between properties from the domain vocabulaire.
-                                 # Custom processors can define their own attributes.
+                                  # 'given', 'when', 'then' or None for non-bdd keywords
+        self.signature = None     # Robot keyword with its embedded arguments in ${...} notation
+        self.emb_args = dict()    # embedded arguments in format self.emb_args["${arg}"] = value
+        self.model_info = dict()  # Modelling information is available as a dictionary.
+                                  # The standard format is dict(IN=[], OUT=[]) and can
+                                  # optionally contain an error field.
+                                  # IN and OUT are lists of Python evaluatable expressions.
+                                  # The `new vocab` form can be used to create new domain objects.
+                                  # The `vocab.attribute` form can then be used to express relations
+                                  # between properties from the domain vocabulaire.
+                                  # Custom processors can define their own attributes.
         self.__extract_data_from_robot()
 
     def __str__(self):
@@ -134,6 +134,15 @@ class Step:
         return self.model_info.get('error')
 
     @property
+    def keyword(self):
+        if not self.signature:
+            return self.org_step
+        s = f"{self.step_kw} {self.signature}" if self.step_kw else self.signature
+        for arg, value in self.emb_args.items():
+            s = s.replace(arg, value, 1)
+        return s
+
+    @property
     def gherkin_kw(self):
         return self._gherkin_kw
 
@@ -143,7 +152,7 @@ class Step:
 
     @property
     def step_kw(self):
-        first_word = self.keyword.split()[0]
+        first_word = self.org_step.split()[0]
         return first_word if first_word.lower() in ['given','when','then','and','but'] else None
 
     @property
@@ -153,13 +162,13 @@ class Step:
 
     def __extract_data_from_robot(self):
         try:
-            runner = BuiltIn()._namespace.get_runner(self.keyword)
+            runner = BuiltIn()._namespace.get_runner(self.org_step)
             if hasattr(runner, 'error'):
                 raise ValueError(runner.error)
             kw = runner.keyword
-            self.signature = kw.name
             self.emb_args = dict() if not kw.embedded else dict(zip(["${%s}" % a for a in kw.embedded.args],
                                                                     kw.embedded.match(self.kw_wo_gherkin).groups()))
+            self.signature = kw.name
             self.model_info = self.__parse_model_info(kw._doc)
         except Exception as ex:
             self.model_info['error']=str(ex)
