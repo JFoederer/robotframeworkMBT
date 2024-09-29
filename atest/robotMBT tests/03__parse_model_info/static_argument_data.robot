@@ -54,6 +54,12 @@ argument used as name in model
     Then domain term Birthday card is accessible from the model
     and property illustration design is set to birthday cake for domain term Birthday card
 
+argument with indisctinct name used in model
+    Given property illustration design is set to birthday cake for domain term Birthday card
+    When a user introduces &#⚠️ as new domain term to the model
+    Then domain term &#⚠️ is accessible from the model
+    and property + is set to + for domain term &#⚠️
+
 *** Keywords ***
 a user introduces ${term} as new domain term to the model
     [Documentation]    *model info*

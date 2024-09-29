@@ -33,6 +33,9 @@
 import copy
 from robot.libraries.BuiltIn import BuiltIn
 
+from keyword import iskeyword
+import builtins
+
 class Suite:
     def __init__(self, name, parent=None):
         self.name = name
@@ -212,7 +215,13 @@ class Step:
                         try:
                             float(value)
                         except:
-                            escaped_value = value.replace("'", r"\'")
-                            value = f"'{escaped_value}'"
+                            value = self.make_identifier(value)
                 result[-1] = result[-1].replace(arg, value)
         return result
+
+    @staticmethod
+    def make_identifier(s):
+        _s = s.replace(' ', '_')
+        if s.isidentifier():
+            return f"_{_s}" if iskeyword(_s) or _s in dir(builtins) else _s
+        return ''.join([c if c.isidentifier() else f"o{ord(c)}" for c in _s])
