@@ -48,3 +48,27 @@ argument with Python keyword
     Given there is a birthday card
     when 'elif' writes their name on the birthday card
     then the birthday card has 'elif' written on it
+
+argument used as name in model
+    When a user introduces Birthday card as new domain term to the model
+    Then domain term Birthday card is accessible from the model
+    and property illustration design is set to birthday cake for domain term Birthday card
+
+*** Keywords ***
+a user introduces ${term} as new domain term to the model
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: new ${term}
+    No operation
+
+domain term ${term} is accessible from the model
+    [Documentation]    *model info*
+    ...    :IN: ${term}.accessible == True
+    ...    :OUT: ${term}.accessible = True
+    No operation
+
+property ${property} is set to ${value} for domain term ${term}
+    [Documentation]    *model info*
+    ...    :IN: ${term}.${property} == ${value}
+    ...    :OUT: ${term}.${property} = ${value}
+    No operation
