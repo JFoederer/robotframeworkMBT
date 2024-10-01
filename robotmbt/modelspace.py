@@ -40,7 +40,7 @@ class ModelSpace:
         self.ref_id = str(reference_id)
         self.std_attrs = []
         self.props = dict()
-        self.values = [] # For using literals without having to use quotes (abc='abc')
+        self.values = dict() # For using literals without having to use quotes (abc='abc')
         self.std_attrs = dir(self)
 
     def __repr__(self):
@@ -70,8 +70,10 @@ class ModelSpace:
         else:
             return self.__dict__.keys()
 
-    def process_expression(self, expr):
+    def process_expression(self, expr, emb_args={}):
         expr = expr.strip()
+        for arg in emb_args:
+            expr = arg.substitute_in(expr, as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
             return 'exec'
@@ -83,7 +85,7 @@ class ModelSpace:
         for p in self.props:
             exec(f"{p} = self.props['{p}']")
         for v in self.values:
-            exec(f"{v} = '{v}'")
+            exec(f"{v} = '{self.values[v]}'")
         try:
             result = eval(expr, locals())
         except SyntaxError:
@@ -91,15 +93,19 @@ class ModelSpace:
                 exec(expr, locals())
                 result = 'exec'
             except NameError as missing:
-                self.values.append(missing.name)
-                result = self.process_expression(expr)
+                matching_args = [arg.value for arg in emb_args if arg.codestring == missing.name]
+                self.values[missing.name] = matching_args[0] if matching_args else missing.name
+                self.values[missing.name] = self.values[missing.name].replace("'", r"\'")
+                result = self.process_expression(expr, emb_args)
             except AttributeError as err:
                 raise ModellingError(f"{err.name} used before assignment")
         except NameError as missing:
             if missing.name == expr:
                 raise # Putting only a name in an expression can be used as exists check
-            self.values.append(missing.name)
-            result = self.process_expression(expr)
+            matching_args = [arg.value for arg in emb_args if arg.codestring == missing.name]
+            self.values[missing.name] = matching_args[0] if matching_args else missing.name
+            self.values[missing.name] = self.values[missing.name].replace("'", r"\'")
+            result = self.process_expression(expr, emb_args)
         except AttributeError as err:
             raise ModellingError(f"{err.name} used before assignment")
 

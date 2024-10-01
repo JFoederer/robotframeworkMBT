@@ -60,6 +60,13 @@ argument with indisctinct name used in model
     Then domain term &#⚠️ is accessible from the model
     and property + is set to + for domain term &#⚠️
 
+argument values are kept as-is when used as value in the model
+    Given the birthday card has 'max' written on it
+    and the birthday card has 'Gert-Jan' written on it
+    and the birthday card has 'Jeanne d'Arc' written on it
+    and the birthday card has '藤原拓海' written on it
+    then the model includes these specific values
+
 *** Keywords ***
 a user introduces ${term} as new domain term to the model
     [Documentation]    *model info*
@@ -77,4 +84,16 @@ property ${property} is set to ${value} for domain term ${term}
     [Documentation]    *model info*
     ...    :IN: ${term}.${property} == ${value}
     ...    :OUT: ${term}.${property} = ${value}
+    No operation
+
+the model includes these specific values
+    [Documentation]    *model info*
+    ...    :IN: 'max' in birthday_card.names
+    ...         'Gert-Jan' in birthday_card.names
+    ...         '藤原拓海' in birthday_card.names
+    ...         "Jeanne d'Arc" in birthday_card.names
+    ...    :OUT: 'max' in birthday_card.names
+    ...         'Gert-Jan' in birthday_card.names
+    ...         '藤原拓海' in birthday_card.names
+    ...         "Jeanne d'Arc" in birthday_card.names
     No operation

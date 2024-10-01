@@ -181,7 +181,7 @@ class SuiteProcessors:
                     try:
                         updated_model = self.tracestate.model
                         for expr in exit_conditions:
-                            if updated_model.process_expression(expr) is False:
+                            if updated_model.process_expression(expr, part2.steps[0].emb_args) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -213,7 +213,7 @@ class SuiteProcessors:
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     try:
-                        if m.process_expression(expr) is False:
+                        if m.process_expression(expr, step.emb_args) is False:
                             return False
                     except Exception:
                         return False
@@ -221,7 +221,7 @@ class SuiteProcessors:
                 step_completes = False
                 for expr in step.model_info['OUT']:
                     try:
-                        if m.process_expression(expr) is False:
+                        if m.process_expression(expr, step.emb_args) is False:
                             break
                     except Exception:
                         break
@@ -241,12 +241,12 @@ class SuiteProcessors:
             step = scenario.steps[i]
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
-                    m.process_expression(expr)
+                    m.process_expression(expr, step.emb_args)
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
-                        if m.process_expression(expr) is False:
+                        if m.process_expression(expr, step.emb_args) is False:
                              refine_here = True
                     except Exception:
                         refine_here = True
@@ -255,10 +255,12 @@ class SuiteProcessors:
                         edge_step = Step('Log', f"Refinement follows for step: {step.keyword}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
+                        edge_step.emb_args = step.emb_args[:]
                         front.steps.append(edge_step)
                         edge_step = Step('Log', f"Refinement completed for step: {step.keyword}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
+                        edge_step.emb_args = step.emb_args[:]
                         back.steps[0] = copy.deepcopy(back.steps[0])
                         back.steps[0].model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
@@ -270,7 +272,7 @@ class SuiteProcessors:
         m = model.copy()
         for step in scenario.steps:
             for expr in SuiteProcessors._relevant_expressions(step):
-                m.process_expression(expr)
+                m.process_expression(expr, step.emb_args)
         return m
 
     @staticmethod
@@ -282,8 +284,8 @@ class SuiteProcessors:
                 return False
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    if m.process_expression(expr) is False:
-                        logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")
+                    if m.process_expression(expr, step.emb_args) is False:
+                        logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False") # report with filled in args
                         logger.debug(f"last state:\n{m.get_status_text()}")
                         return False
                 except Exception as err:
