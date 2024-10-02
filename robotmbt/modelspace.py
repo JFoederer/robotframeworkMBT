@@ -70,8 +70,8 @@ class ModelSpace:
         else:
             return self.__dict__.keys()
 
-    def process_expression(self, expr, emb_args={}):
-        expr = expr.strip()
+    def process_expression(self, expression, emb_args={}):
+        expr = expression.strip()
         for arg in emb_args:
             expr = arg.substitute_in(expr, as_code=True)
         if self._is_new_vocab_expression(expr):
@@ -93,19 +93,15 @@ class ModelSpace:
                 exec(expr, locals())
                 result = 'exec'
             except NameError as missing:
-                matching_args = [arg.value for arg in emb_args if arg.codestring == missing.name]
-                self.values[missing.name] = matching_args[0] if matching_args else missing.name
-                self.values[missing.name] = self.values[missing.name].replace("'", r"\'")
-                result = self.process_expression(expr, emb_args)
+                self.__add_alias(missing.name, emb_args)
+                result = self.process_expression(expression, emb_args)
             except AttributeError as err:
                 raise ModellingError(f"{err.name} used before assignment")
         except NameError as missing:
             if missing.name == expr:
                 raise # Putting only a name in an expression can be used as exists check
-            matching_args = [arg.value for arg in emb_args if arg.codestring == missing.name]
-            self.values[missing.name] = matching_args[0] if matching_args else missing.name
-            self.values[missing.name] = self.values[missing.name].replace("'", r"\'")
-            result = self.process_expression(expr, emb_args)
+            self.__add_alias(missing.name, emb_args)
+            result = self.process_expression(expression, emb_args)
         except AttributeError as err:
             raise ModellingError(f"{err.name} used before assignment")
 
@@ -113,6 +109,10 @@ class ModelSpace:
             exec(f"self.props['{p}'] = {p}")
 
         return result
+
+    def __add_alias(self, missing_name, emb_args):
+        matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
+        self.values[missing_name] = matching_args[0].replace("'", r"\'") if matching_args else missing_name
 
     @staticmethod
     def _is_new_vocab_expression(expression):
