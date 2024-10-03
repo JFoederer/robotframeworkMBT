@@ -33,8 +33,7 @@
 import copy
 from robot.libraries.BuiltIn import BuiltIn
 
-from keyword import iskeyword
-import builtins
+from .steparguments import StepArgument, StepArguments
 
 class Suite:
     def __init__(self, name, parent=None):
@@ -113,7 +112,7 @@ class Step:
         self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
                                   # 'given', 'when', 'then' or None for non-bdd keywords
         self.signature = None     # Robot keyword with its embedded arguments in ${...} notation
-        self.emb_args = []        # embedded arguments list of EmbeddedStepArgument objects
+        self.emb_args = StepArguments() # embedded arguments list of StepArgument objects
         self.model_info = dict()  # Modelling information is available as a dictionary.
                                   # The standard format is dict(IN=[], OUT=[]) and can
                                   # optionally contain an error field.
@@ -141,9 +140,7 @@ class Step:
         if not self.signature:
             return self.org_step
         s = f"{self.step_kw} {self.signature}" if self.step_kw else self.signature
-        for emb_arg in self.emb_args:
-            s = emb_arg.substitute_in(s)
-        return s
+        return self.emb_args.fill_in_args(s)
 
     @property
     def gherkin_kw(self):
@@ -170,8 +167,8 @@ class Step:
                 raise ValueError(runner.error)
             kw = runner.keyword
             if kw.embedded:
-                self.emb_args = [EmbeddedStepArgument(*match) for match in
-                                 zip(kw.embedded.args, kw.embedded.match(self.kw_wo_gherkin).groups())]
+                self.emb_args = StepArguments([StepArgument(*match) for match in
+                                 zip(kw.embedded.args, kw.embedded.match(self.kw_wo_gherkin).groups())])
             self.signature = kw.name
             self.model_info = self.__parse_model_info(kw._doc)
         except Exception as ex:
@@ -198,59 +195,7 @@ class Step:
             expressions = [e.strip() for e in elms[-1].split("|") if e]
             while lines and not lines[0].startswith(":"):
                 expressions.extend([e.strip() for e in lines.pop(0).split("|") if e])
-            expressions = self.__fill_in_args(expressions, self.emb_args)
             model_info[key] = expressions
         if not model_info:
             raise ValueError("When present, *model info* cannot be empty")
         return model_info
-
-    def __fill_in_args(self, expressions, emb_args):
-        result = []
-        for expr in expressions:
-            #for arg in emb_args:
-            #    expr = arg.substitute_in(expr, as_code=True)
-            result.append(expr)
-        return result
-
-class EmbeddedStepArgument:
-    def __init__(self, arg_name, value):
-        self.arg = "${%s}" % arg_name
-        self.org_value = value
-        self._value = None
-        self._codestr = None
-        self.value = value
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        self._value = value
-        self._codestr = self.make_codestring(value)
-
-    @property
-    def codestring(self):
-        return self._codestr
-
-    def substitute_in(self, text, as_code=False):
-        sub = self.codestring if as_code else self.value
-        return text.replace(self.arg, sub)
-
-    @staticmethod
-    def make_codestring(text):
-        codestr = str(text)
-        if codestr.title() in ['None', 'True', 'False']:
-            return codestr.title()
-        try:
-            float(codestr)
-        except:
-            codestr = EmbeddedStepArgument.make_identifier(codestr)
-        return codestr
-
-    @staticmethod
-    def make_identifier(s):
-        _s = str(s).replace(' ', '_')
-        if s.isidentifier():
-            return f"_{_s}" if iskeyword(_s) or _s in dir(builtins) else _s
-        return ''.join([c if c.isidentifier() else f"o{ord(c)}" for c in _s])

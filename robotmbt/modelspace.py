@@ -32,6 +32,8 @@
 
 import copy
 
+from .steparguments import StepArguments
+
 class ModellingError(Exception):
     pass
 
@@ -70,10 +72,8 @@ class ModelSpace:
         else:
             return self.__dict__.keys()
 
-    def process_expression(self, expression, emb_args={}):
-        expr = expression.strip()
-        for arg in emb_args:
-            expr = arg.substitute_in(expr, as_code=True)
+    def process_expression(self, expression, emb_args=StepArguments()):
+        expr = emb_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
             return 'exec'
