@@ -83,9 +83,9 @@ class ModelSpace:
             return 'exec'
 
         for p in self.props:
-            exec(f"{p} = self.props['{p}']")
+            exec(f"{p} = self.props['{p}']", locals())
         for v in self.values:
-            exec(f"{v} = '{self.values[v]}'")
+            exec(f"{v} = '{self.values[v]}'", locals())
         try:
             result = eval(expr, locals())
         except SyntaxError:
@@ -106,7 +106,7 @@ class ModelSpace:
             raise ModellingError(f"{err.name} used before assignment")
 
         for p in self.props:
-            exec(f"self.props['{p}'] = {p}")
+            exec(f"self.props['{p}'] = {p}", locals())
 
         return result
 
