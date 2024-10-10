@@ -86,6 +86,8 @@ class StepArgument:
     @staticmethod
     def make_identifier(s):
         _s = str(s).replace(' ', '_')
-        if s.isidentifier():
-            return f"_{_s}" if iskeyword(_s) or _s in dir(builtins) else _s
-        return ''.join([c if c.isidentifier() else f"o{ord(c)}" for c in _s])
+        if _s.isidentifier():
+            return f"{_s}_" if iskeyword(_s) or _s in dir(builtins) else _s
+        if _s[:1].isdecimal():
+            _s = f'_{_s}'
+        return ''.join([c if c.isidentifier() or c.isdecimal() else f"o{ord(c)}" for c in _s])

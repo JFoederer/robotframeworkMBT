@@ -178,7 +178,11 @@ class TestStepArgument(unittest.TestCase):
     def test_keep_identifier_names_close_to_original(self):
         self.assertEqual(StepArgument.make_identifier('foo bar'), 'foo_bar')
         self.assertEqual(StepArgument.make_identifier('import'), 'import_')
-        self.assertTrue(StepArgument.make_identifier('4foo2bar').endwith('foo2bar'))
+        self.assertTrue(StepArgument.make_identifier('4foo2bar').endswith('foo2bar'))
+
+
+class TestStepArguments(unittest.TestCase):
+    pass
 
 
 if __name__ == '__main__':
