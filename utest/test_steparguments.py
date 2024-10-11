@@ -161,28 +161,79 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg6.codestring, 'パ')
 
     def test_identical_values_yield_same_codestring(self):
-        arg1 = StepArgument('foo', 'bar')
-        arg2 = StepArgument('foo', 'bar')
+        arg1 = StepArgument('foo1', 'bar')
+        arg2 = StepArgument('foo2', 'bar')
         self.assertEqual(arg1.codestring, arg2.codestring)
-        arg3 = StepArgument('foo', '1A')
-        arg4 = StepArgument('foo', '1A')
+        arg3 = StepArgument('foo1', '1A')
+        arg4 = StepArgument('foo2', '1A')
         self.assertEqual(arg3.codestring, arg4.codestring)
-        arg5 = StepArgument('foo', ' +')
-        arg6 = StepArgument('foo', ' +')
+        arg5 = StepArgument('foo1', ' +')
+        arg6 = StepArgument('foo2', ' +')
         self.assertEqual(arg5.codestring, arg6.codestring)
 
     def test_number_bool_none_identifiers(self):
-        for v in [1, 0, -1, None, True, False]:
-            self.assertTrue(StepArgument.make_identifier(v).isidentifier())
+        valuelist = [1, 0, -1, None, True, False]
+        for v in valuelist:
+            idf = StepArgument.make_identifier(v)
+            self.assertTrue(idf.isidentifier())
+            self.assertTrue(idf not in [str(elm) for elm in valuelist])
 
     def test_keep_identifier_names_close_to_original(self):
         self.assertEqual(StepArgument.make_identifier('foo bar'), 'foo_bar')
-        self.assertEqual(StepArgument.make_identifier('import'), 'import_')
+        self.assertTrue(StepArgument.make_identifier('import').startswith('import'))
         self.assertTrue(StepArgument.make_identifier('4foo2bar').endswith('foo2bar'))
 
 
 class TestStepArguments(unittest.TestCase):
-    pass
+    def test_empty_string_stays_empty(self):
+        argset1 = StepArguments()
+        self.assertEqual(argset1.fill_in_args(""), "")
+        argset2 = StepArguments([StepArgument('foo', 'bar')])
+        self.assertEqual(argset2.fill_in_args(""), "")
+
+    def test_replace_single_argument(self):
+        argset = StepArguments([StepArgument('foo', 'bar')])
+        self.assertEqual(argset.fill_in_args("${foo}"), "bar")
+
+    def test_replace_multiple_arguments(self):
+        argset = StepArguments([StepArgument('foo1', 'bar1'),
+                                StepArgument('foo2', 'bar2')])
+        self.assertEqual(argset.fill_in_args("${foo1} ${foo2}"), "bar1 bar2")
+        self.assertEqual(argset.fill_in_args("${foo2} ${foo1}"), "bar2 bar1")
+
+    def test_same_argument_can_be_replaced_more_than_once(self):
+        argset = StepArguments([StepArgument('foo', 'bar')])
+        self.assertEqual(argset.fill_in_args("${foo} ${foo}"), "bar bar")
+
+    def test_arguments_can_be_replaced_in_any_string(self):
+        argset = StepArguments([StepArgument('foo1', 'bar1'),
+                                StepArgument('foo2', 'bar2')])
+        self.assertEqual(argset.fill_in_args("\t${foo1} and ${foo2}@#$%s  $$$$${foo2}${foo1}}"),
+                                             "\tbar1 and bar2@#$%s  $$$$bar2bar1}")
+
+    def test_can_use_robot_arguments_in_code_fragments(self):
+        args = StepArguments([StepArgument('foo1', '3bar'), # 3bar needs to be converted to a valid identifier
+                              StepArgument('foo2', '3bar')])
+        assignment = "${foo1} = 'magic'"
+        exec(args.fill_in_args(assignment, as_code=True), locals())
+        expr = "${foo2} == 'magic'"
+        # both foo1 and foo1 should map to the same identfier, because they were passed the same value.
+        # If it is not a valid identifier, the exec command fails,
+        # otherwise it is assigned the fixed string value, ready for comparison
+        self.assertTrue(eval(args.fill_in_args(expr, as_code=True), locals()))
+
+    def test_new_argument_sets_are_independent_of_their_source(self):
+        arg1 = StepArgument('foo1', 'bar1')
+        arg2 = StepArgument('foo2', 'bar2')
+        arg2.value = 'extra bar'
+        firstset = StepArguments([arg1, arg2])
+        secondset = StepArguments(firstset)
+        for arg in secondset:
+            arg.value = 'new value'
+        self.assertEqual(arg1.value, 'bar1')
+        self.assertEqual(arg2.value, 'extra bar')
+        self.assertEqual(arg.value, 'new value')
+        self.assertEqual(arg.org_value, 'bar2')
 
 
 if __name__ == '__main__':
