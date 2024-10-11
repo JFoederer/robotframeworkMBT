@@ -48,3 +48,52 @@ argument with Python keyword
     Given there is a birthday card
     when 'elif' writes their name on the birthday card
     then the birthday card has 'elif' written on it
+
+argument used as name in model
+    When a user introduces Birthday card as new domain term to the model
+    Then domain term Birthday card is accessible from the model
+    and property illustration design is set to birthday cake for domain term Birthday card
+
+argument with indisctinct name used in model
+    Given property illustration design is set to birthday cake for domain term Birthday card
+    When a user introduces &#⚠️ as new domain term to the model
+    Then domain term &#⚠️ is accessible from the model
+    and property + is set to + for domain term &#⚠️
+
+argument values are kept as-is when used as value in the model
+    Given the birthday card has 'max' written on it
+    and the birthday card has 'Gert-Jan' written on it
+    and the birthday card has 'Jeanne d'Arc' written on it
+    and the birthday card has '藤原拓海' written on it
+    then the model includes these specific values
+
+*** Keywords ***
+a user introduces ${term} as new domain term to the model
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: new ${term}
+    No operation
+
+domain term ${term} is accessible from the model
+    [Documentation]    *model info*
+    ...    :IN: ${term}.accessible == True
+    ...    :OUT: ${term}.accessible = True
+    No operation
+
+property ${property} is set to ${value} for domain term ${term}
+    [Documentation]    *model info*
+    ...    :IN: ${term}.${property} == ${value}
+    ...    :OUT: ${term}.${property} = ${value}
+    No operation
+
+the model includes these specific values
+    [Documentation]    *model info*
+    ...    :IN: 'max' in birthday_card.names
+    ...         'Gert-Jan' in birthday_card.names
+    ...         '藤原拓海' in birthday_card.names
+    ...         "Jeanne d'Arc" in birthday_card.names
+    ...    :OUT: 'max' in birthday_card.names
+    ...         'Gert-Jan' in birthday_card.names
+    ...         '藤原拓海' in birthday_card.names
+    ...         "Jeanne d'Arc" in birthday_card.names
+    No operation

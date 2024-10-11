@@ -32,6 +32,8 @@
 
 import copy
 
+from .steparguments import StepArguments
+
 class ModellingError(Exception):
     pass
 
@@ -40,7 +42,7 @@ class ModelSpace:
         self.ref_id = str(reference_id)
         self.std_attrs = []
         self.props = dict()
-        self.values = [] # For using literals without having to use quotes (abc='abc')
+        self.values = dict() # For using literals without having to use quotes (abc='abc')
         self.std_attrs = dir(self)
 
     def __repr__(self):
@@ -70,8 +72,8 @@ class ModelSpace:
         else:
             return self.__dict__.keys()
 
-    def process_expression(self, expr):
-        expr = expr.strip()
+    def process_expression(self, expression, emb_args=StepArguments()):
+        expr = emb_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
             return 'exec'
@@ -81,9 +83,9 @@ class ModelSpace:
             return 'exec'
 
         for p in self.props:
-            exec(f"{p} = self.props['{p}']")
+            exec(f"{p} = self.props['{p}']", locals())
         for v in self.values:
-            exec(f"{v} = '{v}'")
+            exec(f"{v} = '{self.values[v]}'", locals())
         try:
             result = eval(expr, locals())
         except SyntaxError:
@@ -91,22 +93,26 @@ class ModelSpace:
                 exec(expr, locals())
                 result = 'exec'
             except NameError as missing:
-                self.values.append(missing.name)
-                result = self.process_expression(expr)
+                self.__add_alias(missing.name, emb_args)
+                result = self.process_expression(expression, emb_args)
             except AttributeError as err:
                 raise ModellingError(f"{err.name} used before assignment")
         except NameError as missing:
             if missing.name == expr:
                 raise # Putting only a name in an expression can be used as exists check
-            self.values.append(missing.name)
-            result = self.process_expression(expr)
+            self.__add_alias(missing.name, emb_args)
+            result = self.process_expression(expression, emb_args)
         except AttributeError as err:
             raise ModellingError(f"{err.name} used before assignment")
 
         for p in self.props:
-            exec(f"self.props['{p}'] = {p}")
+            exec(f"self.props['{p}'] = {p}", locals())
 
         return result
+
+    def __add_alias(self, missing_name, emb_args):
+        matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
+        self.values[missing_name] = matching_args[0].replace("'", r"\'") if matching_args else missing_name
 
     @staticmethod
     def _is_new_vocab_expression(expression):
