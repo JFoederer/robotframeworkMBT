@@ -163,9 +163,9 @@ class Step:
     def __extract_data_from_robot(self):
         try:
             runner = BuiltIn()._namespace.get_runner(self.org_step)
-            if hasattr(runner, 'error'):
-                raise ValueError(runner.error)
             kw = runner.keyword
+            if kw.error:
+                raise ValueError(kw.error)
             if kw.embedded:
                 self.emb_args = StepArguments([StepArgument(*match) for match in
                                  zip(kw.embedded.args, kw.embedded.match(self.kw_wo_gherkin).groups())])
