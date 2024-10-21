@@ -13,19 +13,19 @@ Library           robotmbt
 *** Test Cases ***
 trailing scenario
     Given there is a birthday card
-    when 'Tannaz' writes their name on the birthday card
+    when Tannaz writes their name on the birthday card
     then the birthday card has 'Tannaz' written on it
     [Teardown]    Check order    ${3}
 
 middle scenario
     Given there is a blank birthday card available
-    when 'Johan' writes their name on the birthday card
+    when Johan writes their name on the birthday card
     then the birthday card has 'Johan' written on it
     and the birthday card has 1 name written on it
     [Teardown]    Check order    ${2}
 
 leading scenario
-    When 'Johan' buys a birthday card
+    When Johan buys a birthday card
     then there is a blank birthday card available
     [Teardown]    Check order    ${1}
 

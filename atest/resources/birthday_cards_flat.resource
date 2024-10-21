@@ -1,5 +1,5 @@
 *** Keywords ***
-'${person}' buys a birthday card
+${person} buys a birthday card
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: new birthday_card | birthday_card.with_whom = ${person}
@@ -20,14 +20,14 @@ there is a birthday card
     ...    :OUT: birthday_card
     Variable should exist    ${names}
 
-'${person}' has the birthday card
+${person} has the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card.with_whom == ${person}
     ...    :OUT: birthday_card.with_whom == ${person}
     Log    The card is right here in ${person}'s hand
     Should be equal    ${has_card}    ${person}
 
-'${person}' writes their name on the birthday card
+${person} writes their name on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card
     ...    :OUT: birthday_card.names.append(${person})
@@ -52,7 +52,7 @@ the birthday card has ${n} name${plural} written on it
     ...    :OUT: len(birthday_card.names) == ${n}
     Length should be    ${names}    ${{int(${n})}}
 
-'${person A}' passes the birthday card ${back/on} to '${person B}'
+${person A} passes the birthday card ${back/on} to ${person B}
     [Documentation]    *model info*
     ...    :IN: birthday_card.with_whom == ${person A}
     ...    :OUT: birthday_card.with_whom = ${person B}
@@ -60,7 +60,7 @@ the birthday card has ${n} name${plural} written on it
     Log    Thank you ${person A}, I'll be sure to put name on here.
     Set suite variable    ${has_card}    ${person B}
 
-'${person}' refuses to write their name on the birthday card
+${person} refuses to write their name on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card
     ...    :OUT: birthday_card

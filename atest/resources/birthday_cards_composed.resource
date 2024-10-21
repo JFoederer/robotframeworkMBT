@@ -2,7 +2,7 @@
 Library    String
 
 *** Keywords ***
-'${person}' buys a birthday card
+${person} buys a birthday card
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: new birthday_card
@@ -28,7 +28,7 @@ the birthday card has '${name}' written on it
     ...    :OUT: ${name} in birthday_card.names
     Should Contain    ${names}    ${name}
 
-'${person}' writes their name on the birthday card
+${person} writes their name on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card | new stepscope | stepscope.count = len(birthday_card.names)
     ...    :OUT: ${person} in birthday_card.names
@@ -47,7 +47,7 @@ there is text added in ${style} on the birthday card
     ...    :OUT: birthday_card.style == ${style}
     Should be equal    ${writing style}    ${style}
 
-'${person}' writes their name in pen on the birthday card
+${person} writes their name in pen on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card | stepscope
     ...    :OUT: birthday_card.names.append(${person}) | birthday_card.style = ink
@@ -58,7 +58,7 @@ there is text added in ${style} on the birthday card
     Log    ${person} prefers to use a pen for writing
     Set suite variable    ${writing style}    ink
 
-'${person}' writes their first letter as a piece of art
+${person} writes their first letter as a piece of art
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: new artwork | artwork.name=${person}[0]
@@ -66,7 +66,7 @@ there is text added in ${style} on the birthday card
     ${first_letter}=    Get substring    ${person}    0    0
     Log    ${person} writes a beautiful capital letter ${first_letter}
 
-'${person}' writes the other letters in decorative writing
+${person} writes the other letters in decorative writing
     [Documentation]    *model info*
     ...    :IN: artwork.name
     ...    :OUT: artwork.name+=${person}[1:] | birthday_card.names.append(artwork.name)
@@ -78,7 +78,7 @@ there is text added in ${style} on the birthday card
     Log    ${person} prefers to use a pen for writing
     Set suite variable    ${writing style}    calligraphy
 
-'${person}' writes their name in pencil on the birthday card
+${person} writes their name in pencil on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card | new _pencil | _pencil.tip=broken
     ...    :OUT: _pencil.tip==sharp | birthday_card.names.append(${person})
@@ -112,13 +112,13 @@ the pencil is ready for writing
     ...    :OUT: _pencil.tip==sharp
     Log    I can work with this
 
-'${sender}' writes ${recepient}'s address on the birthday card
+${sender} writes ${recepient}'s address on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card
     ...    :OUT: birthday_card.recepient = ${recepient}
     Log    Writing ${recepient}'s name and address on the card
 
-'${person}' puts the birthday card in the mail
+${person} puts the birthday card in the mail
     [Documentation]    *model info*
     ...    :IN: birthday_card
     ...    :OUT: birthday_card.is_mailed = True
@@ -136,7 +136,7 @@ the postal service delivers the birthday card to ${recepient}'s mailbox
     ...    :OUT: birthday_card.is_delivered = True | birthday_card.mailbox = ${recepient}
     Log    Something fell on the doormat
 
-'${person}' received the birthday card
+${person} received the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card.is_delivered == True | birthday_card.mailbox == ${person}
     ...    :OUT: birthday_card.is_delivered == True | birthday_card.mailbox == ${person}
