@@ -8,18 +8,18 @@ Library           robotmbt
 
 *** Test Cases ***
 Buying a card
-    When 'Someone' buys a birthday card
+    When someone buys a birthday card
     then there is a blank birthday card available
 
 Refusing to sign the birthday card
     Given there is a birthday card
-    when 'everybody' refuses to write their name on the birthday card
+    when everybody refuses to write their name on the birthday card
     then the birthday card has 0 names written on it
 
 At least 42 people can write their name on the card
     Skip when unreachable
     Given the birthday card has 41 names written on it
-    when 'Someone' writes their name on the birthday card
+    when someone writes their name on the birthday card
     then the birthday card has 42 names written on it
 
 *** Keywords ***
@@ -34,7 +34,7 @@ Skip when unreachable
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: None
-    ...    
+    ...
     ...    If the scenario is inserted after proper detection of the expected error,
     ...    then this keyword causes the remainder of the scenario to be skipped and
     ...    the test passes. When inserted without detected error, the scenario will

@@ -9,22 +9,22 @@ Library           robotmbt
 
 *** Test Cases ***
 Buying a card
-    When 'Johan' buys a birthday card
+    When Johan buys a birthday card
     then there is a blank birthday card available
 
 Someone writes their name on the card
     Given there is a birthday card
-    when 'Someone' writes their name on the birthday card
+    when Someone writes their name on the birthday card
     then the birthday card has 'Someone' written on it
 
 Someone else writes their name on the card
     Given there is a birthday card
-    when 'Someone else' writes their name on the birthday card
+    when Someone else writes their name on the birthday card
     then the birthday card has 'Someone else' written on it
 
 At least 42 people can write their name on the card
     Given the birthday card has 41 names written on it
-    when 'Johan' writes their name on the birthday card
+    when Johan writes their name on the birthday card
     then the birthday card has 42 names written on it
 
 Taking an evelope

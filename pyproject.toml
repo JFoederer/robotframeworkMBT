@@ -19,7 +19,7 @@ classifiers = [
 ]
 keywords = ["robotframework", "robot", "mbt", "bdd", "testing"]
 dependencies = [
-    "robotframework >= 7.0",
+    "robotframework >= 7.1",
 ]
 requires-python = ">=3.10"
 
