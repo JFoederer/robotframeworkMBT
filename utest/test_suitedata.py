@@ -31,7 +31,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-from unittest import mock
 
 from robotmbt.suitedata import Suite, Scenario, Step
 
@@ -281,9 +280,8 @@ class TestSteps(unittest.TestCase):
     def setUp(self):
         self.steps = self.create_steps()
 
-    @mock.patch.object(Step, '_Step__extract_data_from_robot')
     @staticmethod
-    def create_steps(mock, parent=None):
+    def create_steps(parent=None):
         Kw1 = Step('action keyword', parent=parent)
         Gg1 = Step('Given step Gg1', parent=parent)
         Ga1 = Step('and step Ga1', parent=parent)

@@ -136,7 +136,7 @@ class SuiteProcessors:
     def _scenario_with_repeat_counter(self, index):
         """Fetches the scenario by index and, if this scenario is already used in the trace,
         adds a repetition counter to its name."""
-        candidate = self.scenarios[index]
+        candidate = self.scenarios[index].copy() # ToDo: Make do with less copying
         rep_count = self.tracestate.count(index)
         if rep_count:
             candidate = candidate.copy()
@@ -247,6 +247,7 @@ class SuiteProcessors:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
+                        # ToDo: handle substitution
                         if m.process_expression(expr, step.emb_args) is False:
                              refine_here = True
                     except Exception:
@@ -285,6 +286,9 @@ class SuiteProcessors:
                 return False
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
+                    if m.expression_modifies_step(expr, step.emb_args):
+                        # ToDo: handle step modification
+                        continue
                     if m.process_expression(expr, step.emb_args) is False:
                         logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")
                         logger.debug(f"last state:\n{m.get_status_text()}")

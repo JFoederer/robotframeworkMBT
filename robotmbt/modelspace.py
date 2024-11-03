@@ -114,6 +114,22 @@ class ModelSpace:
         matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
         self.values[missing_name] = matching_args[0].replace("'", r"\'") if matching_args else missing_name
 
+    def expression_modifies_step(self, expression, args):
+        if expression.startswith('${'):
+            for var in args:
+                if expression.casefold().startswith(var.arg):
+                    assignment_expr = expression.replace(var.arg, '', 1).strip()
+                    if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
+                        continue # not an assignment
+                    assignment_expr = assignment_expr.replace('=', '', 1).strip()
+
+                    new_value = self.process_expression(assignment_expr, args)
+                    if new_value == 'exec':
+                        raise ModellingError(f"Invalid expression for argument substitution: {assignment_expr}")
+                    var.value = new_value
+                    return True
+        return False
+
     @staticmethod
     def _is_new_vocab_expression(expression):
         return expression.lower().startswith('new ') and len(expression.split()) == 2
