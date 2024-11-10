@@ -45,6 +45,11 @@ class StepArguments(list):
             result = result.replace(arg.arg, sub)
         return result
 
+    def __getitem__(self, key):
+        for steparg in self:
+            if key.casefold() == steparg.arg.casefold():
+                return steparg
+        return super()[key]
 
 class StepArgument:
     def __init__(self, arg_name, value):

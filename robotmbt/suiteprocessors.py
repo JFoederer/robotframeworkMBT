@@ -162,7 +162,6 @@ class SuiteProcessors:
         if self._scenario_needs_refinement(candidate, self.tracestate.model):
             part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
             exit_conditions = part2.steps[0].model_info['OUT']
-            part2.steps[0].model_info['OUT'] = []
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
             new_model = self._process_scenario(part1, self.tracestate.model)
             self.tracestate.push_partial_scenario(index, part1, new_model)
@@ -284,8 +283,9 @@ class SuiteProcessors:
                 return False
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    if m.expression_modifies_step(expr, step.emb_args):
-                        # ToDo: handle step modification
+                    arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
+                    if new_value:
+                        step.emb_args[arg].value = new_value
                         continue
                     if m.process_expression(expr, step.emb_args) is False:
                         logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")
