@@ -271,6 +271,10 @@ class SuiteProcessors:
         m = model.copy()
         for step in scenario.steps:
             for expr in SuiteProcessors._relevant_expressions(step):
+                modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
+                if modded_arg:
+                    step.emb_args[modded_arg].value = new_value
+                    continue
                 m.process_expression(expr, step.emb_args)
         return m
 
@@ -283,9 +287,9 @@ class SuiteProcessors:
                 return False
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
-                    if new_value:
-                        step.emb_args[arg].value = new_value
+                    modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
+                    if modded_arg:
+                        step.emb_args[modded_arg].value = new_value
                         continue
                     if m.process_expression(expr, step.emb_args) is False:
                         logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")

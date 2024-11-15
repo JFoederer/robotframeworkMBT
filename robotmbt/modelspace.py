@@ -117,7 +117,7 @@ class ModelSpace:
     def argument_modified_by_expression(self, expression, args):
         if expression.startswith('${'):
             for var in args:
-                if expression.casefold().startswith(var.arg):
+                if expression.casefold().startswith(var.arg.casefold()):
                     assignment_expr = expression.replace(var.arg, '', 1).strip()
                     if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
                         continue # not an assignment

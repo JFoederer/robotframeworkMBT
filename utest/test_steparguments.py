@@ -217,10 +217,16 @@ class TestStepArguments(unittest.TestCase):
         assignment = "${foo1} = 'magic'"
         exec(args.fill_in_args(assignment, as_code=True), locals())
         expr = "${foo2} == 'magic'"
-        # both foo1 and foo1 should map to the same identfier, because they were passed the same value.
+        # both foo1 and foo2 should map to the same identfier, because they were passed the same value.
         # If it is not a valid identifier, the exec command fails,
-        # otherwise it is assigned the fixed string value, ready for comparison
+        # otherwise it is assigned the fixed string value 'magic', ready for comparison
         self.assertTrue(eval(args.fill_in_args(expr, as_code=True), locals()))
+
+    def test_robot_arguments_can_be_non_string(self):
+        args = StepArguments([StepArgument('foo1', 1),
+                              StepArgument('foo2', None)])
+        self.assertEqual('1', args.fill_in_args('${foo1}'))
+        self.assertEqual('None', args.fill_in_args('${foo2}'))
 
     def test_new_argument_sets_are_independent_of_their_source(self):
         arg1 = StepArgument('foo1', 'bar1')

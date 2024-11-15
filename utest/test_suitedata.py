@@ -268,13 +268,14 @@ class TestScenarios(unittest.TestCase):
     def test_copies_are_independent(self):
         dup = self.scenario.copy()
         dup.name = "other name"
-        dup.steps.append('extra step')
+        dup.steps.append(Step('extra step', parent=dup))
         self.assertIs(dup.parent, self.scenario.parent)
         self.assertEqual(dup.setup, self.scenario.setup)
         self.assertEqual(dup.teardown, self.scenario.teardown)
         self.assertNotEqual(dup.name, self.scenario.name)
-        self.assertIs(dup.steps[0], self.scenario.steps[0])
-        self.assertIsNot(dup.steps[-1], self.scenario.steps[-1])
+        self.assertIsNot(dup.steps[0], self.scenario.steps[0])
+        self.assertEqual(dup.steps[0].keyword, self.scenario.steps[0].keyword)
+        self.assertNotEqual(dup.steps[-1].keyword, self.scenario.steps[-1].keyword)
 
 class TestSteps(unittest.TestCase):
     def setUp(self):

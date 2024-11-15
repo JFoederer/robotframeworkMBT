@@ -41,7 +41,7 @@ class StepArguments(list):
     def fill_in_args(self, text, as_code=False):
         result = text
         for arg in self:
-            sub = arg.codestring if as_code else arg.value
+            sub = arg.codestring if as_code else str(arg.value)
             result = result.replace(arg.arg, sub)
         return result
 
