@@ -136,7 +136,7 @@ class SuiteProcessors:
     def _scenario_with_repeat_counter(self, index):
         """Fetches the scenario by index and, if this scenario is already used in the trace,
         adds a repetition counter to its name."""
-        candidate = self.scenarios[index].copy() # ToDo: Make do with less copying
+        candidate = self.scenarios[index]
         rep_count = self.tracestate.count(index)
         if rep_count:
             candidate = candidate.copy()
@@ -153,17 +153,17 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
-        if self._scenario_can_execute(candidate, self.tracestate.model):
-            new_model = self._process_scenario(candidate, self.tracestate.model)
-            self.tracestate.confirm_full_scenario(index, candidate, new_model)
+        confirmed_candidate, new_model = self._process_scenario(candidate, self.tracestate.model)
+        if confirmed_candidate:
+            self.tracestate.confirm_full_scenario(index, confirmed_candidate, new_model)
             self._report_tracestate_to_user()
             return True
 
-        if self._scenario_needs_refinement(candidate, self.tracestate.model):
+        if self._scenario_needs_refinement(candidate, self.tracestate.model): # ToDo: handle substitution
             part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
             exit_conditions = part2.steps[0].model_info['OUT']
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
-            new_model = self._process_scenario(part1, self.tracestate.model)
+            part1, new_model = self._process_scenario(part1, self.tracestate.model)
             self.tracestate.push_partial_scenario(index, part1, new_model)
             self._report_tracestate_to_user()
             self.tracestate.reject_scenario(index) # Scenario cannot refine itself
@@ -246,7 +246,6 @@ class SuiteProcessors:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
-                        # ToDo: handle substitution
                         if m.process_expression(expr, step.emb_args) is False:
                              refine_here = True
                     except Exception:
@@ -269,22 +268,11 @@ class SuiteProcessors:
     @staticmethod
     def _process_scenario(scenario, model):
         m = model.copy()
-        for step in scenario.steps:
-            for expr in SuiteProcessors._relevant_expressions(step):
-                modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
-                if modded_arg:
-                    step.emb_args[modded_arg].value = new_value
-                    continue
-                m.process_expression(expr, step.emb_args)
-        return m
-
-    @staticmethod
-    def _scenario_can_execute(scenario, model):
-        m = model.copy()
+        scenario = scenario.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
                 logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
-                return False
+                return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
                     modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
@@ -292,14 +280,12 @@ class SuiteProcessors:
                         step.emb_args[modded_arg].value = new_value
                         continue
                     if m.process_expression(expr, step.emb_args) is False:
-                        logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")
-                        logger.debug(f"last state:\n{m.get_status_text()}")
-                        return False
+                        raise Exception(False)
                 except Exception as err:
                     logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: [{expr}] {err}")
                     logger.debug(f"last state:\n{m.get_status_text()}")
-                    return False
-        return True
+                    return None, None
+        return scenario, m
 
     @staticmethod
     def _relevant_expressions(step):
