@@ -14,8 +14,6 @@ Background
     and Johan is a friend of Bahar
     and Tannaz is a friend of Bahar
     and Frederique is a friend of Bahar
-
-Buying a card
     When Johan buys a birthday card
     then there is a blank birthday card available
 
