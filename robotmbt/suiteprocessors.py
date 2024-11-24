@@ -159,7 +159,7 @@ class SuiteProcessors:
             self._report_tracestate_to_user()
             return True
 
-        if self._scenario_needs_refinement(candidate, self.tracestate.model): # ToDo: handle substitution
+        if self._scenario_needs_refinement(candidate, self.tracestate.model): # ToDo: prevent double processing
             part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
             exit_conditions = part2.steps[0].model_info['OUT']
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
@@ -213,6 +213,10 @@ class SuiteProcessors:
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     try:
+                        modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
+                        if modded_arg:
+                            step.emb_args[modded_arg].value = new_value
+                            continue
                         if m.process_expression(expr, step.emb_args) is False:
                             return False
                     except Exception:
@@ -246,6 +250,10 @@ class SuiteProcessors:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
+                        modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
+                        if modded_arg:
+                            step.emb_args[modded_arg].value = new_value
+                            continue
                         if m.process_expression(expr, step.emb_args) is False:
                              refine_here = True
                     except Exception:

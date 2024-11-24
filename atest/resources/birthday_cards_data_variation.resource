@@ -57,3 +57,30 @@ the birthday card has ${n} different names written on it
     ...    :IN: len(set(birthday_card.names)) == ${n}
     ...    :OUT: len(set(birthday_card.names)) == ${n}
     Length should be    ${names}    ${{int(${n})}}
+
+${person} signs the birthday card
+    [Documentation]    *model info*
+    ...    :IN: ${person} not in birthday_card.names | ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0]
+    ...    new scenario | scenario.guest = ${person}
+    ...    :OUT: ${person} in birthday_card.names
+    Should contain    ${names}    ${person}
+
+the birthday card has a personal touch
+    [Documentation]    *model info*
+    ...    :IN: len(birthday_card.names) > 0 | birthday_card.wish
+    ...    :OUT: len(birthday_card.names) > 0 | birthday_card.wish
+    Variable should exist    ${birthday_wish}
+    ${number_of_names}=    Get Length    ${names}
+    Should Be True    ${number_of_names} > 0
+
+${person} adds the wish '${wish}' to the birthday card
+    [Documentation]    *model info*
+    ...    :IN: birthday_card | ${person}= scenario.guest
+    ...    :OUT: birthday_card.wish = ${wish}
+    Set Suite Variable    \${birthday_wish}    ${wish}
+
+the birthday card proclaims: ${wish}
+    [Documentation]    *model info*
+    ...    :IN: birthday_card.wish == ${wish}
+    ...    :OUT: birthday_card.wish == ${wish}
+    Should Be Equal    ${birthday_wish}    ${wish}

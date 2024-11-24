@@ -21,7 +21,6 @@ A friend signs the birthday card
 
 Signing a birthday card
     Given there is a birthday card
-    and a friend's name is not yet on the birthday card
     when the friend writes their name on the birthday card
     and the friend adds the wish 'Happy birthday!' to the birthday card
     then the birthday card has 'the friend's name' written on it
