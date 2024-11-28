@@ -179,9 +179,8 @@ class SuiteProcessors:
                 if m_inserted:
                     insert_valid_here = True
                     try:
-                        updated_model = self.tracestate.model
                         for expr in exit_conditions:
-                            if updated_model.process_expression(expr, part2.steps[0].emb_args) is False:
+                            if self.process_expression_incl_arg_subst(self.tracestate.model, expr, part2.steps[0]) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -207,17 +206,14 @@ class SuiteProcessors:
     @staticmethod
     def _scenario_needs_refinement(scenario, model):
         m = model.copy()
+        scenario = scenario.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
                 return False
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     try:
-                        modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
-                        if modded_arg:
-                            step.emb_args[modded_arg].value = new_value
-                            continue
-                        if m.process_expression(expr, step.emb_args) is False:
+                        if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
                             return False
                     except Exception:
                         return False
@@ -225,7 +221,7 @@ class SuiteProcessors:
                 step_completes = False
                 for expr in step.model_info['OUT']:
                     try:
-                        if m.process_expression(expr, step.emb_args) is False:
+                        if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
                             break
                     except Exception:
                         return False
@@ -241,20 +237,18 @@ class SuiteProcessors:
     @staticmethod
     def _split_refinement_candidate(scenario, model):
         m = model.copy()
+        scenario = scenario.copy()
         for i in range(len(scenario.steps)):
             step = scenario.steps[i]
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
-                    m.process_expression(expr, step.emb_args)
+                    SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args)
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
-                        modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
-                        if modded_arg:
-                            step.emb_args[modded_arg].value = new_value
-                            continue
-                        if m.process_expression(expr, step.emb_args) is False:
+
+                        if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
                              refine_here = True
                     except Exception:
                         assert False, "_split_refinement_candidate() called on non-refineable scenario"
@@ -283,17 +277,21 @@ class SuiteProcessors:
                 return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    modded_arg, new_value = m.argument_modified_by_expression(expr, step.emb_args)
-                    if modded_arg:
-                        step.emb_args[modded_arg].value = new_value
-                        continue
-                    if m.process_expression(expr, step.emb_args) is False:
+                    if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
                         raise Exception(False)
                 except Exception as err:
                     logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: [{expr}] {err}")
                     logger.debug(f"last state:\n{m.get_status_text()}")
                     return None, None
         return scenario, m
+
+    @staticmethod
+    def process_expression_incl_arg_subst(model, expr, args):
+        modded_arg, new_value = model.argument_modified_by_expression(expr, args)
+        if modded_arg:
+            args[modded_arg].value = new_value
+            return True
+        return model.process_expression(expr, args)
 
     @staticmethod
     def _relevant_expressions(step):
