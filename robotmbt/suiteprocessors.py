@@ -159,8 +159,8 @@ class SuiteProcessors:
             self._report_tracestate_to_user()
             return True
 
-        if self._scenario_needs_refinement(candidate, self.tracestate.model): # ToDo: prevent double processing
-            part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
+        part1, part2 = self._split_candidate_if_refinement_needed(candidate, self.tracestate.model)
+        if part2:
             exit_conditions = part2.steps[0].model_info['OUT']
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
             part1, new_model = self._process_scenario(part1, self.tracestate.model)
@@ -204,56 +204,31 @@ class SuiteProcessors:
         return False
 
     @staticmethod
-    def _scenario_needs_refinement(scenario, model):
+    def _split_candidate_if_refinement_needed(scenario, model):
         m = model.copy()
         scenario = scenario.copy()
+        no_split = (scenario, None)
         for step in scenario.steps:
             if 'error' in step.model_info:
-                return False
+                return no_split
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     try:
                         if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
-                            return False
+                            return no_split
                     except Exception:
-                        return False
-            if step.gherkin_kw in ['when', 'then']:
-                step_completes = False
-                for expr in step.model_info['OUT']:
-                    try:
-                        if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
-                            break
-                    except Exception:
-                        return False
-                else:
-                    step_completes = True
-                if not step_completes:
-                    if step.gherkin_kw == 'when':
-                        logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
-                        return True
-                    return False
-        return False
-
-    @staticmethod
-    def _split_refinement_candidate(scenario, model):
-        m = model.copy()
-        scenario = scenario.copy()
-        for i in range(len(scenario.steps)):
-            step = scenario.steps[i]
-            if step.gherkin_kw in ['given', 'when']:
-                for expr in step.model_info['IN']:
-                    SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args)
+                        return no_split
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
-
                         if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
-                             refine_here = True
+                            logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
+                            refine_here = True
                     except Exception:
-                        assert False, "_split_refinement_candidate() called on non-refineable scenario"
+                        return no_split
                     if refine_here:
-                        front, back = scenario.split_at_step(i)
+                        front, back = scenario.split_at_step(scenario.steps.index(step))
                         edge_step = Step('Log', f"Refinement follows for step: {step.keyword}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
@@ -264,8 +239,8 @@ class SuiteProcessors:
                         back.steps.insert(0, edge_step)
                         back.steps[1] = back.steps[1].copy()
                         back.steps[1].model_info['IN'] = []
-                        return front, back
-        assert False, "_split_refinement_candidate() called on non-refineable scenario"
+                        return (front, back)
+        return no_split
 
     @staticmethod
     def _process_scenario(scenario, model):
