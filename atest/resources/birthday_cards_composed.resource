@@ -30,9 +30,9 @@ the birthday card has '${name}' written on it
 
 ${person} writes their name on the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card | new stepscope | stepscope.count = len(birthday_card.names)
+    ...    :IN: birthday_card | scenario.count = len(birthday_card.names)
     ...    :OUT: ${person} in birthday_card.names
-    ...          len(birthday_card.names) == stepscope.count+1 | del stepscope
+    ...          len(birthday_card.names) == scenario.count+1
     Should Contain    ${names}    ${person}
 
 the birthday card has ${n} name${plural} written on it
@@ -49,10 +49,10 @@ there is text added in ${style} on the birthday card
 
 ${person} writes their name in pen on the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card | stepscope
+    ...    :IN: birthday_card | scenario.count
     ...    :OUT: birthday_card.names.append(${person}) | birthday_card.style = ink
     ...
-    ...    Using stepscope is a trick to force this step into a refinement
+    ...    Using scenario data is a trick to force this step into a refinement
     Log    Writing '${person}' on the birthday card
     Set suite variable    @{names}    @{names}    ${person}
     Log    ${person} prefers to use a pen for writing
@@ -61,17 +61,16 @@ ${person} writes their name in pen on the birthday card
 ${person} writes their first letter as a piece of art
     [Documentation]    *model info*
     ...    :IN: None
-    ...    :OUT: new artwork | artwork.name=${person}[0]
+    ...    :OUT: scenario.artwork = ${person}[0]
     ...          birthday_card.style = calligraphy
     ${first_letter}=    Get substring    ${person}    0    0
     Log    ${person} writes a beautiful capital letter ${first_letter}
 
 ${person} writes the other letters in decorative writing
     [Documentation]    *model info*
-    ...    :IN: artwork.name
-    ...    :OUT: artwork.name+=${person}[1:] | birthday_card.names.append(artwork.name)
+    ...    :IN: scenario.artwork
+    ...    :OUT: scenario.artwork+=${person}[1:] | birthday_card.names.append(scenario.artwork)
     ...          birthday_card.style = calligraphy
-    ...          del artwork
     ${other_letters}=    Get substring    ${person}    1
     Log    ${person} writes ${other_letters} in a matching font
     Set suite variable    @{names}    @{names}    ${person}
@@ -80,36 +79,35 @@ ${person} writes the other letters in decorative writing
 
 ${person} writes their name in pencil on the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card | new _pencil | _pencil.tip=broken
-    ...    :OUT: _pencil.tip==sharp | birthday_card.names.append(${person})
+    ...    :IN: birthday_card | scenario.pencil=broken
+    ...    :OUT: scenario.pencil==sharp | birthday_card.names.append(${person})
     ...          birthday_card.style = pencil
-    ...          del _pencil
     Set suite variable    @{names}    @{names}    ${person}
     Log    ${person} prefers to use a pencil for writing
     Set suite variable    ${writing style}    pencil
 
 a pencil is needed for writing
     [Documentation]    *model info*
-    ...    :IN: _pencil
-    ...    :OUT: _pencil
+    ...    :IN: scenario.pencil
+    ...    :OUT: scenario.pencil
     Log    Found a pencil! But you might want to check it...
 
 the pencil has a broken tip
     [Documentation]    *model info*
-    ...    :IN:  _pencil.tip==broken
-    ...    :OUT: _pencil.tip=broken
+    ...    :IN:  scenario.pencil==broken
+    ...    :OUT: scenario.pencil=broken
     Log    Oh no, I can't write like this :-(
 
 someone sharpens the tip of the pencil
     [Documentation]    *model info*
-    ...    :IN: _pencil.tip==broken
-    ...    :OUT: _pencil.tip=sharp
+    ...    :IN: scenario.pencil==broken
+    ...    :OUT: scenario.pencil=sharp
     Log    Nice and sharp again
 
 the pencil is ready for writing
     [Documentation]    *model info*
-    ...    :IN: _pencil.tip==sharp
-    ...    :OUT: _pencil.tip==sharp
+    ...    :IN: scenario.pencil==sharp
+    ...    :OUT: scenario.pencil==sharp
     Log    I can work with this
 
 ${sender} writes ${recepient}'s address on the birthday card

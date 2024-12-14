@@ -41,15 +41,15 @@ ${person} writes their name on the birthday card
 
 ${person}'s name is not yet on the birthday card
     [Documentation]    *model info*
-    ...    :IN: ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0] | ${person} not in birthday_card.names
-    ...    new scenario | scenario.guest = ${person}
+    ...    :IN: ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0]
+    ...    scenario.guest = ${person}
     ...    :OUT: ${person} not in birthday_card.names
     Should not contain    ${names}    ${person}
 
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
     ...    :IN: ${name} in birthday_card.names
-    ...    :OUT: ${name}= scenario.guest | scenario.guest in birthday_card.names | del scenario
+    ...    :OUT: ${name}= scenario.guest | scenario.guest in birthday_card.names
     Should contain    ${names}    ${name}
 
 the birthday card has ${n} different names written on it
@@ -61,7 +61,7 @@ the birthday card has ${n} different names written on it
 ${person} signs the birthday card
     [Documentation]    *model info*
     ...    :IN: ${person} not in birthday_card.names | ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0]
-    ...    new scenario | scenario.guest = ${person}
+    ...    scenario.guest = ${person}
     ...    :OUT: ${person} in birthday_card.names
     Should contain    ${names}    ${person}
 

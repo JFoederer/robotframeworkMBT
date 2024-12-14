@@ -112,6 +112,7 @@ class SuiteProcessors:
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
+                self.tracestate.model.new_scenario_scope()
                 inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
                                                         retry_flag=allow_duplicate_scenarios)
                 if inserted:
@@ -156,6 +157,7 @@ class SuiteProcessors:
         confirmed_candidate, new_model = self._process_scenario(candidate, self.tracestate.model)
         if confirmed_candidate:
             self.tracestate.confirm_full_scenario(index, confirmed_candidate, new_model)
+            self.tracestate.model.end_scenario_scope()
             self._report_tracestate_to_user()
             return True
 
@@ -175,6 +177,7 @@ class SuiteProcessors:
                 self._report_tracestate_to_user()
                 return False
             while i_refine is not None:
+                self.tracestate.model.new_scenario_scope()
                 m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
                 if m_inserted:
                     insert_valid_here = True

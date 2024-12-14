@@ -43,6 +43,8 @@ class ModelSpace:
         self.std_attrs = []
         self.props = dict()
         self.values = dict() # For using literals without having to use quotes (abc='abc')
+        self.scenario_vars = []
+        self.new_scenario_scope()
         self.std_attrs = dir(self)
 
     def __repr__(self):
@@ -71,6 +73,17 @@ class ModelSpace:
             return [attr for attr in self.__dir__(False) if attr not in self.std_attrs]
         else:
             return self.__dict__.keys()
+
+    def new_scenario_scope(self):
+        self.scenario_vars.append(RecursiveScope(self.scenario_vars[-1] if len(self.scenario_vars) else None))
+        self.props['scenario'] = self.scenario_vars[-1]
+
+    def end_scenario_scope(self):
+        self.scenario_vars.pop()
+        if len(self.scenario_vars):
+            self.props['scenario'] = self.scenario_vars[-1]
+        else:
+            self.props.pop('scenario')
 
     def process_expression(self, expression, emb_args=StepArguments()):
         expr = emb_args.fill_in_args(expression.strip(), as_code=True)
@@ -144,7 +157,42 @@ class ModelSpace:
     def get_status_text(self):
         status = str()
         for p in self.props:
+            if p == 'scenario':
+                continue
             status += f"{p}:\n"
             for attr in dir(self.props[p]):
                 status += f"    {attr}={getattr(self.props[p], attr)}\n"
+        if 'scenario' in self.props:
+            scenario_attrs = [attr for attr in dir(self.props['scenario']) if not attr.startswith('_')]
+            if scenario_attrs:
+                status += "scenario:\n"
+                for attr in scenario_attrs:
+                    status += f"    {attr}={getattr(self.props['scenario'], attr)}\n"
         return status
+
+class RecursiveScope:
+    """
+    Generic scoping object with the properties needed for handling scenario variables with refinement.
+
+    In case of refinement the outer scenario can already have set some constraints on the model data.
+    This information needs to be available to the inner scenarios as well, as it may need to build
+    further upon this data. Further refining the data implies that it also needs to be able to modify
+    the already available data to, for instance, add more contraints.
+
+    The resulting behavior is that any action (read or write) on an existing attribute, will be
+    executed on the highest available level. Creating new attributes, will make the current level the
+    highest available level for that atrribute.
+    """
+    def __init__(self, outer):
+        super().__setattr__('_outer_scope', outer)
+
+    def __getattr__(self, attr):
+        if hasattr(super().__getattribute__('_outer_scope'), attr):
+            return getattr(self._outer_scope, attr)
+        return super().__getattribute__(attr)
+
+    def __setattr__(self, attr, value):
+        if hasattr(self._outer_scope, attr):
+            setattr(self._outer_scope, attr, value)
+        else:
+            super().__setattr__(attr, value)
