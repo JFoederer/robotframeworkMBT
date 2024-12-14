@@ -16,12 +16,12 @@ Background
 
 A friend signs the birthday card
     Given there is a birthday card
-    when a friend signs the birthday card
+    when Tannaz signs the birthday card
     then the birthday card has a personal touch
 
 Signing a birthday card
     Given there is a birthday card
-    when the friend writes their name on the birthday card
-    and the friend adds the wish 'Happy birthday!' to the birthday card
-    then the birthday card has 'the friend's name' written on it
+    when Johan writes their name on the birthday card
+    and Johan adds the wish 'Happy birthday!' to the birthday card
+    then the birthday card has 'Johan' written on it
     and the birthday card proclaims: Happy birthday!

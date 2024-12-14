@@ -41,7 +41,7 @@ ${person} writes their name on the birthday card
 
 ${person}'s name is not yet on the birthday card
     [Documentation]    *model info*
-    ...    :IN: ${person} not in birthday_card.names | ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0]
+    ...    :IN: ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0] | ${person} not in birthday_card.names
     ...    new scenario | scenario.guest = ${person}
     ...    :OUT: ${person} not in birthday_card.names
     Should not contain    ${names}    ${person}
