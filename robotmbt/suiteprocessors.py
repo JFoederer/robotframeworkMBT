@@ -227,7 +227,10 @@ class SuiteProcessors:
                     try:
                         if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
                             logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
-                            refine_here = True
+                            if step.gherkin_kw == 'when':
+                                refine_here = True
+                            else:
+                                return no_split
                     except Exception:
                         return no_split
                     if refine_here:
