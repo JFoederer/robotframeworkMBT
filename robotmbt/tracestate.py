@@ -30,8 +30,6 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .modelspace import ModelSpace
-
 class TraceState:
     def __init__(self, n_scenarios):
         self._c_pool = [False] * n_scenarios # coverage pool: True means scenario is in trace
@@ -42,7 +40,7 @@ class TraceState:
     @property
     def model(self):
         """returns the model as it is at the end of the current trace"""
-        return self._snapshots[-1].model if self._trace else ModelSpace()
+        return self._snapshots[-1].model if self._trace else None
 
     @property
     def tried(self):

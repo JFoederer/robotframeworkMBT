@@ -37,6 +37,7 @@ from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import not_keyword
 from robot.api import logger
 
+from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
 from .steparguments import StepArguments
@@ -100,6 +101,7 @@ class SuiteProcessors:
     def try_to_reach_full_coverage(self, allow_duplicate_scenarios):
         random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
+        self.active_model = ModelSpace()
         self._init_reporting()
 
         while not self.tracestate.coverage_reached():
@@ -107,24 +109,23 @@ class SuiteProcessors:
             if i_candidate is None:
                 if not self.tracestate.can_rewind():
                     break
-                tail = self.tracestate.rewind()
+                tail = self._rewind()
                 logger.debug("Having to roll back up to "
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
-                self.tracestate.model.new_scenario_scope()
+                self.active_model.new_scenario_scope()
                 inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
                                                         retry_flag=allow_duplicate_scenarios)
                 if inserted:
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing():
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
-                        self.tracestate.rewind()
+                        self._rewind()
                     elif self.tracestate.coverage_drought > self.DROUGHT_LIMIT:
                         logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
                                      "Roll back to last coverage increase and try something else.")
-                        for i in range(self.DROUGHT_LIMIT+1):
-                            self.tracestate.rewind()
+                        self._rewind(self.DROUGHT_LIMIT+1)
                         self._report_tracestate_to_user()
 
     def __last_candidate_changed_nothing(self):
@@ -154,36 +155,38 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
-        confirmed_candidate, new_model = self._process_scenario(candidate, self.tracestate.model)
+        confirmed_candidate, new_model = self._process_scenario(candidate, self.active_model)
         if confirmed_candidate:
-            self.tracestate.confirm_full_scenario(index, confirmed_candidate, new_model)
-            self.tracestate.model.end_scenario_scope()
+            self.active_model = new_model
+            self.active_model.end_scenario_scope()
+            self.tracestate.confirm_full_scenario(index, confirmed_candidate, self.active_model)
             self._report_tracestate_to_user()
             return True
 
-        part1, part2 = self._split_candidate_if_refinement_needed(candidate, self.tracestate.model)
+        part1, part2 = self._split_candidate_if_refinement_needed(candidate, self.active_model)
         if part2:
             exit_conditions = part2.steps[0].model_info['OUT']
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
-            part1, new_model = self._process_scenario(part1, self.tracestate.model)
+            part1, new_model = self._process_scenario(part1, self.active_model)
             self.tracestate.push_partial_scenario(index, part1, new_model)
+            self.active_model = new_model
             self._report_tracestate_to_user()
             self.tracestate.reject_scenario(index) # Scenario cannot refine itself
 
             i_refine = self.tracestate.next_candidate(retry=retry_flag)
             if i_refine is None:
                 logger.debug("Refinement needed, but there are no scenarios left")
-                self.tracestate.rewind()
+                self._rewind()
                 self._report_tracestate_to_user()
                 return False
             while i_refine is not None:
-                self.tracestate.model.new_scenario_scope()
+                self.active_model.new_scenario_scope()
                 m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
                 if m_inserted:
                     insert_valid_here = True
                     try:
                         for expr in exit_conditions:
-                            if self.process_expression_incl_arg_subst(self.tracestate.model, expr, part2.steps[0]) is False:
+                            if self.process_expression_incl_arg_subst(self.active_model, expr, part2.steps[0]) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -195,16 +198,22 @@ class SuiteProcessors:
                     else:
                         logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
                     logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
-                    self.tracestate.rewind()
+                    self._rewind()
                     self._report_tracestate_to_user()
                 i_refine = self.tracestate.next_candidate(retry=retry_flag)
-            self.tracestate.rewind()
+            self._rewind()
             self._report_tracestate_to_user()
             return False
 
         self.tracestate.reject_scenario(index)
         self._report_tracestate_to_user()
         return False
+
+    def _rewind(self, n=1):
+        for i in range(n):
+            tail = self.tracestate.rewind()
+        self.active_model = self.tracestate.model or ModelSpace()
+        return tail
 
     @staticmethod
     def _split_candidate_if_refinement_needed(scenario, model):
