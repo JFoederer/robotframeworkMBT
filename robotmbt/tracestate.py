@@ -60,12 +60,12 @@ class TraceState:
 
     def next_candidate(self, retry=False):
         for i in range(len(self._c_pool)):
-            if i not in self._tried[-1] and self.count(i) == 0 and not self._is_refinement_active(i):
+            if i not in self._tried[-1] and not self._is_refinement_active(i) and self.count(i) == 0:
                 return i
         if not retry:
             return None
         for i in range(len(self._c_pool)):
-            if i not in self._tried[-1]:
+            if i not in self._tried[-1] and not self._is_refinement_active(i):
                 return i
         return None
 

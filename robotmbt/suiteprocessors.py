@@ -171,7 +171,6 @@ class SuiteProcessors:
             self.tracestate.push_partial_scenario(index, part1, new_model)
             self.active_model = new_model
             self._report_tracestate_to_user()
-            self.tracestate.reject_scenario(index) # Scenario cannot refine itself
 
             i_refine = self.tracestate.next_candidate(retry=retry_flag)
             if i_refine is None:

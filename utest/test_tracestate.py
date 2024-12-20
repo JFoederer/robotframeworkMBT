@@ -714,5 +714,24 @@ class TestRefinement(unittest.TestCase):
         ts.confirm_full_scenario(candidate2, 'B1', {})
         self.assertEqual(ts.coverage_drought, 2)
 
+    def test_scenario_cannot_refine_itself(self):
+        ts = TraceState(2)
+        candidate1 = ts.next_candidate()
+        ts.push_partial_scenario(candidate1, 'T1.1', {})
+        candidate2 = ts.next_candidate()
+        self.assertIsNotNone(candidate2)
+        ts.reject_scenario(candidate2)
+        self.assertIsNone(ts.next_candidate())
+
+    def test_scenario_cannot_refine_itself_with_repetition(self):
+        ts = TraceState(2)
+        candidate1 = ts.next_candidate(retry=True)
+        ts.push_partial_scenario(candidate1, 'T1.1', {})
+        candidate2 = ts.next_candidate(retry=True)
+        self.assertIsNotNone(candidate2)
+        ts.reject_scenario(candidate2)
+        self.assertIsNone(ts.next_candidate(retry=True))
+
+
 if __name__ == '__main__':
     unittest.main()
