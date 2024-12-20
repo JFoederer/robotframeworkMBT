@@ -218,18 +218,21 @@ class TestTraceState(unittest.TestCase):
         ts.confirm_full_scenario(0, 'one', {})
         self.assertEqual(ts.highest_part(0), 0)
 
-    def test_create_empty_modelspace_on_empty_trace(self):
-        ts = TraceState(1)
-        self.assertIn('ModelSpace', ts.model.__class__.__name__)
-        self.assertEqual(dir(ts.model), [])
-
-    def test_model__property_takes_model_from_tail(self):
+    def test_model_property_takes_model_from_tail(self):
         ts = TraceState(2)
         ts.confirm_full_scenario(ts.next_candidate(), 'one', dict(a=1))
         ts.confirm_full_scenario(ts.next_candidate(), 'two', dict(b=2))
         self.assertEqual(ts.model, dict(b=2))
         ts.rewind()
         self.assertEqual(ts.model, dict(a=1))
+
+    def test_no_model_from_empty_trace(self):
+        ts = TraceState(1)
+        self.assertIs(ts.model, None)
+        ts.confirm_full_scenario(0, 'one', {})
+        self.assertIsNotNone(ts.model)
+        ts.rewind()
+        self.assertIs(ts.model, None)
 
     def test_tried_property_starts_empty(self):
         ts = TraceState(1)
