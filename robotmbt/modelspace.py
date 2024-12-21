@@ -44,7 +44,6 @@ class ModelSpace:
         self.props = dict()
         self.values = dict() # For using literals without having to use quotes (abc='abc')
         self.scenario_vars = []
-        self.new_scenario_scope()
         self.std_attrs = dir(self)
 
     def __repr__(self):
@@ -57,12 +56,16 @@ class ModelSpace:
         return self.get_status_text() == other.get_status_text()
 
     def add_prop(self, name):
+        if name == 'scenario':
+            raise ModellingError(f"scenario is a reserved attribute.")
         if name in self.props or name in self.values:
             raise ModellingError(f"Naming conflict, '{name}' already in use.")
         self.props[name] = ModelSpace(name)
         setattr(self, name, self.props[name])
 
     def del_prop(self, name):
+        if name == 'scenario':
+            raise ModellingError(f"scenario is a reserved attribute and cannot be removed.")
         if name not in self.props:
             raise ModellingError(f"Delete failed, '{name}' is not defined.")
         self.props.pop(name)
@@ -79,6 +82,7 @@ class ModelSpace:
         self.props['scenario'] = self.scenario_vars[-1]
 
     def end_scenario_scope(self):
+        assert len(self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
         self.scenario_vars.pop()
         if len(self.scenario_vars):
             self.props['scenario'] = self.scenario_vars[-1]
@@ -124,6 +128,9 @@ class ModelSpace:
         return result
 
     def __add_alias(self, missing_name, emb_args):
+        if missing_name == 'scenario':
+            raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
+                                 "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
         matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
         self.values[missing_name] = matching_args[0].replace("'", r"\'") if matching_args else missing_name
 
