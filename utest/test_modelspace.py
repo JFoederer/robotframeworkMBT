@@ -347,6 +347,37 @@ class TestScenarioScopeVars(unittest.TestCase):
         self.assertIsInstance(cm.exception, ModellingError)
         self.assertEqual(str(cm.exception), "foo used before assignment")
 
+    def test_scenario_vars_appear_in_status_text(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.assertEqual(self.m.get_status_text(), "scenario:\n"
+                                                   "    foo=bar\n")
+
+    def test_scenario_vars_appear_last_in_status_text(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('new aa')
+        self.m.process_expression('aa.A = 1')
+        self.m.process_expression('scenario.foo = bar')
+        self.m.process_expression('new zz')
+        self.m.process_expression('zz.Z = 26')
+        self.assertTrue(self.m.get_status_text().endswith( "scenario:\n"
+                                                            "    foo=bar\n"))
+
+    def test_scenario_var_starting_with_underscore(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario._foo = _bar')
+        self.assertEqual(self.m.get_status_text(), "scenario:\n"
+                                                   "    _foo=_bar\n")
+
+    def test_scenario_var_status_text_from_nested_scope(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo1 = bar1')
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo2 = bar2')
+        self.assertEqual(self.m.get_status_text(), "scenario:\n"
+                                                   "    foo1=bar1\n"
+                                                   "    foo2=bar2\n")
+
 
 if __name__ == '__main__':
     unittest.main()

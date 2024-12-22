@@ -163,18 +163,18 @@ class ModelSpace:
 
     def get_status_text(self):
         status = str()
+        scenario_attrs = []
         for p in self.props:
             if p == 'scenario':
+                scenario_attrs = self.props['scenario']
                 continue
             status += f"{p}:\n"
             for attr in dir(self.props[p]):
                 status += f"    {attr}={getattr(self.props[p], attr)}\n"
-        if 'scenario' in self.props:
-            scenario_attrs = [attr for attr in dir(self.props['scenario']) if not attr.startswith('_')]
-            if scenario_attrs:
-                status += "scenario:\n"
-                for attr in scenario_attrs:
-                    status += f"    {attr}={getattr(self.props['scenario'], attr)}\n"
+        if scenario_attrs:
+            status += "scenario:\n"
+            for attr, value in scenario_attrs:
+                status += f"    {attr}={value}\n"
         return status
 
 class RecursiveScope:
@@ -203,3 +203,7 @@ class RecursiveScope:
             setattr(self._outer_scope, attr, value)
         else:
             super().__setattr__(attr, value)
+
+    def __iter__(self):
+        return iter([(attr, getattr(self, attr)) for attr in dir(self._outer_scope) + dir(self)
+                                                          if not attr.startswith('__') and attr != '_outer_scope'])
