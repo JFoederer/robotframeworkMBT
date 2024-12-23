@@ -363,6 +363,10 @@ class TestScenarioScopeVars(unittest.TestCase):
         self.assertTrue(self.m.get_status_text().endswith( "scenario:\n"
                                                             "    foo=bar\n"))
 
+    def test_exclude_scenario_vars_from_status_text_when_empty(self):
+        self.m.new_scenario_scope()
+        self.assertEqual(self.m.get_status_text(), "")
+
     def test_scenario_var_starting_with_underscore(self):
         self.m.new_scenario_scope()
         self.m.process_expression('scenario._foo = _bar')

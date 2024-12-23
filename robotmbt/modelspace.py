@@ -207,3 +207,6 @@ class RecursiveScope:
     def __iter__(self):
         return iter([(attr, getattr(self, attr)) for attr in dir(self._outer_scope) + dir(self)
                                                           if not attr.startswith('__') and attr != '_outer_scope'])
+
+    def __bool__(self):
+        return any(True for _ in self)
