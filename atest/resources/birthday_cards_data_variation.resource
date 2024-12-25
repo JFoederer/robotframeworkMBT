@@ -34,22 +34,24 @@ there is a birthday card
 
 ${person} writes their name on the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card | ${person} = scenario.guest
+    ...    :MOD: ${person}=writer FROM [guest for guest in party.guests if guest not in birthday_card.names]
+    ...    :IN: birthday_card
     ...    :OUT: birthday_card.names.append(${person})
     Log    Writing '${person}' on the birthday card
     Set suite variable    @{names}    @{names}    ${person}
 
 ${person}'s name is not yet on the birthday card
     [Documentation]    *model info*
-    ...    :IN: ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0]
-    ...    scenario.guest = ${person}
+    ...    :MOD: ${person}=writer FROM [guest for guest in party.guests if guest not in birthday_card.names]
+    ...    :IN: ${person} not in birthday_card.names
     ...    :OUT: ${person} not in birthday_card.names
     Should not contain    ${names}    ${person}
 
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
+    ...    :MOD: ${name}=writer FROM [guest for guest in party.guests if guest in birthday_card.names]
     ...    :IN: ${name} in birthday_card.names
-    ...    :OUT: ${name}= scenario.guest | scenario.guest in birthday_card.names
+    ...    :OUT: ${name} in birthday_card.names
     Should contain    ${names}    ${name}
 
 the birthday card has ${n} different names written on it
@@ -60,8 +62,8 @@ the birthday card has ${n} different names written on it
 
 ${person} signs the birthday card
     [Documentation]    *model info*
-    ...    :IN: ${person} not in birthday_card.names | ${person}= [guest for guest in party.guests if guest not in birthday_card.names][0]
-    ...    scenario.guest = ${person}
+    ...    :MOD: ${person}=writer FROM [guest for guest in party.guests if guest not in birthday_card.names]
+    ...    :IN: ${person} not in birthday_card.names | scenario.guest = ${person}
     ...    :OUT: ${person} in birthday_card.names
     Should contain    ${names}    ${person}
 
@@ -75,7 +77,8 @@ the birthday card has a personal touch
 
 ${person} adds the wish '${wish}' to the birthday card
     [Documentation]    *model info*
-    ...    :IN: birthday_card | ${person}= scenario.guest
+    ...    :MOD: ${person}=writer
+    ...    :IN: birthday_card
     ...    :OUT: birthday_card.wish = ${wish}
     Set Suite Variable    \${birthday_wish}    ${wish}
 

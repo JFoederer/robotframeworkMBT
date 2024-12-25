@@ -140,14 +140,18 @@ class ModelSpace:
                 if expression.casefold().startswith(var.arg.casefold()):
                     assignment_expr = expression.replace(var.arg, '', 1).strip()
                     if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
-                        continue # not an assignment
+                        break # not an assignment
                     assignment_expr = assignment_expr.replace('=', '', 1).strip()
-
-                    new_value = self.process_expression(assignment_expr, args)
-                    if new_value == 'exec':
-                        raise ModellingError(f"Invalid expression for argument substitution: {assignment_expr}")
-                    return var.arg, new_value
-        return None, None
+                    if ' FROM ' in assignment_expr:
+                        [target, constraint] = [s.strip() for s in assignment_expr.split(' FROM ')]
+                        options = self.process_expression(constraint, args)
+                        if options == 'exec':
+                            break
+                    else:
+                        target = assignment_expr
+                        options = None
+                    return var.arg, target, options
+        raise ModellingError(f"Invalid argument substitution: {expression}")
 
     @staticmethod
     def _is_new_vocab_expression(expression):

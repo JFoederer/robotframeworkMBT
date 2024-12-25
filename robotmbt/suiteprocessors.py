@@ -37,6 +37,7 @@ from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import not_keyword
 from robot.api import logger
 
+from .equivalenceclass import EquivalenceClass
 from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
@@ -155,6 +156,11 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
+        candidate = self._make_concrete_example(candidate, self.active_model)
+        if not candidate:
+            self.tracestate.reject_scenario(index)
+            return False
+
         confirmed_candidate, new_model = self._process_scenario(candidate, self.active_model)
         if confirmed_candidate:
             self.active_model = new_model
@@ -185,7 +191,7 @@ class SuiteProcessors:
                     insert_valid_here = True
                     try:
                         for expr in exit_conditions:
-                            if self.process_expression_incl_arg_subst(self.active_model, expr, part2.steps[0]) is False:
+                            if self.active_model.process_expression(expr, part2.steps[0]) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -225,7 +231,7 @@ class SuiteProcessors:
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
                     try:
-                        if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
+                        if m.process_expression(expr, step.emb_args) is False:
                             return no_split
                     except Exception:
                         return no_split
@@ -233,7 +239,7 @@ class SuiteProcessors:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
-                        if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
+                        if m.process_expression(expr, step.emb_args) is False:
                             logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
                             if step.gherkin_kw == 'when':
                                 refine_here = True
@@ -266,21 +272,13 @@ class SuiteProcessors:
                 return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    if SuiteProcessors.process_expression_incl_arg_subst(m, expr, step.emb_args) is False:
+                    if m.process_expression(expr, step.emb_args) is False:
                         raise Exception(False)
                 except Exception as err:
                     logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: [{expr}] {err}")
                     logger.debug(f"last state:\n{m.get_status_text()}")
                     return None, None
         return scenario, m
-
-    @staticmethod
-    def process_expression_incl_arg_subst(model, expr, args):
-        modded_arg, new_value = model.argument_modified_by_expression(expr, args)
-        if modded_arg:
-            args[modded_arg].value = new_value
-            return True
-        return model.process_expression(expr, args)
 
     @staticmethod
     def _relevant_expressions(step):
@@ -292,6 +290,40 @@ class SuiteProcessors:
         if step.gherkin_kw in ['when', 'then']:
             expressions += step.model_info['OUT']
         return expressions
+
+    @staticmethod
+    def _make_concrete_example(scenario, model):
+        m = model.copy()
+        scenario = scenario.copy()
+        try:
+            substitutions = {}
+            for step in scenario.steps:
+                if step.gherkin_kw == 'then':
+                    continue # No new constraints are processed for then-steps
+                if 'MOD' in step.model_info:
+                    for expr in step.model_info['MOD']:
+                        modded_arg, target, constraint = m.argument_modified_by_expression(expr, step.emb_args)
+                        org_example = step.emb_args[modded_arg].org_value
+                        if  target in substitutions:
+                            substitutions[target].substitute(org_example, constraint)
+                        else:
+                            if not constraint:
+                                raise Exception("Constraint required for first assignment")
+                            eqc = EquivalenceClass()
+                            eqc.substitute(org_example, constraint)
+                            substitutions[target] = eqc
+            for eqclass in substitutions:
+                substitutions[eqclass].solve()
+            for step in scenario.steps:
+                if 'MOD' in step.model_info:
+                    for expr in step.model_info['MOD']:
+                        modded_arg, target, constraint = m.argument_modified_by_expression(expr, step.emb_args)
+                        org_example = step.emb_args[modded_arg].org_value
+                        step.emb_args[modded_arg].value = substitutions[target].solution[org_example]
+        except Exception as err:
+            logger.debug(f"Unable to insert scenario {scenario.name} due to modifier: {err}")
+            return None
+        return scenario
 
     def _init_reporting(self):
         self.shufflemap = [self.flat_suite.scenarios.index(s)+1 for s in self.scenarios]
