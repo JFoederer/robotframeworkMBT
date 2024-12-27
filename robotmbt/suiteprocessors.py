@@ -171,7 +171,7 @@ class SuiteProcessors:
 
         part1, part2 = self._split_candidate_if_refinement_needed(candidate, self.active_model)
         if part2:
-            exit_conditions = part2.steps[0].model_info['OUT']
+            exit_conditions = part2.steps[1].model_info['OUT']
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
             part1, new_model = self._process_scenario(part1, self.active_model)
             self.tracestate.push_partial_scenario(index, part1, new_model)
@@ -190,8 +190,10 @@ class SuiteProcessors:
                 if m_inserted:
                     insert_valid_here = True
                     try:
+                        # Check exit condition before finalizing refinement and inserting the tail part
+                        model_scratchpad = self.active_model.copy()
                         for expr in exit_conditions:
-                            if self.active_model.process_expression(expr, part2.steps[0]) is False:
+                            if model_scratchpad.process_expression(expr, part2.steps[1].emb_args) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -202,6 +204,7 @@ class SuiteProcessors:
                             return True
                     else:
                         logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
+                        logger.debug(f"last state:\n{self.active_model.get_status_text()}")
                     logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
                     self._rewind()
                     self._report_tracestate_to_user()
@@ -240,8 +243,8 @@ class SuiteProcessors:
                     refine_here = False
                     try:
                         if m.process_expression(expr, step.emb_args) is False:
-                            logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
                             if step.gherkin_kw == 'when':
+                                logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
                                 refine_here = True
                             else:
                                 return no_split
@@ -291,8 +294,7 @@ class SuiteProcessors:
             expressions += step.model_info['OUT']
         return expressions
 
-    @staticmethod
-    def _make_concrete_example(scenario, model):
+    def _make_concrete_example(self, scenario, model):
         m = model.copy()
         scenario = scenario.copy()
         try:
