@@ -36,6 +36,7 @@ class TraceState:
         self._tried = [[]]   # Keeps track of the scenarios already tried at each step in the trace
         self._trace = []     # Choice trace, when was which scenario inserted (e.g. ['1', '2.1', '3', '2.0'])
         self._snapshots = [] # Keeps details for elements in trace
+        self._open_refinements = []
 
     @property
     def model(self):
@@ -87,6 +88,13 @@ class TraceState:
     def _is_refinement_active(self, index):
         return self.highest_part(index) != 0
 
+    def find_scenarios_with_active_refinement(self):
+        scenarios = []
+        for i in self._open_refinements:
+            index = -self._trace[::-1].index(f'{i}.1')-1
+            scenarios.append(self._snapshots[index].scenario)
+        return scenarios
+
     def reject_scenario(self, i_scenario):
         """Trying a scenario excludes it from further cadidacy on this level"""
         self._tried[-1].append(i_scenario)
@@ -99,6 +107,7 @@ class TraceState:
             c_drought = self.coverage_drought+1
         if self._is_refinement_active(index):
             id = f"{index}.0"
+            self._open_refinements.pop()
         else:
             id = str(index)
             self._tried[-1].append(index)
@@ -113,6 +122,7 @@ class TraceState:
             id = f"{index}.1"
             self._tried[-1].append(index)
             self._tried.append([])
+            self._open_refinements.append(index)
         self._trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model, self.coverage_drought))
 
@@ -124,6 +134,7 @@ class TraceState:
         index = int(id.split('.')[0])
         if id.endswith('.0'):
             self._snapshots.pop()
+            self._open_refinements.append(index)
             while self._trace[-1] != f"{index}.1":
                 self.rewind()
             return self.rewind()
@@ -133,6 +144,8 @@ class TraceState:
             if self.count(index) == 0:
                 self._c_pool[index] = False
             self._tried.pop()
+            if id.endswith('.1'):
+                self._open_refinements.pop()
         return self._snapshots[-1] if self._snapshots else None
 
     def __iter__(self):

@@ -297,8 +297,16 @@ class SuiteProcessors:
     def _make_concrete_example(self, scenario, model):
         m = model.copy()
         scenario = scenario.copy()
+        scenarios_in_refinement = self.tracestate.find_scenarios_with_active_refinement()
+
+        # reuse previous solution for all parts in split up scenario
+        for sir in scenarios_in_refinement:
+            if sir.name.startswith(scenario.name): # change to more robust check
+                return scenario
+
+        substitutions = {}
         try:
-            substitutions = {}
+            # collect set of constraints
             for step in scenario.steps:
                 if step.gherkin_kw == 'then':
                     continue # No new constraints are processed for then-steps
@@ -314,17 +322,44 @@ class SuiteProcessors:
                             eqc = EquivalenceClass()
                             eqc.substitute(org_example, constraint)
                             substitutions[target] = eqc
-            for eqclass in substitutions:
-                substitutions[eqclass].solve()
-            for step in scenario.steps:
-                if 'MOD' in step.model_info:
-                    for expr in step.model_info['MOD']:
-                        modded_arg, target, constraint = m.argument_modified_by_expression(expr, step.emb_args)
-                        org_example = step.emb_args[modded_arg].org_value
-                        step.emb_args[modded_arg].value = substitutions[target].solution[org_example]
+
+            # limit choices for refinement scenarios
+            for variation_point, eqc in substitutions.items():
+                # find matching outer scenario
+                for sir in scenarios_in_refinement:
+                    if variation_point in sir.data_choices:
+                        sir_exclude_list = []
+                        target_exclude_list = []
+                        for sir_example_value, choice in sir.data_choices[variation_point].solution.items():
+                            if sir_example_value in sir_exclude_list: continue
+                            for current_example_value, constraint in eqc.substitutions.items():
+                                if current_example_value in target_exclude_list: continue
+                                if choice in constraint:
+                                    eqc.substitute(current_example_value, [choice])
+                                    sir_exclude_list.append(sir_example_value)
+                                    target_exclude_list.append(current_example_value)
+                                    break
+                            else:
+                                raise Exception("Impossible data match in refinement scenario")
+                            break
+
+            # find solution
+            for eqclass in substitutions.values():
+                eqclass.solve()
+            if substitutions:
+                logger.debug(f"Example variant generated with substitution map: {substitutions}")
         except Exception as err:
             logger.debug(f"Unable to insert scenario {scenario.name} due to modifier: {err}")
             return None
+
+        # Update scenario with generated values
+        scenario.data_choices = {k:v.copy() for k, v in substitutions.items()}
+        for step in scenario.steps:
+            if 'MOD' in step.model_info:
+                for expr in step.model_info['MOD']:
+                    modded_arg, target, constraint = m.argument_modified_by_expression(expr, step.emb_args)
+                    org_example = step.emb_args[modded_arg].org_value
+                    step.emb_args[modded_arg].value = substitutions[target].solution[org_example]
         return scenario
 
     def _init_reporting(self):

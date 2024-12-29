@@ -68,6 +68,7 @@ class Scenario:
         self.setup = None    # Can be a single step or None
         self.teardown = None # Can be a single step or None
         self.steps = []
+        self.data_choices = {}
 
     @property
     def longname(self):
@@ -86,6 +87,7 @@ class Scenario:
     def copy(self):
         duplicate = copy.copy(self)
         duplicate.steps = [step.copy() for step in self.steps]
+        duplicate.data_choices = {k:v.copy() for k, v in self.data_choices.items()}
         return duplicate
 
     def split_at_step(self, stepindex):
@@ -95,12 +97,12 @@ class Scenario:
         stepindex 1 the first step is in the first part, the other in the last part, and so on.
         """
         assert stepindex <= len(self.steps), "Split index out of range. Not enough steps in scenario."
-        front = Scenario(self.name, self.parent)
-        front.setup = self.setup
+        front = self.copy()
+        front.teardown = None
         front.steps = self.steps[:stepindex]
-        back = Scenario(self.name, self.parent)
+        back = self.copy()
         back.steps = self.steps[stepindex:]
-        back.teardown = self.teardown
+        back.setup = None
         return front, back
 
 class Step:
