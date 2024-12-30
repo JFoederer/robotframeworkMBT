@@ -52,8 +52,12 @@ class SuiteReplacer:
     @keyword(name="Treat this test suite Model-based")
     def treat_model_based(self):
         """
-        Iterate through the suite and if all keywords also have a modelling variant (prefix 'model')
-        then replace the contents with a generated trace.
+        Add this keyword to a suite setup to treat that test suite model-based.
+
+        In a model-based test suite the test cases are used as building blocks for generating new
+        test traces each run, rather than just following the traditional linear path. Based on the
+        model info that is included in the test steps, the test cases are modifed, mixed and
+        matched to create unique traces and achieve more test coverage quicker.
         """
         self.robot_suite = self.current_suite
 
