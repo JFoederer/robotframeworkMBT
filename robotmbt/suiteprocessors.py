@@ -160,9 +160,10 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
-        candidate = self._make_concrete_example(candidate, self.active_model)
+        candidate = self._generate_scenario_variant(candidate, self.active_model)
         if not candidate:
             self.tracestate.reject_scenario(index)
+            self._report_tracestate_to_user()
             return False
 
         confirmed_candidate, new_model = self._process_scenario(candidate, self.active_model)
@@ -301,14 +302,14 @@ class SuiteProcessors:
             expressions += step.model_info['OUT']
         return expressions
 
-    def _make_concrete_example(self, scenario, model):
+    def _generate_scenario_variant(self, scenario, model):
         m = model.copy()
         scenario = scenario.copy()
         scenarios_in_refinement = self.tracestate.find_scenarios_with_active_refinement()
 
-        # reuse previous solution for all parts in split up scenario
+        # reuse previous solution for all parts in split-up scenario
         for sir in scenarios_in_refinement:
-            if sir.name.startswith(scenario.name): # change to more robust check
+            if sir.src_id == scenario.src_id:
                 return scenario
 
         substitutions = {}
@@ -319,20 +320,25 @@ class SuiteProcessors:
                     continue # No new constraints are processed for then-steps
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
-                        modded_arg, target, constraint = m.argument_modified_by_expression(expr, step.emb_args)
+                        modded_arg, target, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                        if not constraint and target not in substitutions:
+                            raise ValueError(f"No options to choose from at first assignment to {target}")
+                        options =  m.process_expression(constraint, step.emb_args) if constraint else None
+                        if options == 'exec':
+                            raise ValueError(f"Invalid constraint for argument substitution: {expr}")
+
                         org_example = step.emb_args[modded_arg].org_value
                         if  target in substitutions:
-                            substitutions[target].substitute(org_example, constraint)
+                            substitutions[target].substitute(org_example, options)
                         else:
-                            if not constraint:
-                                raise Exception("Constraint required for first assignment")
+                            if not options:
+                                raise ValueError(f"Constraint on modifer did not yield any options {expr}")
                             eqc = EquivalenceClass()
-                            eqc.substitute(org_example, constraint)
+                            eqc.substitute(org_example, options)
                             substitutions[target] = eqc
 
             # limit choices for refinement scenarios
             for variation_point, eqc in substitutions.items():
-                # find matching outer scenario
                 for sir in scenarios_in_refinement:
                     if variation_point in sir.data_choices:
                         sir_exclude_list = []
@@ -347,7 +353,7 @@ class SuiteProcessors:
                                     target_exclude_list.append(current_example_value)
                                     break
                             else:
-                                raise Exception("Impossible data match in refinement scenario")
+                                raise ValueError(f"Data mismatch with scenario under refinement ({sir.name} [{sir.src_id}])")
                             break
 
             # find solution
@@ -364,10 +370,27 @@ class SuiteProcessors:
         for step in scenario.steps:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
-                    modded_arg, target, constraint = m.argument_modified_by_expression(expr, step.emb_args)
+                    modded_arg, target, constraint = self._parse_modifier_expression(expr, step.emb_args)
                     org_example = step.emb_args[modded_arg].org_value
                     step.emb_args[modded_arg].value = substitutions[target].solution[org_example]
         return scenario
+
+    @staticmethod
+    def _parse_modifier_expression(expression, args):
+        if expression.startswith('${'):
+            for var in args:
+                if expression.casefold().startswith(var.arg.casefold()):
+                    assignment_expr = expression.replace(var.arg, '', 1).strip()
+                    if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
+                        break # not an assignment
+                    assignment_expr = assignment_expr.replace('=', '', 1).strip()
+                    if ' FROM ' in assignment_expr:
+                        [target, constraint] = [s.strip() for s in assignment_expr.split(' FROM ')]
+                    else:
+                        target = assignment_expr
+                        constraint = None
+                    return var.arg, target, constraint
+        raise ValueError(f"Invalid argument substitution: {expression}")
 
     def _report_tracestate_to_user(self):
         user_trace = "["
