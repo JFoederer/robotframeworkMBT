@@ -85,7 +85,12 @@ class SuiteProcessors:
         self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
 
+        for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
+            scenario.src_id = id
         self.scenarios = self.flat_suite.scenarios[:]
+        logger.debug("Use these numbers to reference scenarios from traces\n\t" +
+                "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+
         # a short trace without the need for repeating scenarios is preferred
         self.try_to_reach_full_coverage(allow_duplicate_scenarios=False)
 
@@ -103,8 +108,6 @@ class SuiteProcessors:
         random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
         self.active_model = ModelSpace()
-        self._init_reporting()
-
         while not self.tracestate.coverage_reached():
             i_candidate = self.tracestate.next_candidate(retry=allow_duplicate_scenarios)
             if i_candidate is None:
@@ -128,6 +131,7 @@ class SuiteProcessors:
                                      "Roll back to last coverage increase and try something else.")
                         self._rewind(self.DROUGHT_LIMIT+1)
                         self._report_tracestate_to_user()
+                        logger.debug(f"last state:\n{self.active_model.get_status_text()}")
 
     def __last_candidate_changed_nothing(self):
         if len(self.tracestate) < 2:
@@ -166,7 +170,9 @@ class SuiteProcessors:
             self.active_model = new_model
             self.active_model.end_scenario_scope()
             self.tracestate.confirm_full_scenario(index, confirmed_candidate, self.active_model)
+            logger.debug(f"Inserted scenario {confirmed_candidate.src_id}, {confirmed_candidate.name}")
             self._report_tracestate_to_user()
+            logger.debug(f"last state:\n{self.active_model.get_status_text()}")
             return True
 
         part1, part2 = self._split_candidate_if_refinement_needed(candidate, self.active_model)
@@ -177,6 +183,7 @@ class SuiteProcessors:
             self.tracestate.push_partial_scenario(index, part1, new_model)
             self.active_model = new_model
             self._report_tracestate_to_user()
+            logger.debug(f"last state:\n{self.active_model.get_status_text()}")
 
             i_refine = self.tracestate.next_candidate(retry=retry_flag)
             if i_refine is None:
@@ -278,8 +285,8 @@ class SuiteProcessors:
                     if m.process_expression(expr, step.emb_args) is False:
                         raise Exception(False)
                 except Exception as err:
-                    logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: [{expr}] {err}")
-                    logger.debug(f"last state:\n{m.get_status_text()}")
+                    logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, "
+                                 f"due to step {step.keyword}: [{expr}] {err}")
                     return None, None
         return scenario, m
 
@@ -349,7 +356,7 @@ class SuiteProcessors:
             if substitutions:
                 logger.debug(f"Example variant generated with substitution map: {substitutions}")
         except Exception as err:
-            logger.debug(f"Unable to insert scenario {scenario.name} due to modifier: {err}")
+            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier: {err}")
             return None
 
         # Update scenario with generated values
@@ -362,19 +369,13 @@ class SuiteProcessors:
                     step.emb_args[modded_arg].value = substitutions[target].solution[org_example]
         return scenario
 
-    def _init_reporting(self):
-        self.shufflemap = [self.flat_suite.scenarios.index(s)+1 for s in self.scenarios]
-        logger.debug("Use these numbers to reference scenarios from traces\n\t" +
-                     "\n\t".join([f"{i+1}: {s.name}" for i, s in enumerate(self.flat_suite.scenarios)]))
-
     def _report_tracestate_to_user(self):
         user_trace = "["
-        for id in [s.id for s in self.tracestate]:
-            index = int(id.split('.')[0])
-            part = f".{id.split('.')[1]}" if '.' in id else ""
-            user_trace += f"{self.shufflemap[index]}{part}, "
+        for snapshot in self.tracestate:
+            part = f".{snapshot.id.split('.')[1]}" if '.' in snapshot.id else ""
+            user_trace += f"{snapshot.scenario.src_id}{part}, "
         user_trace = user_trace[:-2] + "]" if ',' in user_trace else "[]"
-        reject_trace = [self.shufflemap[i] for i in self.tracestate.tried]
+        reject_trace = [self.scenarios[i].src_id for i in self.tracestate.tried]
         logger.debug(f"Trace: {user_trace} Reject: {reject_trace}")
 
     def _report_tracestate_wrapup(self):
