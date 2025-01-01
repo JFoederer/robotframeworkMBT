@@ -67,11 +67,17 @@ ${person} signs the birthday card
     ...    :OUT: ${person} in birthday_card.names
     Should contain    ${names}    ${person}
 
+${person} is signing the birthday card
+    [Documentation]    *model info*
+    ...    :MOD: ${person}=writer FROM [scenario.guest]
+    ...    :IN: ${person} == scenario.guest
+    ...    :OUT: ${person} == scenario.guest
+    No Operation
+
 the birthday card has a personal touch
     [Documentation]    *model info*
-    ...    :IN: len(birthday_card.names) > 0 | birthday_card.wish
-    ...    :OUT: len(birthday_card.names) > 0 | birthday_card.wish
-    Variable should exist    ${birthday_wish}
+    ...    :IN: len(birthday_card.names) > 0
+    ...    :OUT: len(birthday_card.names) > 0
     ${number_of_names}=    Get Length    ${names}
     Should Be True    ${number_of_names} > 0
 
