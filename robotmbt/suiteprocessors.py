@@ -316,11 +316,13 @@ class SuiteProcessors:
         try:
             # collect set of constraints
             for step in scenario.steps:
-                if step.gherkin_kw == 'then':
-                    continue # No new constraints are processed for then-steps
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
                         modded_arg, target, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                        if step.gherkin_kw == 'then':
+                            constraint = None # No new constraints are processed for then-steps
+                            if target not in substitutions:
+                                raise ValueError(f"Variation point '{target}' did not get a value before the then-step checks")
                         if not constraint and target not in substitutions:
                             raise ValueError(f"No options to choose from at first assignment to {target}")
                         options =  m.process_expression(constraint, step.emb_args) if constraint else None
