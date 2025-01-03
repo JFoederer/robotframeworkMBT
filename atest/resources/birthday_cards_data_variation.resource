@@ -34,7 +34,7 @@ there is a birthday card
 
 ${person} writes their name on the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${person}=writer FROM [guest for guest in party.guests if guest not in birthday_card.names]
+    ...    :MOD: ${person}= party.guests
     ...    :IN: birthday_card
     ...    :OUT: birthday_card.names.append(${person})
     Log    Writing '${person}' on the birthday card
@@ -42,14 +42,14 @@ ${person} writes their name on the birthday card
 
 ${person}'s name is not yet on the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${person}=writer FROM [guest for guest in party.guests if guest not in birthday_card.names]
+    ...    :MOD: ${person}= [guest for guest in party.guests if guest not in birthday_card.names]
     ...    :IN: ${person} not in birthday_card.names
     ...    :OUT: ${person} not in birthday_card.names
     Should not contain    ${names}    ${person}
 
 the birthday card has '${name}' written on it
     [Documentation]    *model info*
-    ...    :MOD: ${name}=writer FROM [guest for guest in party.guests if guest in birthday_card.names]
+    ...    :MOD: ${name}= [guest for guest in party.guests if guest in birthday_card.names]
     ...    :IN: ${name} in birthday_card.names
     ...    :OUT: ${name} in birthday_card.names
     Should contain    ${names}    ${name}
@@ -62,14 +62,14 @@ the birthday card has ${n} different names written on it
 
 ${person} signs the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${person}=writer FROM [guest for guest in party.guests if guest not in birthday_card.names]
+    ...    :MOD: ${person}= [guest for guest in party.guests if guest not in birthday_card.names]
     ...    :IN: ${person} not in birthday_card.names | scenario.guest = ${person}
     ...    :OUT: ${person} in birthday_card.names
     Should contain    ${names}    ${person}
 
 ${person} is signing the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${person}=writer FROM [scenario.guest]
+    ...    :MOD: ${person}= [scenario.guest]
     ...    :IN: ${person} == scenario.guest
     ...    :OUT: ${person} == scenario.guest
     No Operation
@@ -83,7 +83,7 @@ the birthday card has a personal touch
 
 ${person} adds the wish '${wish}' to the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${person}=writer
+    ...    :MOD: ${person}= party.guests
     ...    :IN: birthday_card
     ...    :OUT: birthday_card.wish = ${wish}
     Set Suite Variable    \${birthday_wish}    ${wish}
@@ -93,3 +93,24 @@ the birthday card proclaims: ${wish}
     ...    :IN: birthday_card.wish == ${wish}
     ...    :OUT: birthday_card.wish == ${wish}
     Should Be Equal    ${birthday_wish}    ${wish}
+
+${person} is the birthday celebrant
+    [Documentation]    *model info*
+    ...    :MOD: ${person}= [party.host]
+    ...    :IN: party.host == ${person}
+    ...    :OUT: party.host == ${person}
+    No Operation
+
+the birthday celebrant's name, ${name}, is written on the card
+    [Documentation]    *model info*
+    ...    :MOD: ${name}= [party.host]
+    ...    :IN: party.host in birthday_card.names
+    ...    :OUT: party.host in birthday_card.names
+    Should contain    ${names}    ${name}
+
+the birthday celebrant's name, ${name}, is not written on the card
+    [Documentation]    *model info*
+    ...    :MOD: ${name}= [party.host]
+    ...    :IN: party.host not in birthday_card.names
+    ...    :OUT: party.host not in birthday_card.names
+    Should not contain    ${names}    ${name}

@@ -88,7 +88,7 @@ class Scenario:
     def copy(self):
         duplicate = copy.copy(self)
         duplicate.steps = [step.copy() for step in self.steps]
-        duplicate.data_choices = {k:v.copy() for k, v in self.data_choices.items()}
+        duplicate.data_choices = self.data_choices.copy()
         return duplicate
 
     def split_at_step(self, stepindex):

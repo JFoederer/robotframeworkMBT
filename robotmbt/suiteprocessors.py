@@ -162,6 +162,7 @@ class SuiteProcessors:
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
         candidate = self._generate_scenario_variant(candidate, self.active_model)
         if not candidate:
+            self.active_model.end_scenario_scope()
             self.tracestate.reject_scenario(index)
             self._report_tracestate_to_user()
             return False
@@ -221,6 +222,7 @@ class SuiteProcessors:
             self._report_tracestate_to_user()
             return False
 
+        self.active_model.end_scenario_scope()
         self.tracestate.reject_scenario(index)
         self._report_tracestate_to_user()
         return False
@@ -312,40 +314,37 @@ class SuiteProcessors:
             if sir.src_id == scenario.src_id:
                 return scenario
 
-        substitutions = {}
+        eqc = EquivalenceClass()
         try:
             # collect set of constraints
             for step in scenario.steps:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
-                        modded_arg, target, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                        modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                        org_example = step.emb_args[modded_arg].org_value
                         if step.gherkin_kw == 'then':
                             constraint = None # No new constraints are processed for then-steps
-                            if target not in substitutions:
-                                raise ValueError(f"Variation point '{target}' did not get a value before the then-step checks")
-                        if not constraint and target not in substitutions:
-                            raise ValueError(f"No options to choose from at first assignment to {target}")
-                        options =  m.process_expression(constraint, step.emb_args) if constraint else None
-                        if options == 'exec':
-                            raise ValueError(f"Invalid constraint for argument substitution: {expr}")
-
-                        org_example = step.emb_args[modded_arg].org_value
-                        if  target in substitutions:
-                            substitutions[target].substitute(org_example, options)
-                        else:
+                            if org_example not in eqc.substitutions:
+                                raise ValueError(f"Variation point '{org_example}' did not get a value before the then-step checks")
+                        if not constraint and org_example not in eqc.substitutions:
+                            raise ValueError(f"No options to choose from at first assignment to {org_example}")
+                        if constraint:
+                            options =  m.process_expression(constraint, step.emb_args)
+                            if options == 'exec':
+                                raise ValueError(f"Invalid constraint for argument substitution: {expr}")
                             if not options:
                                 raise ValueError(f"Constraint on modifer did not yield any options {expr}")
-                            eqc = EquivalenceClass()
-                            eqc.substitute(org_example, options)
-                            substitutions[target] = eqc
+                        else:
+                            options = None
+                        eqc.substitute(org_example, options)
 
             # limit choices for refinement scenarios
-            for variation_point, eqc in substitutions.items():
+            for example_value in eqc:
                 for sir in scenarios_in_refinement:
-                    if variation_point in sir.data_choices:
+                    if example_value in sir.data_choices:
                         sir_exclude_list = []
                         target_exclude_list = []
-                        for sir_example_value, choice in sir.data_choices[variation_point].solution.items():
+                        for sir_example_value, choice in sir.data_choices.solution.items():
                             if sir_example_value in sir_exclude_list: continue
                             for current_example_value, constraint in eqc.substitutions.items():
                                 if current_example_value in target_exclude_list: continue
@@ -359,22 +358,21 @@ class SuiteProcessors:
                             break
 
             # find solution
-            for eqclass in substitutions.values():
-                eqclass.solve()
-            if substitutions:
-                logger.debug(f"Example variant generated with substitution map: {substitutions}")
+            eqc.solve()
+            if eqc.solution:
+                logger.debug(f"Example variant generated with substitution map: {eqc}")
         except Exception as err:
             logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier: {err}")
             return None
 
         # Update scenario with generated values
-        scenario.data_choices = {k:v.copy() for k, v in substitutions.items()}
+        scenario.data_choices = eqc.copy()
         for step in scenario.steps:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
-                    modded_arg, target, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                    modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
                     org_example = step.emb_args[modded_arg].org_value
-                    step.emb_args[modded_arg].value = substitutions[target].solution[org_example]
+                    step.emb_args[modded_arg].value = eqc.solution[org_example]
         return scenario
 
     @staticmethod
@@ -385,13 +383,8 @@ class SuiteProcessors:
                     assignment_expr = expression.replace(var.arg, '', 1).strip()
                     if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
                         break # not an assignment
-                    assignment_expr = assignment_expr.replace('=', '', 1).strip()
-                    if ' FROM ' in assignment_expr:
-                        [target, constraint] = [s.strip() for s in assignment_expr.split(' FROM ')]
-                    else:
-                        target = assignment_expr
-                        constraint = None
-                    return var.arg, target, constraint
+                    constraint = assignment_expr.replace('=', '', 1).strip()
+                    return var.arg, constraint
         raise ValueError(f"Invalid argument substitution: {expression}")
 
     def _report_tracestate_to_user(self):
