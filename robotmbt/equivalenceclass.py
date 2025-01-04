@@ -70,7 +70,10 @@ class EquivalenceClass:
 
 class Constraint:
     def __init__(self, constraint):
-        self.optionset = set(constraint)
+        try:
+            self.optionset = set(constraint)
+        except:
+            raise ValueError(f"Invalid option set for initial constraint: {constraint}")
 
     def __repr__(self):
         return f'Constraint([{", ".join([str(e) for e in self.optionset])}])'

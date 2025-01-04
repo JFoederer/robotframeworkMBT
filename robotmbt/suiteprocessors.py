@@ -36,6 +36,7 @@ import random
 from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import not_keyword
 from robot.api import logger
+from robot.utils import is_list_like
 
 from .equivalenceclass import EquivalenceClass
 from .modelspace import ModelSpace
@@ -254,7 +255,7 @@ class SuiteProcessors:
                     try:
                         if m.process_expression(expr, step.emb_args) is False:
                             if step.gherkin_kw == 'when':
-                                logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
+                                logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step}")
                                 refine_here = True
                             else:
                                 return no_split
@@ -262,12 +263,12 @@ class SuiteProcessors:
                         return no_split
                     if refine_here:
                         front, back = scenario.split_at_step(scenario.steps.index(step))
-                        edge_step = Step('Log', f"Refinement follows for step: {step.keyword}", parent=scenario)
+                        edge_step = Step('Log', f"Refinement follows for step: {step}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
                         edge_step.emb_args = StepArguments(step.emb_args)
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', f"Refinement completed for step: {step.keyword}", parent=scenario)
+                        edge_step = Step('Log', f"Refinement completed for step: {step}", parent=scenario)
                         edge_step.model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
                         back.steps[1] = back.steps[1].copy()
@@ -281,7 +282,7 @@ class SuiteProcessors:
         scenario = scenario.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
-                logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
+                logger.debug(f"Error in scenario {scenario.name} at step {step}: {step.model_info['error']}")
                 return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
@@ -289,7 +290,7 @@ class SuiteProcessors:
                         raise Exception(False)
                 except Exception as err:
                     logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, "
-                                 f"due to step {step.keyword}: [{expr}] {err}")
+                                 f"due to step '{step}': [{expr}] {err}")
                     return None, None
         return scenario, m
 
@@ -297,7 +298,7 @@ class SuiteProcessors:
     def _relevant_expressions(step):
         expressions = []
         if 'IN' not in step.model_info or 'OUT' not in step.model_info:
-            raise Exception(f"Model info incomplete for step: {step.keyword}")
+            raise Exception(f"Model info incomplete for step: {step}")
         if step.gherkin_kw in ['given', 'when']:
             expressions += step.model_info['IN']
         if step.gherkin_kw in ['when', 'then']:
@@ -328,12 +329,14 @@ class SuiteProcessors:
                                 raise ValueError(f"Variation point '{org_example}' did not get a value before the then-step checks")
                         if not constraint and org_example not in eqc.substitutions:
                             raise ValueError(f"No options to choose from at first assignment to {org_example}")
-                        if constraint:
+                        if constraint and constraint != '.*':
                             options =  m.process_expression(constraint, step.emb_args)
                             if options == 'exec':
                                 raise ValueError(f"Invalid constraint for argument substitution: {expr}")
                             if not options:
-                                raise ValueError(f"Constraint on modifer did not yield any options {expr}")
+                                raise ValueError(f"Constraint on modifer did not yield any options: {expr}")
+                            if not is_list_like(options):
+                                raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
                         else:
                             options = None
                         eqc.substitute(org_example, options)
@@ -341,7 +344,8 @@ class SuiteProcessors:
             if eqc.solution:
                 logger.debug(f"Example variant generated with substitution map: {eqc}")
         except Exception as err:
-            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier: {err}")
+            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
+                         f"    In step {step}: {err}")
             return None
 
         # Update scenario with generated values

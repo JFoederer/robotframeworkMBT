@@ -125,10 +125,10 @@ class Step:
                                   # Custom processors can define their own attributes.
 
     def __str__(self):
-        return f"Step: {self.keyword}"
+        return self.keyword
 
     def __repr__(self):
-        return str(self) + f" with model info: {self.model_info}"
+        return f"Step: '{self}' with model info: {self.model_info}"
 
     def copy(self):
         cp = Step(self.org_step, *self.args, parent=self.parent)

@@ -311,6 +311,7 @@ class TestSteps(unittest.TestCase):
                     'but step Tb1']
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.keyword, e)
+            self.assertEqual(str(s), e)
 
     def test_gherkin_keywords(self):
         expected = [None] + 3*['given'] + 3*['when'] + 3*['then']

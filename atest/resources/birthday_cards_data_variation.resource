@@ -3,20 +3,23 @@ ${person} is having their birthday
     [Documentation]    *model info*
     ...    :IN: new party | party.host = ${person} | party.guests = []
     ...    :OUT: None
-    No Operation
+    Set suite variable    \${celebrant}    ${person}
+    @{guests}=    Create list
+    Set suite variable    ${guests}
 
 ${guest} is a friend of ${host}
     [Documentation]    *model info*
+    ...    :MOD: ${guest}= [${guest}]
     ...    :IN: party.host == ${host} | party.guests.append(${guest})
     ...    :OUT: None
-    No Operation
+    Set suite variable    @{guests}    @{guests}    ${guest}
 
 ${person} buys a birthday card
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: new birthday_card
     Log    choosing a birthday card with baloons
-    Set suite variable    ${has_card}    ${person}
+    Set suite variable    \${has_card}    ${person}
     @{names}=    Create list
     Set suite variable    ${names}
 
@@ -79,7 +82,7 @@ the birthday card has a personal touch
     ...    :IN: len(birthday_card.names) > 0
     ...    :OUT: len(birthday_card.names) > 0
     ${number_of_names}=    Get Length    ${names}
-    Should Be True    ${number_of_names} > 0
+    Should be True    ${number_of_names} > 0
 
 ${person} adds the wish '${wish}' to the birthday card
     [Documentation]    *model info*
@@ -92,14 +95,14 @@ the birthday card proclaims: ${wish}
     [Documentation]    *model info*
     ...    :IN: birthday_card.wish == ${wish}
     ...    :OUT: birthday_card.wish == ${wish}
-    Should Be Equal    ${birthday_wish}    ${wish}
+    Should be equal    ${birthday_wish}    ${wish}
 
 ${person} is the birthday celebrant
     [Documentation]    *model info*
     ...    :MOD: ${person}= [party.host]
     ...    :IN: party.host == ${person}
     ...    :OUT: party.host == ${person}
-    No Operation
+    Should be equal    ${celebrant}    ${person}
 
 the birthday celebrant's name, ${name}, is written on the card
     [Documentation]    *model info*
@@ -114,3 +117,51 @@ the birthday celebrant's name, ${name}, is not written on the card
     ...    :IN: party.host not in birthday_card.names
     ...    :OUT: party.host not in birthday_card.names
     Should not contain    ${names}    ${name}
+
+${sender} writes ${recepient}'s address on the birthday card
+    [Documentation]    *model info*
+    ...    :MOD: ${sender}= party.guests | ${recepient}= [party.host]
+    ...    :IN: birthday_card
+    ...    :OUT: birthday_card.recepient = ${recepient}
+    Set suite variable    \${address of}    ${recepient}
+    Log    Writing ${recepient}'s name and address on the card
+
+${sender} tries to write ${recepient}'s address on the birthday card
+    [Documentation]    *model info*
+    ...    :MOD: ${sender}= party.guests | ${recepient}= .*
+    ...    :IN: birthday_card
+    ...    :OUT: None
+    IF   '${recepient}' == '${celebrant}'
+        Set suite variable    \${address_of}    ${recepient}
+        Log    Writing ${recepient}'s name and address on the card
+    ELSE
+        Set suite variable    \${address_of}    ${empty}
+        Log    Getting stopped by a friend
+    END
+
+${recepient}'s address is on the birthday card
+    [Documentation]    *model info*
+    ...    :MOD: ${recepient}= [party.host]
+    ...    :IN: birthday_card.address == party.host
+    ...    :OUT: birthday_card.address = party.host
+    Should be equal    ${recepient}    ${celebrant}
+    Should be equal    ${address of}    ${celebrant}
+    Log    The card is addressed to ${recepient}
+
+${person} alerts ${other person} that it is ${celebrant}'s birthday
+    [Documentation]    *model info*
+    ...    :MOD: ${person}= party.guests | ${other person}= party.guests | ${celebrant}= [party.host]
+    ...    :IN: ${celebrant} == party.host
+    ...    :OUT: ${celebrant} == party.host
+    Should contain    ${guests}    ${person}
+    Should not be equal    ${address of}    ${celebrant}
+    Log    Uhm ${other person}? You do relize that it is ${celebrant}'s birthday?
+
+${person} confirms ${recepient}'s address
+    [Documentation]    *model info*
+    ...    :MOD: ${person}= party.guests | ${recepient}= [party.host]
+    ...    :IN: ${recepient} == party.host
+    ...    :OUT: ${recepient} == party.host
+    Should contain    ${guests}    ${person}
+    Should be equal    ${recepient}    ${celebrant}
+    Log    Yes, that is correct. This is ${recepient}'s address?
