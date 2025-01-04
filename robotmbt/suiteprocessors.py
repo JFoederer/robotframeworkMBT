@@ -314,9 +314,9 @@ class SuiteProcessors:
             if sir.src_id == scenario.src_id:
                 return scenario
 
+        # collect set of constraints
         eqc = EquivalenceClass()
         try:
-            # collect set of constraints
             for step in scenario.steps:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
@@ -337,27 +337,6 @@ class SuiteProcessors:
                         else:
                             options = None
                         eqc.substitute(org_example, options)
-
-            # limit choices for refinement scenarios
-            for example_value in eqc:
-                for sir in scenarios_in_refinement:
-                    if example_value in sir.data_choices:
-                        sir_exclude_list = []
-                        target_exclude_list = []
-                        for sir_example_value, choice in sir.data_choices.solution.items():
-                            if sir_example_value in sir_exclude_list: continue
-                            for current_example_value, constraint in eqc.substitutions.items():
-                                if current_example_value in target_exclude_list: continue
-                                if choice in constraint:
-                                    eqc.substitute(current_example_value, [choice])
-                                    sir_exclude_list.append(sir_example_value)
-                                    target_exclude_list.append(current_example_value)
-                                    break
-                            else:
-                                raise ValueError(f"Data mismatch with scenario under refinement ({sir.name} [{sir.src_id}])")
-                            break
-
-            # find solution
             eqc.solve()
             if eqc.solution:
                 logger.debug(f"Example variant generated with substitution map: {eqc}")
