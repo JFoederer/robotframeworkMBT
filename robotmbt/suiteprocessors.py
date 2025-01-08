@@ -326,7 +326,9 @@ class SuiteProcessors:
                         if step.gherkin_kw == 'then':
                             constraint = None # No new constraints are processed for then-steps
                             if org_example not in eqc.substitutions:
-                                raise ValueError(f"Variation point '{org_example}' did not get a value before the then-step checks")
+                                # if a then-step signals the first use of an example value, it is considered a new definition
+                                eqc.substitute(org_example, [org_example])
+                                continue
                         if not constraint and org_example not in eqc.substitutions:
                             raise ValueError(f"No options to choose from at first assignment to {org_example}")
                         if constraint and constraint != '.*':
