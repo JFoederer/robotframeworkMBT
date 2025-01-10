@@ -32,22 +32,20 @@
 
 import random
 
-class EquivalenceClass:
+class SubstitutionMap:
     def __init__(self):
         self.substitutions = {} # {example_value:Constraint}
         self.solution = None
 
-    def __repr__(self):
-        if self.solution:
-            return "EquivalenceClass(%s)" % ", ".join([f"{k} ⤝ {v}" for k, v in self.solution.items()])
-        else:
-            return f"EquivalenceClass({', '.join(self.substitutions)})"
+    def __str__(self):
+        src = self.solution or self.substitutions
+        return ", ".join([f"{k} ⤝ {v}" for k, v in src.items()])
 
     def __iter__(self):
         return iter(self.substitutions)
 
     def copy(self):
-        new = EquivalenceClass()
+        new = SubstitutionMap()
         new.substitutions = {k: v.copy() for k,v in self.substitutions.items()}
         new.solution = self.solution
         return new

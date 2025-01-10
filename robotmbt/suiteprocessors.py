@@ -38,7 +38,7 @@ from robot.api.deco import not_keyword
 from robot.api import logger
 from robot.utils import is_list_like
 
-from .equivalenceclass import EquivalenceClass
+from .substitutionmap import SubstitutionMap
 from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
@@ -316,7 +316,7 @@ class SuiteProcessors:
                 return scenario
 
         # collect set of constraints
-        eqc = EquivalenceClass()
+        subs = SubstitutionMap()
         try:
             for step in scenario.steps:
                 if 'MOD' in step.model_info:
@@ -325,11 +325,11 @@ class SuiteProcessors:
                         org_example = step.emb_args[modded_arg].org_value
                         if step.gherkin_kw == 'then':
                             constraint = None # No new constraints are processed for then-steps
-                            if org_example not in eqc.substitutions:
+                            if org_example not in subs.substitutions:
                                 # if a then-step signals the first use of an example value, it is considered a new definition
-                                eqc.substitute(org_example, [org_example])
+                                subs.substitute(org_example, [org_example])
                                 continue
-                        if not constraint and org_example not in eqc.substitutions:
+                        if not constraint and org_example not in subs.substitutions:
                             raise ValueError(f"No options to choose from at first assignment to {org_example}")
                         if constraint and constraint != '.*':
                             options =  m.process_expression(constraint, step.emb_args)
@@ -341,23 +341,23 @@ class SuiteProcessors:
                                 raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
                         else:
                             options = None
-                        eqc.substitute(org_example, options)
-            eqc.solve()
-            if eqc.solution:
-                logger.debug(f"Example variant generated with substitution map: {eqc}")
+                        subs.substitute(org_example, options)
+            subs.solve()
+            if subs.solution:
+                logger.debug(f"Example variant generated with argument substitution: {subs}")
         except Exception as err:
             logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                          f"    In step {step}: {err}")
             return None
 
         # Update scenario with generated values
-        scenario.data_choices = eqc.copy()
+        scenario.data_choices = subs
         for step in scenario.steps:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
                     modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
                     org_example = step.emb_args[modded_arg].org_value
-                    step.emb_args[modded_arg].value = eqc.solution[org_example]
+                    step.emb_args[modded_arg].value = subs.solution[org_example]
         return scenario
 
     @staticmethod
