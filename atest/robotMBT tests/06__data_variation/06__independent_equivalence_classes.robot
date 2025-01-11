@@ -2,10 +2,12 @@
 Documentation     This suite focuses on data variation based on equivalence partitioning. An action
 ...               step, or when-step, oftentimes uses data from just a sigle equivalence class. In
 ...               that case, the when-step's modifier can specify its data directly. This allows an
-...               example value to be used for the first time in scenario in the when-step. This is
-...               demonstrated in the first example. Other situations require a when-step to deal
-...               with multiple independent equivalence classes. To ensure that the when-step uses
-...               a value from the correct equivalence class, it must rely on a prior constraint.
+...               example value to be used for the first time in a scenario in the when-step. This
+...               is demonstrated in the example using _when ${person} writes..._. Other situations
+...               require a when-step (_when ${person} tries to write..._) to deal with multiple
+...               independent equivalence classes (celebrants or friends). To ensure that the
+...               when-step uses a value from the correct equivalence class, it must rely on prior
+...               constraints.
 Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_data_variation.resource
 Library           robotmbt
@@ -38,4 +40,4 @@ A friend checks the address while writing
     when Johan writes their name on the birthday card
     and Johan tries to write Bahar's address on the birthday card
     and Tannaz confirms Bahar's address
-    and Bahar's address is on the birthday card
+    then Bahar's address is on the birthday card
