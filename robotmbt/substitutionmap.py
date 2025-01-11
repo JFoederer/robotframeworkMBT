@@ -83,7 +83,7 @@ class Constraint:
         return Constraint(self.optionset)
 
     def add_constraint(self, constraint):
-        if not constraint: return
+        if constraint is None: return
         self.optionset = self.optionset.intersection(constraint)
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')
