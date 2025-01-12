@@ -241,6 +241,19 @@ class TestStepArguments(unittest.TestCase):
         self.assertEqual(arg.value, 'new value')
         self.assertEqual(arg.org_value, 'bar2')
 
+    def test_arguments_can_be_indexed_by_robot_name(self):
+        arg1 = StepArgument('foo1', 'bar1')
+        arg2 = StepArgument('foo2', 'bar2')
+        argset = StepArguments([arg1, arg2])
+        self.assertEqual(argset['${foo1}'].value, 'bar1')
+        self.assertEqual(argset['${foo2}'].value, 'bar2')
+
+    def test_arguments_indices_are_case_insensitive(self):
+        arg1 = StepArgument('foo1', 'bar1')
+        arg2 = StepArgument('FOO2', 'bar2')
+        argset = StepArguments([arg1, arg2])
+        self.assertEqual(argset['${FoO1}'].value, 'bar1')
+        self.assertEqual(argset['${foo2}'].value, 'bar2')
 
 if __name__ == '__main__':
     unittest.main()
