@@ -35,7 +35,7 @@ import random
 class SubstitutionMap:
     def __init__(self):
         self.substitutions = {} # {example_value:Constraint}
-        self.solution = None
+        self.solution = {}      # {example_value:solution_value}
 
     def __str__(self):
         src = self.solution or self.substitutions
@@ -71,6 +71,8 @@ class Constraint:
         try:
             self.optionset = set(constraint)
         except:
+            self.optionset = None
+        if not self.optionset or isinstance(constraint, str):
             raise ValueError(f"Invalid option set for initial constraint: {constraint}")
 
     def __repr__(self):
