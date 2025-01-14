@@ -16,6 +16,7 @@ Library           robotmbt
 Background
     Given Bahar is having their birthday
     and Johan is a friend of Bahar
+    and Tannaz is a friend of Bahar
     When Johan buys a birthday card
     then there is a blank birthday card available
 

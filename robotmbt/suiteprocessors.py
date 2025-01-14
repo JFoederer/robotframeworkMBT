@@ -342,15 +342,20 @@ class SuiteProcessors:
                         else:
                             options = None
                         subs.substitute(org_example, options)
-            subs.solve()
-            if subs.solution:
-                logger.debug(f"Example variant generated with argument substitution: {subs}")
         except Exception as err:
             logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                          f"    In step {step}: {err}")
             return None
 
+        try:
+            subs.solve()
+        except ValueError as err:
+            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n    {err}: {subs}")
+            return None
+
         # Update scenario with generated values
+        if subs.solution:
+            logger.debug(f"Example variant generated with argument substitution: {subs}")
         scenario.data_choices = subs
         for step in scenario.steps:
             if 'MOD' in step.model_info:

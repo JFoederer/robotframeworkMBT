@@ -33,6 +33,97 @@
 import unittest
 from robotmbt.substitutionmap import Constraint, SubstitutionMap
 
+
+class TestSubstitutionMap(unittest.TestCase):
+    def test_an_empty_substitution_map_yields_an_empty_solution(self):
+        sm = SubstitutionMap()
+        self.assertEqual(sm.solve(), {})
+        self.assertEqual(sm.solution, {})
+
+    def test_single_distinct_options_are_the_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1])
+        sm.substitute('B', [2])
+        self.assertEqual(sm.solve(), {'A':1, 'B':2})
+        self.assertEqual(sm.solution, {'A':1, 'B':2})
+
+    def test_single_overlapping_options_have_no_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1])
+        sm.substitute('B', [1])
+        self.assertRaises(ValueError, sm.solve)
+
+    def test_each_example_value_gets_a_unique_solution_value(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3])
+        sm.substitute('B', [1, 2, 3])
+        sm.substitute('C', [1, 2, 3])
+        sm.solve()
+        self.assertNotEqual(sm.solution['A'], sm.solution['B'])
+        self.assertNotEqual(sm.solution['A'], sm.solution['C'])
+        self.assertNotEqual(sm.solution['B'], sm.solution['C'])
+
+    def test_adding_new_constraint_clears_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2])
+        sm.solve()
+        self.assertNotEqual(sm.solution, {})
+        sm.substitute('B', [1, 2])
+        self.assertEqual(sm.solution, {})
+        sm.solve()
+        self.assertNotEqual(sm.solution, {})
+        sm.substitute('B', [1])
+        self.assertEqual(sm.solution, {})
+
+    def test_failing_to_solve_clears_prior_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1])
+        sm.substitute('B', [1, 2])
+        sm.solve()
+        self.assertNotEqual(sm.solution, {})
+        sm.substitute('B', [1])
+        self.assertRaises(ValueError, sm.solve)
+        self.assertEqual(sm.solution, {})
+
+    def test_substitution_map_copies_are_independent(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3])
+        sm.substitute('B', [1, 2, 3])
+        sm.substitute('C', [1, 2, 3])
+        sm.solve()
+        sm2 = sm.copy()
+        self.assertEqual(sm.solution, sm2.solution)
+        self.assertIsNot(sm.solution, sm2.solution)
+        # remove chosen value for C from sm2 and check that
+        # substitutions and solution have their own values
+        c_solution = sm.solution['C']
+        sm2.substitute('C', [n for n in [1, 2, 3] if n != c_solution])
+        sm2.solve()
+        self.assertNotEqual(sm.solution, sm2.solution)
+        self.assertIn(c_solution, sm.substitutions['C'])
+        self.assertNotIn(c_solution, sm2.substitutions['C'])
+
+    def test_substitution_map_str_without_solution_shows_all_possible_values(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2])
+        self.assertIn('A', f"{sm}")
+        self.assertIn('1', f"{sm}")
+        self.assertIn('2', f"{sm}")
+        sm.substitute('B', [2, 3])
+        self.assertIn('B', f"{sm}")
+        self.assertIn('3', f"{sm}")
+        self.assertEqual(f"{sm}".count('2'), 2)
+
+    def test_substitution_map_str_with_solution_shows_results_only(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2])
+        sm.substitute('B', [2, 3])
+        sm.substitute('C', [2])
+        self.assertEqual(f"{sm}".count('2'), 3)
+        sm.solve()
+        self.assertEqual(f"{sm}".count('2'), 1)
+
+
 class TestConstraint(unittest.TestCase):
     def test_constraint_can_be_created_from_list_like_object(self):
         c = Constraint(('one', 'two', 'three'))

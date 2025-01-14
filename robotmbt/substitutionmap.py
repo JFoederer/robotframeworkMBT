@@ -32,7 +32,15 @@
 
 import random
 
+
 class SubstitutionMap:
+    """
+    A substitution map takes a set of example values that each have a set of
+    options from which to pick their concrete values. To narrow down the amount
+    of options, multiple calls to substitute() can be made with additional
+    constraints. solve() takes the current set of example values and assigns
+    a unique concrete value to each.
+    """
     def __init__(self):
         self.substitutions = {} # {example_value:Constraint}
         self.solution = {}      # {example_value:solution_value}
@@ -41,30 +49,33 @@ class SubstitutionMap:
         src = self.solution or self.substitutions
         return ", ".join([f"{k} ⤝ {v}" for k, v in src.items()])
 
-    def __iter__(self):
-        return iter(self.substitutions)
-
     def copy(self):
         new = SubstitutionMap()
         new.substitutions = {k: v.copy() for k,v in self.substitutions.items()}
-        new.solution = self.solution
+        new.solution = self.solution.copy()
         return new
 
-    def substitute(self, example_value, constraint=None) -> None:
-        self.solution = None
+    def substitute(self, example_value, constraint=None):
+        self.solution = {}
         if example_value in self.substitutions:
             self.substitutions[example_value].add_constraint(constraint)
         else:
             self.substitutions[example_value] = Constraint(constraint)
 
     def solve(self):
+        self.solution = {}
         solution = dict()
-        for example_value in self.substitutions:
-            solution[example_value] = random.choice(list(self.substitutions[example_value].optionset))
-            for other in [e for e in self.substitutions if e is not example_value]:
-                self.substitutions[other].add_constraint([e for e in self.substitutions[other] if e != solution[example_value]])
+        substitutions = self.copy().substitutions
+        for example_value in substitutions:
+            solution[example_value] = random.choice(list(substitutions[example_value].optionset))
+            for other in [e for e in substitutions if e is not example_value]:
+                try:
+                    substitutions[other].add_constraint([e for e in substitutions[other] if e != solution[example_value]])
+                except ValueError:
+                    raise ValueError("No solution found within the set of given constraints")
         self.solution = solution
         return solution
+
 
 class Constraint:
     def __init__(self, constraint):
