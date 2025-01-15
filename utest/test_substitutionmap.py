@@ -75,6 +75,14 @@ class TestSubstitutionMap(unittest.TestCase):
         sm.substitute('B', [1])
         self.assertEqual(sm.solution, {})
 
+    def test_removing_last_option_in_substitution_raises(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3])
+        self.assertRaises(ValueError, sm.substitute, 'A', [8, 9])
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3])
+        self.assertRaises(ValueError, sm.substitute, 'A', [])
+
     def test_failing_to_solve_clears_prior_solution(self):
         sm = SubstitutionMap()
         sm.substitute('A', [1])
@@ -84,6 +92,85 @@ class TestSubstitutionMap(unittest.TestCase):
         sm.substitute('B', [1])
         self.assertRaises(ValueError, sm.solve)
         self.assertEqual(sm.solution, {})
+
+    def test_wrong_choice_in_one_blocks_solution_for_others(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2])
+        sm.substitute('B', [2, 3])
+        sm.substitute('C', [2, 3])
+        sm.solve()
+        self.assertEqual(sm.solution['A'], 1)
+        self.assertIn(sm.solution['B'], [2, 3])
+        self.assertIn(sm.solution['C'], [2, 3])
+        self.assertNotEqual(sm.solution['B'], sm.solution['C'])
+
+    def test_block_constraints_with_no_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3, 4])
+        sm.substitute('B', [1, 2, 3, 4])
+        sm.substitute('C', [1, 2, 3, 4])
+        sm.substitute('D', [1, 2, 3, 4])
+        sm.substitute('E', [1, 2, 3, 4])
+        self.assertRaises(ValueError, sm.solve)
+
+    def test_cascading_constraints_with_sigle_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1])
+        sm.substitute('B', [1, 2])
+        sm.substitute('C', [1, 2, 3])
+        sm.substitute('D', [1, 2, 3, 4])
+        sm.substitute('E', [1, 2, 3, 4, 5])
+        sm.solve()
+        self.assertEqual(sm.solution, dict(A=1, B=2, C=3, D=4, E=5))
+
+    def test_reverse_cascading_constraints_with_single_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3, 4, 5])
+        sm.substitute('B', [1, 2, 3, 4])
+        sm.substitute('C', [1, 2, 3])
+        sm.substitute('D', [1, 2])
+        sm.substitute('E', [1])
+        sm.solve()
+        self.assertEqual(sm.solution, dict(A=5, B=4, C=3, D=2, E=1))
+
+    def test_chained_constraints_with_single_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2])
+        sm.substitute('B', [2, 3])
+        sm.substitute('C', [3, 4])
+        sm.substitute('D', [4, 5])
+        sm.substitute('E', [5])
+        sm.solve()
+        self.assertEqual(sm.solution, dict(A=1, B=2, C=3, D=4, E=5))
+
+    def test_reversed_chained_constraints_with_single_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [5])
+        sm.substitute('B', [5, 4])
+        sm.substitute('C', [4, 3])
+        sm.substitute('D', [3, 2])
+        sm.substitute('E', [2, 1])
+        sm.solve()
+        self.assertEqual(sm.solution, dict(A=5, B=4, C=3, D=2, E=1))
+
+    def test_chained_constraints_with_two_solutions(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2])
+        sm.substitute('B', [2, 3])
+        sm.substitute('C', [3, 4])
+        sm.substitute('D', [4, 5])
+        sm.substitute('E', [5, 1])
+        result_options_found = 2*[False]
+        while not all(result_options_found):
+            sm.solve()
+            if sm.solution['A'] == 1:
+                self.assertEqual(sm.solution, dict(A=1, B=2, C=3, D=4, E=5))
+                result_options_found[0] = True
+            elif sm.solution['A'] == 2:
+                self.assertEqual(sm.solution, dict(A=2, B=3, C=4, D=5, E=1))
+                result_options_found[1] = True
+            else:
+                assert False, "Invalid solution generated"
 
     def test_substitution_map_copies_are_independent(self):
         sm = SubstitutionMap()
@@ -148,6 +235,13 @@ class TestConstraint(unittest.TestCase):
         self.assertEqual(len(c.optionset), 2)
         c.add_constraint(['one', 'three'])
         self.assertEqual(len(c.optionset), 1)
+
+    def test_constraints_strip_duplicate_values(self):
+        c = Constraint(['one', 'two', 'two', 'three'])
+        self.assertEqual(len(c.optionset), 3)
+        c.add_constraint(['two', 'two', 'three', 'three', 'four', 'four'])
+        self.assertEqual(len(c.optionset), 2)
+        self.assertSetEqual(c.optionset, set(['two', 'three']))
 
     def test_available_options_can_be_reviewed(self):
         c = Constraint(['one', 'two', 'three'])
