@@ -55,7 +55,7 @@ class SubstitutionMap:
         new.solution = self.solution.copy()
         return new
 
-    def substitute(self, example_value, constraint=None):
+    def substitute(self, example_value, constraint):
         self.solution = {}
         if example_value in self.substitutions:
             self.substitutions[example_value].add_constraint(constraint)
@@ -66,13 +66,17 @@ class SubstitutionMap:
         self.solution = {}
         solution = dict()
         substitutions = self.copy().substitutions
-        for example_value in substitutions:
+        sorted_constraints = list(substitutions)
+        while sorted_constraints:
+            sorted_constraints.sort(key=lambda i: len(substitutions[i].optionset))
+            example_value = sorted_constraints[0]
             solution[example_value] = random.choice(list(substitutions[example_value].optionset))
-            for other in [e for e in substitutions if e is not example_value]:
+            for other in [e for e in substitutions if e != example_value]:
                 try:
                     substitutions[other].add_constraint([e for e in substitutions[other] if e != solution[example_value]])
                 except ValueError:
                     raise ValueError("No solution found within the set of given constraints")
+            sorted_constraints.pop(0)
         self.solution = solution
         return solution
 
