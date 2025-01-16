@@ -360,7 +360,7 @@ class SuiteProcessors:
         for step in scenario.steps:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
-                    modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                    modded_arg, _ = self._parse_modifier_expression(expr, step.emb_args)
                     org_example = step.emb_args[modded_arg].org_value
                     step.emb_args[modded_arg].value = subs.solution[org_example]
         return scenario

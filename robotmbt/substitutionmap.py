@@ -66,17 +66,51 @@ class SubstitutionMap:
         self.solution = {}
         solution = dict()
         substitutions = self.copy().substitutions
-        sorted_constraints = list(substitutions)
-        while sorted_constraints:
-            sorted_constraints.sort(key=lambda i: len(substitutions[i].optionset))
-            example_value = sorted_constraints[0]
+        sorted_subs = list(substitutions)
+        subs_stack = []
+        while sorted_subs:
+            sorted_subs.sort(key=lambda i: len(substitutions[i].optionset))
+            example_value = sorted_subs[0]
+            # make a choice for this example
             solution[example_value] = random.choice(list(substitutions[example_value].optionset))
+            subs_stack.append(example_value)
+            # exclude the choice from all others
+            others_list = []
             for other in [e for e in substitutions if e != example_value]:
+                others_list.append(other)
                 try:
-                    substitutions[other].add_constraint([e for e in substitutions[other] if e != solution[example_value]])
+                    substitutions[other].remove_option(solution[example_value])
                 except ValueError:
-                    raise ValueError("No solution found within the set of given constraints")
-            sorted_constraints.pop(0)
+                    # wrong choice, this depletes the last option for another
+                    for corrupted_other in others_list:
+                        substitutions[corrupted_other].undo_remove()
+                    try:
+                        substitutions[example_value].remove_option(solution.pop(example_value))
+                        break
+                    except ValueError:
+                        # roll back last choice
+                        done = False
+                        while not done:
+                            try:
+                                while subs_stack[-1] == example_value:
+                                    substitutions[example_value].undo_remove()
+                                    subs_stack.pop()
+                                last_item = subs_stack[-1]
+                                sorted_subs.insert(0, last_item)
+                            except IndexError:
+                                raise ValueError("No solution found within the set of given constraints")
+                            for previous_dependency in [e for e in substitutions if e != last_item]:
+                                substitutions[previous_dependency].undo_remove()
+                            try:
+                                substitutions[last_item].remove_option(solution.pop(last_item))
+                            except ValueError:
+                                # next level must also be rolled back
+                                example_value = last_item
+                                continue
+                            done = True
+                        break
+            else:
+                sorted_subs.pop(0)
         self.solution = solution
         return solution
 
@@ -89,6 +123,7 @@ class Constraint:
             self.optionset = None
         if not self.optionset or isinstance(constraint, str):
             raise ValueError(f"Invalid option set for initial constraint: {constraint}")
+        self.removed_stack = []
 
     def __repr__(self):
         return f'Constraint([{", ".join([str(e) for e in self.optionset])}])'
@@ -104,3 +139,21 @@ class Constraint:
         self.optionset = self.optionset.intersection(constraint)
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')
+
+    def remove_option(self, option):
+        try:
+            self.optionset.remove(option)
+            self.removed_stack.append(option)
+        except KeyError:
+            self.removed_stack.append(Placeholder)
+        if not len(self.optionset):
+            raise ValueError('No options left after adding constraint')
+
+    def undo_remove(self):
+        last_item = self.removed_stack.pop()
+        if last_item is not Placeholder:
+            self.optionset.add(last_item)
+
+
+class Placeholder:
+    """For when None isn't specific enough"""
