@@ -53,6 +53,14 @@ class TestSubstitutionMap(unittest.TestCase):
         sm.substitute('B', [1])
         self.assertRaises(ValueError, sm.solve)
 
+    def test_multi_overlapping_options_have_no_solution(self):
+        sm = SubstitutionMap()
+        sm.substitute('A', [1, 2, 3])
+        sm.substitute('B', [1])
+        sm.substitute('C', [2])
+        sm.substitute('D', [3])
+        self.assertRaises(ValueError, sm.solve)
+
     def test_each_example_value_gets_a_unique_solution_value(self):
         sm = SubstitutionMap()
         sm.substitute('A', [1, 2, 3])
@@ -93,7 +101,11 @@ class TestSubstitutionMap(unittest.TestCase):
         self.assertRaises(ValueError, sm.solve)
         self.assertEqual(sm.solution, {})
 
-    def test_wrong_choice_in_one_blocks_solution_for_others(self):
+    def test_wrong_choice_blocks_solution(self):
+        """
+        If 2 is chosen as the solution value for A, before evaluating
+        B and C, then either B or C can still be solved, but not both.
+        """
         sm = SubstitutionMap()
         sm.substitute('A', [1, 2])
         sm.substitute('B', [2, 3])
@@ -103,6 +115,34 @@ class TestSubstitutionMap(unittest.TestCase):
         self.assertIn(sm.solution['B'], [2, 3])
         self.assertIn(sm.solution['C'], [2, 3])
         self.assertNotEqual(sm.solution['B'], sm.solution['C'])
+
+    def test_wrong_choice_blocks_solution_repeated(self):
+        """
+        The 'wrong choice' test proved powerful, but due to randomisation
+        it was still possible to get a passing test run, even though the
+        implementation did not always find a solution. Repeating the test
+        with varying data helps to detect randomisation flukes and
+        algorithmic blind spots, like order preference.
+        """
+        variations = [{'A':[1, 2], 'B':[2, 3], 'C':[3, 2]},
+                      {'A':[2, 1], 'B':[2, 3], 'C':[2, 3]},
+                      {'A':[1, 2], 'B':[3, 2], 'C':[2, 3]},
+                      {'A':[2, 1], 'B':[3, 2], 'C':[3, 2]},
+                      {'A':[2, 3], 'B':[1, 2], 'C':[2, 3]},
+                      {'A':[2, 3], 'B':[2, 3], 'C':[1, 2]},
+                      {'A':[3, 2], 'B':[2, 1], 'C':[2, 3]},
+                      {'A':[3, 2], 'B':[3, 2], 'C':[2, 1]}]
+        for variant in variations:
+            sm = SubstitutionMap()
+            for example_value, constraint in variant.items():
+                sm.substitute(example_value, constraint)
+            sm.solve()
+            the_one = [k for k, v in variant.items() if 1 in v][0]
+            others = [k for k in variant if k != the_one]
+            self.assertEqual(sm.solution[the_one], 1)
+            self.assertIn(sm.solution[others[0]], [2, 3])
+            self.assertIn(sm.solution[others[1]], [2, 3])
+            self.assertNotEqual(sm.solution[others[0]], sm.solution[others[1]])
 
     def test_block_constraints_with_no_solution(self):
         sm = SubstitutionMap()
