@@ -66,51 +66,46 @@ class SubstitutionMap:
         self.solution = {}
         solution = dict()
         substitutions = self.copy().substitutions
-        sorted_subs = list(substitutions)
+        unsolved_subs = list(substitutions)
         subs_stack = []
-        while sorted_subs:
-            sorted_subs.sort(key=lambda i: len(substitutions[i].optionset))
-            example_value = sorted_subs[0]
-            # make a choice for this example
+        while unsolved_subs:
+            unsolved_subs.sort(key=lambda i: len(substitutions[i].optionset))
+            example_value = unsolved_subs[0]
             solution[example_value] = random.choice(list(substitutions[example_value].optionset))
             subs_stack.append(example_value)
-            # exclude the choice from all others
             others_list = []
-            for other in [e for e in substitutions if e != example_value]:
-                others_list.append(other)
-                try:
+            try:
+                # exclude the choice from all others
+                for other in [e for e in substitutions if e != example_value]:
+                    others_list.append(other)
                     substitutions[other].remove_option(solution[example_value])
-                except ValueError:
-                    # wrong choice, this depletes the last option for another
-                    for corrupted_other in others_list:
-                        substitutions[corrupted_other].undo_remove()
+                unsolved_subs.pop(0)
+            except ValueError:
+                # wrong choice, it depleted the last option for another example value
+                for affected_other in others_list:
+                    substitutions[affected_other].undo_remove()
+                # roll back last choice
+                solution.pop(example_value)
+                subs_stack.pop()
+                rollback_done = False
+                while not rollback_done:
                     try:
-                        substitutions[example_value].remove_option(solution.pop(example_value))
-                        break
+                        while subs_stack[-1] == example_value:
+                            substitutions[example_value].undo_remove()
+                            subs_stack.pop()
+                    except IndexError:
+                        # nothing left to roll back, no options remaining
+                        raise ValueError("No solution found within the set of given constraints")
+                    last_item = subs_stack[-1]
+                    unsolved_subs.insert(0, last_item)
+                    for other in [e for e in substitutions if e != last_item]:
+                        substitutions[other].undo_remove()
+                    try:
+                        substitutions[last_item].remove_option(solution.pop(last_item))
+                        rollback_done = True
                     except ValueError:
-                        # roll back last choice
-                        done = False
-                        while not done:
-                            try:
-                                while subs_stack[-1] == example_value:
-                                    substitutions[example_value].undo_remove()
-                                    subs_stack.pop()
-                                last_item = subs_stack[-1]
-                                sorted_subs.insert(0, last_item)
-                            except IndexError:
-                                raise ValueError("No solution found within the set of given constraints")
-                            for previous_dependency in [e for e in substitutions if e != last_item]:
-                                substitutions[previous_dependency].undo_remove()
-                            try:
-                                substitutions[last_item].remove_option(solution.pop(last_item))
-                            except ValueError:
-                                # next level must also be rolled back
-                                example_value = last_item
-                                continue
-                            done = True
-                        break
-            else:
-                sorted_subs.pop(0)
+                        # next level must also be rolled back
+                        example_value = last_item
         self.solution = solution
         return solution
 
