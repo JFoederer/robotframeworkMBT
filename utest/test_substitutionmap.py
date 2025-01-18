@@ -285,13 +285,11 @@ class TestConstraint(unittest.TestCase):
 
     def test_available_options_can_be_reviewed(self):
         c = Constraint(['one', 'two', 'three'])
-        for e in ['one', 'two', 'three']: self.assertIn(e, [opt for opt in c])
+        self.assertCountEqual([opt for opt in c], ['one', 'two', 'three'])
         c.add_constraint(['one', 'two'])
-        for e in ['one', 'two']: self.assertIn(e, [opt for opt in c])
-        self.assertNotIn('three', [opt for opt in c])
+        self.assertCountEqual([opt for opt in c], ['one', 'two'])
         c.add_constraint(['one', 'three'])
-        for e in ['one']: self.assertIn(e, [opt for opt in c])
-        for e in ['two', 'three']: self.assertNotIn(e, [opt for opt in c])
+        self.assertCountEqual([opt for opt in c], ['one'])
 
     def test_removing_last_choice_yields_exception(self):
         c = Constraint(['one', 'two', 'three'])
@@ -310,6 +308,59 @@ class TestConstraint(unittest.TestCase):
         self.assertEqual(len(c.optionset), 3)
         self.assertEqual(options, [opt for opt in c])
 
+    def test_single_option_can_be_removed(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('two')
+        self.assertCountEqual(c.optionset, ['one', 'three'])
+
+    def test_removing_unavailable_option_is_silent(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('four')
+        self.assertCountEqual(c.optionset, ['one', 'two', 'three'])
+
+    def test_single_removed_option_can_be_undone(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('two')
+        self.assertCountEqual(c.optionset, ['one', 'three'])
+        c.undo_remove()
+        self.assertCountEqual(c.optionset, ['one', 'two', 'three'])
+
+    def test_multiple_removed_options_can_be_undone(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('two')
+        c.remove_option('one')
+        self.assertCountEqual(c.optionset, ['three'])
+        c.undo_remove()
+        self.assertCountEqual(c.optionset, ['one', 'three'])
+        c.undo_remove()
+        self.assertCountEqual(c.optionset, ['one', 'two', 'three'])
+
+    def test_removing_last_option_raises(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('one')
+        c.remove_option('two')
+        self.assertRaises(ValueError, c.remove_option, 'three')
+
+    def test_undoing_more_than_was_removed_raises(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('one')
+        c.remove_option('two')
+        c.undo_remove()
+        c.undo_remove()
+        self.assertRaises(IndexError, c.undo_remove)
+
+    def test_adding_constraint_does_not_affect_undo_remove_stack(self):
+        c = Constraint(['one', 'two', 'three'])
+        c.remove_option('one')
+        c.remove_option('four')
+        c.add_constraint(['one', 'two'])
+        self.assertCountEqual(c.optionset, ['two'])
+        c.undo_remove() # four was never in there, so isn't added, and three
+                        # was removed by adding a constraint and is ignored.
+        self.assertCountEqual(c.optionset, ['two'])
+        c.undo_remove()
+        self.assertCountEqual(c.optionset, ['one', 'two'])
+
     def test_constraint_copies_are_independent(self):
         c = Constraint(['one', 'two', 'three', 'thirteen'])
         c.add_constraint(['one', 'two', 'three'])
@@ -324,3 +375,7 @@ class TestConstraint(unittest.TestCase):
         self.assertIn('two', cc.optionset)
         self.assertNotIn('three', c.optionset)
         self.assertNotIn('one', cc.optionset)
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -33,6 +33,7 @@
 import unittest
 from robotmbt.tracestate import TraceState
 
+
 class TestTraceState(unittest.TestCase):
     def test_an_empty_tracestate_doesnt_do_so_much(self):
         ts = TraceState(0)
@@ -313,6 +314,7 @@ class TestTraceState(unittest.TestCase):
         ts.rewind()
         self.assertEqual(ts.coverage_drought, 0)
 
+
 class TestPartialScenarios(unittest.TestCase):
     def test_push_partial_does_not_complete_coverage(self):
         ts = TraceState(1)
@@ -487,6 +489,7 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.coverage_drought, 1)
         ts.confirm_full_scenario(1, 'two remainder', {})
         self.assertEqual(ts.coverage_drought, 0)
+
 
 class TestRefinement(unittest.TestCase):
     def test_single_step_refinement(self):
@@ -731,6 +734,68 @@ class TestRefinement(unittest.TestCase):
         self.assertIsNotNone(candidate2)
         ts.reject_scenario(candidate2)
         self.assertIsNone(ts.next_candidate(retry=True))
+
+    def test_initially_no_scenario_is_in_refinement(self):
+        ts = TraceState(1)
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), [])
+
+    def test_full_scenario_is_not_reported_as_refinement(self):
+        ts = TraceState(2)
+        ts.confirm_full_scenario(0, 'S1', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), [])
+
+    def test_push_partial_opens_refinement(self):
+        ts = TraceState(4)
+        ts.push_partial_scenario(0, 'S1.1', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['S1.1'])
+
+    def test_nested_refinements_are_all_reported_as_in_refinement(self):
+        ts = TraceState(4)
+        ts.push_partial_scenario(0, 'T1.1', {})
+        ts.push_partial_scenario(1, 'M1.1', {})
+        ts.push_partial_scenario(2, 'B1.1', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+
+    def test_closing_refinement_removes_it_from_list(self):
+        ts = TraceState(4)
+        ts.push_partial_scenario(0, 'T1.1', {})
+        ts.push_partial_scenario(1, 'M1.1', {})
+        ts.push_partial_scenario(2, 'B1.1', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        ts.confirm_full_scenario(2, 'B1.0', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+
+    def test_multi_step_refinement_is_reported_only_once(self):
+        ts = TraceState(4)
+        ts.push_partial_scenario(0, 'T1.1', {})
+        ts.push_partial_scenario(1, 'M1.1', {})
+        ts.confirm_full_scenario(2, 'B1', {})
+        ts.push_partial_scenario(1, 'M1.2', {})
+        ts.confirm_full_scenario(3, 'B2', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+
+    def test_rewind_open_refinement_removes_it_from_list(self):
+        ts = TraceState(4)
+        ts.push_partial_scenario(0, 'T1.1', {})
+        ts.push_partial_scenario(1, 'M1.1', {})
+        ts.push_partial_scenario(2, 'B1.1', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        ts.rewind()
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+
+    def test_rewind_finished_scenario_with_refinement_removes_enclosed_refinements(self):
+        ts = TraceState(5)
+        ts.confirm_full_scenario(0, 'T1', {})
+        ts.push_partial_scenario(1, 'T2.1', {})
+        ts.push_partial_scenario(2, 'M1.1', {})
+        ts.push_partial_scenario(3, 'B1.1', {})
+        ts.confirm_full_scenario(4, 'S1', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1', 'M1.1', 'B1.1'])
+        ts.confirm_full_scenario(3, 'B1.0', {})
+        ts.confirm_full_scenario(2, 'M1.0', {})
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
+        ts.rewind() # Middle including its Bottom refinement
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
 
 
 if __name__ == '__main__':

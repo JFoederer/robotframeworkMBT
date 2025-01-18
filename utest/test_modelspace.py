@@ -33,6 +33,7 @@
 import unittest
 from robotmbt.modelspace import ModelSpace, ModellingError
 
+
 class TestModelSpace(unittest.TestCase):
     def setUp(self):
         self.m = ModelSpace()
@@ -203,6 +204,10 @@ class TestModelSpace(unittest.TestCase):
 
     def test_fail_exists_check_before_using_new_with_stripping(self):
         self.assertRaises(NameError, self.m.process_expression, ' foo ')
+
+    def test_fail_exists_check_before_setting_property(self):
+        self.m.process_expression('new foo')
+        self.assertRaises(ModellingError, self.m.process_expression, 'foo.bar')
 
     def test_fail_exists_check_after_using_del(self):
         self.m.process_expression('new foo')

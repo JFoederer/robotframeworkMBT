@@ -31,8 +31,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+from types import SimpleNamespace
 
 from robotmbt.suitedata import Suite, Scenario, Step
+
 
 class TestSuites(unittest.TestCase):
     def setUp(self):
@@ -153,6 +155,7 @@ class TestSuites(unittest.TestCase):
         self.assertEqual(len(errorsteps), 4)
         self.assertEqual(set([e.model_info['error'] for e in errorsteps]),
             {'setup oops','scenario oops', 'sub scenario oops', 'sub teardown oops'})
+
 
 class TestScenarios(unittest.TestCase):
     def setUp(self):
@@ -277,6 +280,17 @@ class TestScenarios(unittest.TestCase):
         self.assertEqual(dup.steps[0].keyword, self.scenario.steps[0].keyword)
         self.assertNotEqual(dup.steps[-1].keyword, self.scenario.steps[-1].keyword)
 
+    def test_exteranally_determined_attributes_are_copied_along(self):
+        self.scenario.src_id = 7
+        class Dummy:
+            def copy(self):
+                return 'dummy'
+        self.scenario.data_choices = Dummy()
+        dup = self.scenario.copy()
+        self.assertEqual(dup.src_id, self.scenario.src_id)
+        self.assertEqual(dup.data_choices, 'dummy')
+
+
 class TestSteps(unittest.TestCase):
     def setUp(self):
         self.steps = self.create_steps()
@@ -342,26 +356,58 @@ class TestSteps(unittest.TestCase):
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.kw_wo_gherkin, e)
 
-    def test_arguments_can_be_stored(self):
-        self.assertEqual(self.steps[0].args, ())
-        self.steps[0].args = (1, "yes", None)
-        self.assertEqual(self.steps[0].args, (1, "yes", None))
+    def test_arguments_are_part_of_the_step_str(self):
+        step = Step(RobotKwStub.STEPTEXT, parent=None)
+        self.assertEqual(str(step), RobotKwStub.STEPTEXT)
+        step.add_robot_dependent_data(RobotKwStub())
+        self.assertNotIn('error', step.model_info)
+        self.assertEqual(str(step), RobotKwStub.STEPTEXT)
 
-    def test_model_info_can_be_stored(self):
-        self.assertEqual(self.steps[0].model_info, dict())
-        self.steps[0].model_info = dict(num=1, string="yes", none=None)
-        self.assertEqual(self.steps[0].model_info, dict(num=1, string="yes", none=None))
-        self.steps[-1].model_info = dict( IN=['expr1, expr2'],
-                                         OUT=['expr3', 'expr4'])
-        self.assertEqual(self.steps[-1].model_info, dict( IN=['expr1, expr2'],
-                                                         OUT=['expr3', 'expr4']))
+    def test_modified_arguments_are_part_of_the_step_str(self):
+        step = Step(RobotKwStub.STEPTEXT, parent=None)
+        self.assertEqual(str(step), RobotKwStub.STEPTEXT)
+        step.add_robot_dependent_data(RobotKwStub())
+        self.assertNotIn('error', step.model_info)
+        step.emb_args['${bar}'].value = 'new bar'
+        self.assertEqual(str(step), RobotKwStub.STEPTEXT.replace('bar_value', 'new bar'))
 
-    def test_model_info_errors_can_be_reported(self):
-        self.assertIs(self.steps[0].has_error(), False)
-        self.assertIs(self.steps[0].get_error(), None)
-        self.steps[0].model_info = dict(error='oops')
-        self.assertIs(self.steps[0].has_error(), True)
-        self.assertIs(self.steps[0].get_error(), 'oops')
+    def test_keyword_errors_become_model_errors(self):
+        step = Step(RobotKwStub.STEPTEXT, parent=None)
+        kw = RobotKwStub()
+        kw.error = 'keyword error'
+        step.add_robot_dependent_data(kw)
+        self.assertEqual(step.model_info['error'], 'keyword error')
+
+    def test_model_info_is_loaded(self):
+        step = Step(RobotKwStub.STEPTEXT, parent=None)
+        kw = RobotKwStub()
+        kw._doc = """*model info*
+                     :IN:  expr1 | expr2
+                     :OUT: expr3 | expr4
+                  """
+        step.add_robot_dependent_data(kw)
+        self.assertEqual(step.model_info, dict( IN=['expr1', 'expr2'],
+                                               OUT=['expr3', 'expr4']))
+
+    def test_model_info_errors_are_reported(self):
+        step = Step(RobotKwStub.STEPTEXT, parent=None)
+        kw = RobotKwStub()
+        kw._doc = """*model info*
+                     :INVALID
+                  """
+        step.add_robot_dependent_data(kw)
+        self.assertIn('error', step.model_info)
+
+
+class RobotKwStub:
+    STEPTEXT = "Given step with foo_value and bar_value as arguments"
+    def __init__(self):
+        self.name = "step with ${foo} and ${bar} as arguments"
+        self._doc = "*model info*\n:IN: None\n:OUT: None"
+        self.error = False
+        self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
+                                        match= lambda _: SimpleNamespace(groups=lambda: ['foo_value', 'bar_value']))
+
 
 if __name__ == '__main__':
     unittest.main()

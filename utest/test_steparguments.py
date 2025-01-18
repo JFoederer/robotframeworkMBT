@@ -31,7 +31,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-
 from robotmbt.steparguments import StepArgument, StepArguments
 
 
@@ -254,6 +253,7 @@ class TestStepArguments(unittest.TestCase):
         argset = StepArguments([arg1, arg2])
         self.assertEqual(argset['${FoO1}'].value, 'bar1')
         self.assertEqual(argset['${foo2}'].value, 'bar2')
+
 
 if __name__ == '__main__':
     unittest.main()
