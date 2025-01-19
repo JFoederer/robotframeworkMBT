@@ -34,7 +34,11 @@ Suite Setup    Treat this test suite model-based
 
 ## How to model
 
-Modelling can be done directy from [Robot framework](https://robotframework.org/), without the need for additional tooling. The popular _Given-When-Then_ style is used to capture behaviour in scenarios. Consider these two scenarios:
+Modelling can be done directy from [Robot framework](https://robotframework.org/), without the need for additional tooling. The popular _Given-When-Then_ style is used to capture behaviour in scenarios, following the Specification by example approach.
+
+### The basics
+
+Consider these two scenarios:
 
 ```
 Buying a postcard
@@ -74,11 +78,9 @@ The second scenario has a dependency to the first scenario, due to the given-ste
 * when-steps evaluate both the `:IN:` and `:OUT:` expressions
 * then-steps evaluate only the `:OUT:` expressions
 
-If evaluation of any expression fails or is False, then the scenario cannot be executed at the current position. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. The step implementations use keywords to connect to the system under test. The keywords perform actions or check the specified behaviour.
+If evaluation of any expression fails or is False, then the scenario cannot be executed at the current position. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. The step implementations use keywords to connect to, and interact with, the system under test. The keywords perform actions and check outputs to verify the specified behaviour.
 
-You can keep your models clean by deleting domain terms that are no longer relevant (e.g. `del postcard`). For local data the reserved `scenario` scope can be used, which is automatically cleared at the end of the scenario. If multiple expressions are needed you can separate them in the `*model info*` by using the pipe symbol (`|`) or by starting the next expression on a new line. A single expression cannot be split over multiple lines.
-
-There are three typical kinds of steps
+There are three typical kinds of steps:
 
 * __Action__  
   When-steps perform an action on the system that alters its state. These steps can have dependencies stated in their `:IN:` conditions that are needed before starting the action. Statements in the `:OUT:` expressions indicate what changes are expected by executing this action.
@@ -86,6 +88,16 @@ There are three typical kinds of steps
   Stative steps express a truth value. Like, _you have a blank postcard_. For these steps the `:IN:` expression is a condition. The `:OUT:` part is either identical to the `:IN:` condition or a statement. If the when-action already sets the property, then you use a condition in the `:OUT:` part. Statements, like assigning a new property, are useful to express the result of a scenario. For instance to express indirect effects of an action, or when the result of an action depends on the given system state. The step implementation of stative steps consists purely of checks.
 * __Refinement__  
   Action refinement allows you to build hierarchy into your scenarios. The `:IN:` and `:OUT:` expressions are only conditions (checks), but the `:IN:` and `:OUT:` expressions are different. If for any step the `:OUT:` expression is reached for evaluation, but fails, this signals the need for refinement. A single full scenario can be inserted if all `:IN:` conditions match at the current position and the pending `:OUT:` conditions are satisfied after insertion.
+
+### Keeping your models clean
+
+Clean models start with tidy model info. If multiple expressions are needed you can separate them in the `*model info*` by using the pipe symbol (`|`) or by starting the next expression on a new line. A single expression cannot be split over multiple lines. Try to keep expressions simple. If expressions start becoming complex, maybe the model data needs an update.
+
+Choosing the right model data is essential. It defines how your steps and scenarios interact. A good aproach is to do a domain analysis and organise your model data to reflect the structure of the domain. Choosing the right domain terms will make your life a lot easier when debugging modelling errors. Keep ownership local, so that only a relatively small amount of steps create and modify the data within a certain domain term.
+
+You can keep your models small by deleting domain terms that are no longer relevant (e.g. `del postcard`). For local data, scenario variables can be used. Similar to regular domain terms, you have access to the predefined term `scenario`. Any properties assigned to `scenario` are automatically cleared at the end of the scenario.
+
+Scenario variables can be especially useful under refinement. If a when-step is being refined by another scenario, both scenarios are _open_. This enables communication between these scenarios. The refining scenario has access to, and can modify, scenario variables of the refined scenario. If the refining scenario introduces new properties, these are removed once the refinement completes and are no longer available to the refined scenario.
 
 ## Disclaimer
 
