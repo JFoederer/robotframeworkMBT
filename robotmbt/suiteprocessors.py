@@ -130,7 +130,7 @@ class SuiteProcessors:
                     elif self.tracestate.coverage_drought > self.DROUGHT_LIMIT:
                         logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
                                      "Roll back to last coverage increase and try something else.")
-                        self._rewind(self.DROUGHT_LIMIT+1)
+                        self._rewind(drought_recovery=True)
                         self._report_tracestate_to_user()
                         logger.debug(f"last state:\n{self.active_model.get_status_text()}")
 
@@ -228,8 +228,9 @@ class SuiteProcessors:
         self._report_tracestate_to_user()
         return False
 
-    def _rewind(self, n=1):
-        for i in range(n):
+    def _rewind(self, drought_recovery=False):
+        tail = self.tracestate.rewind()
+        while drought_recovery and self.tracestate.coverage_drought:
             tail = self.tracestate.rewind()
         self.active_model = self.tracestate.model or ModelSpace()
         return tail
