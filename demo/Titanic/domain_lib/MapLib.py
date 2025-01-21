@@ -25,7 +25,7 @@ class MapLib:
     }
 
     areas = {
-        'the English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.41), LocationOnGrid(latitude=51.9, longitude=-8.2)),
+        'the English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.35), LocationOnGrid(latitude=51.850334, longitude=-8.294286)),
         'Iceberg alley': AreaOnGrid(LocationOnGrid(latitude=43, longitude=-45), LocationOnGrid(latitude=48, longitude=-50))
     }
 
