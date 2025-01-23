@@ -6,7 +6,7 @@ Resource          ../domain_lib/Titanic.resource
 Titanic is scheduled for the voyage to New York
     [Documentation]    *model info*
     ...    :IN: new Titanic | Titanic.destination='New York' | Titanic.port=Southampton
-    ...    new Date | Date.now='1912-04-10'
+    ...         new Voyage | Voyage.date= '1912-04-10' | Voyage.new_york_visits= 0
     ...    :OUT: None
     Spawn titanic at location Southampton
     Log    Dear crew, your ship has been assigned to the trip to New York. You are due for departure from the port of Southampton at noon on 1912-04-10.
@@ -14,8 +14,9 @@ Titanic is scheduled for the voyage to New York
 
 Titanic is docked in the port of ${port}
     [Documentation]    *model info*
+    ...    :MOD: ${port}= [${port}]
     ...    :IN: Titanic.port == ${port}
-    ...    :OUT: Titanic.port == ${port}
+    ...    :OUT: Titanic.port == ${port} | if ${port} == 'New York': Voyage.new_york_visits+= 1
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
 
@@ -99,12 +100,31 @@ Titanic starts to sink
 
 Titanic's voyage is complete
     [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
+    ...    :IN: Voyage.date == '1912-04-17'
+    ...    :OUT: Voyage.date='1912-04-17' | Titanic.destination=None
     log    Dear passengers, this is the final destination of this journey. Please remember to collect all your personal belongings when disembarking.
 
 the date is ${date}
     [Documentation]    *model info*
-    ...    :IN: Date.now == ${date}
-    ...    :OUT: Date.now == ${date}
+    ...    :IN: Voyage.date == ${date}
+    ...    :OUT: Voyage.date == ${date}
     Check that    Current date of Journey    equals    ${date}
+
+Titanic sails from ${port A} to ${port B} again
+    [Documentation]    *model info*
+    ...    :MOD: ${port A}= [port for port in ['Southampton', 'Queenstown', 'Cherbourg'] if port == Titanic.port]
+    ...          ${port B}= [port for port in ['Southampton', 'Queenstown', 'Cherbourg'] if port != Titanic.port]
+    ...    :IN: Titanic.port == ${port A}
+    ...    :OUT: Titanic.port= ${port B}
+    Point titanic towards location ${port B}
+    Titanic moves full speed ahead
+    Move Titanic out of current area
+    Move Titanic out of current area
+    Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
+    Titanic stops
+
+Titanic visited New York ${n} times
+    [Documentation]    *model info*
+    ...    :IN: Voyage.new_york_visits == ${n}
+    ...    :OUT: Voyage.new_york_visits == ${n}
+    log    New York is visited ${n} times
