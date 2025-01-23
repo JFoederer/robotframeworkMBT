@@ -8,7 +8,17 @@ This project is an extension to [Robot framework](https://robotframework.org/) f
 
 Test case generation introduces a more dynamic approach to executing a test suite. A typical traditional test suite is executed front to back. For maintainability reasons, test cases are often kept independent of each other. The down side to this approach is that there is little variation and often a lot of duplication, mostly during the setup phases.
 
-With this project we aim to get the best of both worlds. Allowing testers to write small, independent cases that are automatically combined. Finding more issues in less time, by focusing on effectively reaching the desired coverage.
+With this project we aim to get the best of both worlds. Allowing testers to write small, independent scenarios that are automatically combined and expanded. Finding more issues in less time, by focusing on effectively reaching the desired coverage.
+
+## Approach
+
+The popular _Given-When-Then_ style is used to capture behaviour in scenarios, following the Specification by example approach. In Specification by example you specify a system by writing down the minimum set of key examples to clearly convey the intended behaviour of the system. As a tester you need to go beyond these examples and verify that the system behaves as intended for the broader expressed intent. Roughly speaking this implies that expansion is needed over two axis: _when_ and _what_.
+
+The _when_ is about sequencing and entry conditions. When, or in which exact state, do start a scenario? Given-steps define the entry condition for a scenario, which can be less or more specific. The less specific the condition is, the more situations there are in which the specified behaviour should hold. It can be challenging to find and select a good set of concrete situations to use as a starting point. We build on the assumption that for a well specified system, any scenario's entry condition can be reached by drawing from the broader set of specifications.
+
+The _what_ reflects on the fact that examples are just that, examples. There can be many more, equally valid examples. As a tester you want to explore the available options and confirm that the system functions as expected under all possible operating conditions.
+
+RobotMBT offers features to cover both _when_ and _what_ variations.
 
 ## Capabilities
 
@@ -34,7 +44,7 @@ Suite Setup    Treat this test suite model-based
 
 ## How to model
 
-Modelling can be done directy from [Robot framework](https://robotframework.org/), without the need for additional tooling. The popular _Given-When-Then_ style is used to capture behaviour in scenarios, following the Specification by example approach.
+Modelling can be done directy from [Robot framework](https://robotframework.org/), without the need for additional tooling besides [RobotMBT](https://github.com/JFoederer/robotframeworkMBT).
 
 ### The basics
 
