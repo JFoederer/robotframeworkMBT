@@ -60,7 +60,10 @@ class MapLib:
         @param long: longitude of iceberg
         """
         iceberg = Iceberg(longitude=long, latitude=lat)
-        self.ocean.floating_objects.append(iceberg)
+        if isinstance(self.ocean.floating_objects[-1], Iceberg):
+            self.ocean.floating_objects[-1] = iceberg
+        else:
+            self.ocean.floating_objects.append(iceberg)
 
     @keyword("Location of port ${harbour}")
     def location_of_(self, harbour):
