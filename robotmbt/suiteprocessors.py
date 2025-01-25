@@ -91,6 +91,7 @@ class SuiteProcessors:
         self.scenarios = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                 "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+        random.shuffle(self.scenarios)
 
         # a short trace without the need for repeating scenarios is preferred
         self.try_to_reach_full_coverage(allow_duplicate_scenarios=False)
@@ -106,7 +107,6 @@ class SuiteProcessors:
         return self.out_suite
 
     def try_to_reach_full_coverage(self, allow_duplicate_scenarios):
-        random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
         self.active_model = ModelSpace()
         while not self.tracestate.coverage_reached():
