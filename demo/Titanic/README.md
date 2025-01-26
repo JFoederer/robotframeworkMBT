@@ -10,9 +10,9 @@ Please keep in mind that the library and this demo are still in the early develo
 
 ## Contents of the demo - hit or miss?
 
-Two story lines can be played out in this demo, both composed from small specification scenarios. The `miss` scenario reveils the story as it was expected to happen. Titanic is not fazed by any iceberg and safely travels to New York. The `hit` scenario resembles the plot that made the history books.
+Three different story lines can be played out in this demo, which are composed from small specification scenarios. The `miss` scenario reveils the story as it was expected to happen. Titanic is not fazed by any iceberg and safely travels to New York. The `hit` scenario resembles the plot that made the history books. The `extended` scenario extends the _miss_ scenario with multiple voyages and alternative routes.
 
-There are a total of 7 seven scenarios in this demo. Some are very high level, stating functional or performance requirements on Titanic's voyage as a whole. Others are zoomed in to more detail, defining what the expectations are for the vessel when encountering icebergs along the way. Two scenarios are mutually exclusive, but with either one a complete voyage can be specified when combining it with the other available scenarios.
+There are a total of 7 scenarios in this demo, 10 if you use the extended variant. Some are very high level, stating functional or performance requirements on Titanic's voyage as a whole. Others are zoomed in to more detail, defining what the expectations are for the vessel when encountering icebergs along the way. Two scenarios are mutually exclusive, but with either one a complete voyage can be specified when combining it with the other available scenarios.
 
 ## Why the story of Titanic?
 
@@ -38,10 +38,11 @@ To install the packages needed to run the demo, navigate to your local `demo/Tit
 
 ### Step 3: Run the demo
 
-To run the demo execute the `run_demo.py` script in either of the two available variants
+To run the demo execute the `run_demo.py` script in either of the available variants:
 
     python run_demo.py miss
     python run_demo.py hit
+    python run_demo.py extended
 
 If you choose the `hit` scenario, don't be surprised if you encounter some failures along the route...
 
@@ -60,7 +61,7 @@ Instructions:
 * Run: `python run_game.py`
 * A matplotlib window will appear, change focus back to your terminal to play the game.
 
-If you enjoy the visual feedback, you can also enable it during the automated test runs. To do so, update the suite setup in `Titanic_scenarios` to run a second keyword:
+**Tip**: If you enjoy the visual feedback, you can also enable it during the automated demo runs. To do so, update the suite setup in `Titanic_scenarios` to run a second keyword:
 
     *** Settings ***
     Suite Setup       Run keywords    Enable map animation    Treat this test suite model-based
