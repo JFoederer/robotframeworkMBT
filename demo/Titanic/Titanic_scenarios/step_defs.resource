@@ -6,7 +6,7 @@ Resource          ../domain_lib/Titanic.resource
 Titanic is scheduled for the voyage to New York
     [Documentation]    *model info*
     ...    :IN: new Titanic | Titanic.destination='New York' | Titanic.port=Southampton
-    ...         new Voyage | Voyage.date= '1912-04-10' | Voyage.new_york_visits= 0
+    ...         new Voyage | Voyage.date= '1912-04-10' | Voyage.ports_visited= 1
     ...    :OUT: None
     Spawn titanic at location Southampton
     Log    Dear crew, your ship has been assigned to the trip to New York. You are due for departure from the port of Southampton at noon on 1912-04-10.
@@ -16,7 +16,7 @@ Titanic is docked in the port of ${port}
     [Documentation]    *model info*
     ...    :MOD: ${port}= [${port}]
     ...    :IN: Titanic.port == ${port}
-    ...    :OUT: Titanic.port == ${port} | if ${port} == 'New York': Voyage.new_york_visits+= 1
+    ...    :OUT: Titanic.port == ${port} | Voyage.ports_visited+= 1
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
 
@@ -43,11 +43,12 @@ Titanic arrives in the port of ${port}
 
 Titanic crosses area ${area}
     [Documentation]    *model info*
-    ...    :IN: Titanic.port == None
-    ...    :OUT: None
+    ...    :IN: Titanic.port == None | Titanic.location= 'Iceberg alley' if ${area} == 'Atlantic ocean' else None
+    ...    :OUT: Titanic.location != 'Iceberg alley'
     Check that    Map area where 'Titanic's position' is located    Equals    ${area}
     Check that    Titanic's speed    Is Greater Than    0
     Move Titanic out of current area
+    Check that    Map area where 'Titanic's position' is located    does not equal    ${area}
 
 Titanic sails the Atlantic
     [Documentation]    *model info*
@@ -66,6 +67,7 @@ Titanic is sailing Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Iceberg alley'
+    Move Titanic out of current area
     Check that    Map area where 'Titanic's position' is located    Equals    Iceberg alley
     Log    Brrr, that's a bit chilly
 
@@ -112,8 +114,8 @@ the date is ${date}
 
 Titanic sails from ${port A} to ${port B} again
     [Documentation]    *model info*
-    ...    :MOD: ${port A}= [port for port in ['Southampton', 'Queenstown', 'Cherbourg'] if port == Titanic.port]
-    ...          ${port B}= [port for port in ['Southampton', 'Queenstown', 'Cherbourg'] if port != Titanic.port]
+    ...    :MOD: ${port A}= [port for port in [Southampton, Queenstown, Cherbourg, Plymouth] if port == Titanic.port]
+    ...          ${port B}= [port for port in [Southampton, Queenstown, Cherbourg, Plymouth] if port != Titanic.port]
     ...    :IN: Titanic.port == ${port A}
     ...    :OUT: Titanic.port= ${port B}
     Point titanic towards location ${port B}
@@ -123,8 +125,8 @@ Titanic sails from ${port A} to ${port B} again
     Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
     Titanic stops
 
-Titanic visited New York ${n} times
+Titanic visited at least ${n} ports
     [Documentation]    *model info*
-    ...    :IN: Voyage.new_york_visits == ${n}
-    ...    :OUT: Voyage.new_york_visits == ${n}
-    log    New York is visited ${n} times
+    ...    :IN: Voyage.ports_visited >= ${n}
+    ...    :OUT: Voyage.ports_visited >= ${n}
+    log    Wow! Did we already visit ${n} ports!?

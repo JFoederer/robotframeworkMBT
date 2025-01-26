@@ -21,6 +21,7 @@ class MapLib:
         'Southampton': LocationOnGrid(latitude=50.909698, longitude=-1.404351),
         'Cherbourg': LocationOnGrid(latitude=49.630001, longitude=-1.620000),
         'Queenstown': LocationOnGrid(latitude=51.850334, longitude=-8.294286),
+        'Plymouth': LocationOnGrid(latitude=49.51036, longitude=-5.14305),
         'New York': LocationOnGrid(latitude=40.730610, longitude=-73.935242)
     }
 
@@ -29,7 +30,6 @@ class MapLib:
         'Iceberg alley': AreaOnGrid(LocationOnGrid(latitude=43, longitude=-45), LocationOnGrid(latitude=48, longitude=-50))
     }
 
-    # atlantic_area = AreaOnGrid(LocationOnGrid(latitude=40, longitude=-1.41), LocationOnGrid(latitude=51.9, longitude=-74))
     atlantic_area = AreaOnGrid(LocationOnGrid(latitude=35, longitude=-1.41), LocationOnGrid(latitude=65, longitude=-74))
 
     LOCATION_AREA_THRESHOLD = 0.1
