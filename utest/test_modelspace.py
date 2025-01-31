@@ -30,7 +30,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
 import unittest
+
 from robotmbt.modelspace import ModelSpace, ModellingError
 
 
@@ -86,20 +88,6 @@ class TestModelSpace(unittest.TestCase):
         self.assertIs(self.m.process_expression('foo1.bar == 13'), True)
         self.assertIs(self.m.process_expression('foo2.bar == 1313'), True)
         self.assertIs(self.m.process_expression('foo1.bar < foo2.bar'), True)
-
-    def test_fail_when_comparing_undefined_name(self):
-        with self.assertRaises(ModellingError) as cm:
-            self.m.process_expression('foo.bar == foobar')
-        self.assertEqual(str(cm.exception), "bar used before assignment")
-
-    def test_fail_when_comparing_unknown_property(self):
-        self.m.add_prop('foo')
-        with self.assertRaises(ModellingError) as cm:
-            self.m.process_expression('foo.bar == foobar')
-        self.assertEqual(str(cm.exception), "bar used before assignment")
-        with self.assertRaises(ModellingError) as cm:
-            self.m.process_expression('foo.bar.foobar = 13')
-        self.assertEqual(str(cm.exception), "bar used before assignment")
 
     def test_statements_return_exec(self):
         self.m.add_prop('foo')
@@ -217,6 +205,33 @@ class TestModelSpace(unittest.TestCase):
 
     def test_del_fails_if_property_does_not_exist(self):
         self.assertRaises(ModellingError, self.m.process_expression, 'del foo')
+
+    def test_fail_when_checking_undefined_name_with_attribute(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar')
+        self.assertEqual(str(cm.exception), "foo used before definition")
+
+    def test_fail_when_comparing_undefined_name(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar == foobar')
+        self.assertEqual(str(cm.exception), "foo used before definition")
+
+    def test_fail_when_assigning_to_undefined_name(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar = 13')
+        if sys.version_info >= (3, 13):
+            self.assertEqual(str(cm.exception), "foo used before definition")
+        else:
+            self.assertEqual(str(cm.exception), "None used before assignment") # <-- Known issue in Python 3.10/11/12
+
+    def test_fail_when_comparing_unknown_property(self):
+        self.m.add_prop('foo')
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar == foobar')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar.foobar = 13')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
 
     def test_copies_have_all_data(self):
         self.m.process_expression('new foo1')

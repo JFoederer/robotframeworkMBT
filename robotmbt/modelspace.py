@@ -99,33 +99,42 @@ class ModelSpace:
             self.del_prop(self._vocab_term(expr))
             return 'exec'
 
+        local_locals = locals()
         for p in self.props:
-            exec(f"{p} = self.props['{p}']", locals())
+            exec(f"{p} = self.props['{p}']", local_locals)
         for v in self.values:
-            exec(f"{v} = '{self.values[v]}'", locals())
+            exec(f"{v} = '{self.values[v]}'", local_locals)
         try:
-            result = eval(expr, locals())
+            result = eval(expr, local_locals)
         except SyntaxError:
             try:
-                exec(expr, locals())
+                exec(expr, local_locals)
                 result = 'exec'
             except NameError as missing:
                 self.__add_alias(missing.name, emb_args)
                 result = self.process_expression(expression, emb_args)
             except AttributeError as err:
-                raise ModellingError(f"{err.name} used before assignment")
+                self.__handle_attribute_error(err)
         except NameError as missing:
             if missing.name == expr:
                 raise # Putting only a name in an expression can be used as exists check
             self.__add_alias(missing.name, emb_args)
             result = self.process_expression(expression, emb_args)
         except AttributeError as err:
-            raise ModellingError(f"{err.name} used before assignment")
+            self.__handle_attribute_error(err)
 
         for p in self.props:
-            exec(f"self.props['{p}'] = {p}", locals())
+            exec(f"self.props['{p}'] = {p}", local_locals)
 
         return result
+
+    def __handle_attribute_error(self, err):
+        if isinstance(err.obj, str) and err.obj in self.values:
+            # This situation occurs when using e.g. 'foo.bar' in the model before calling 'new foo'.
+            # The NameError on foo is handled by adding its alias, which results in an AttributeError
+            # 'str' object has no attribute 'bar', but the user wants to know that foo does not exist.
+            raise ModellingError(f"{err.obj} used before definition")
+        raise ModellingError(f"{err.name} used before assignment")
 
     def __add_alias(self, missing_name, emb_args):
         if missing_name == 'scenario':

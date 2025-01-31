@@ -214,12 +214,13 @@ class TestStepArguments(unittest.TestCase):
         args = StepArguments([StepArgument('foo1', '3bar'), # 3bar needs to be converted to a valid identifier
                               StepArgument('foo2', '3bar')])
         assignment = "${foo1} = 'magic'"
-        exec(args.fill_in_args(assignment, as_code=True), locals())
+        lc = locals()
+        exec(args.fill_in_args(assignment, as_code=True), lc)
         expr = "${foo2} == 'magic'"
         # both foo1 and foo2 should map to the same identfier, because they were passed the same value.
         # If it is not a valid identifier, the exec command fails,
         # otherwise it is assigned the fixed string value 'magic', ready for comparison
-        self.assertTrue(eval(args.fill_in_args(expr, as_code=True), locals()))
+        self.assertTrue(eval(args.fill_in_args(expr, as_code=True), lc))
 
     def test_robot_arguments_can_be_non_string(self):
         args = StepArguments([StepArgument('foo1', 1),
