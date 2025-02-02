@@ -57,7 +57,7 @@ ${person A} passes the birthday card ${back/on} to ${person B}
     ...    :IN: birthday_card.with_whom == ${person A}
     ...    :OUT: birthday_card.with_whom = ${person B}
     Log    Here you go ${person B}
-    Log    Thank you ${person A}, I'll be sure to put name on here.
+    Log    Thank you ${person A}, I'll be sure to put my name on here.
     Set suite variable    ${has_card}    ${person B}
 
 ${person} refuses to write their name on the birthday card

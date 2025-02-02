@@ -36,7 +36,10 @@ import random
 from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
 from robot.api.deco import not_keyword
 from robot.api import logger
+from robot.utils import is_list_like
 
+from .substitutionmap import SubstitutionMap
+from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
 from .steparguments import StepArguments
@@ -83,7 +86,13 @@ class SuiteProcessors:
         self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
 
+        for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
+            scenario.src_id = id
         self.scenarios = self.flat_suite.scenarios[:]
+        logger.debug("Use these numbers to reference scenarios from traces\n\t" +
+                "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+        random.shuffle(self.scenarios)
+
         # a short trace without the need for repeating scenarios is preferred
         self.try_to_reach_full_coverage(allow_duplicate_scenarios=False)
 
@@ -98,33 +107,32 @@ class SuiteProcessors:
         return self.out_suite
 
     def try_to_reach_full_coverage(self, allow_duplicate_scenarios):
-        random.shuffle(self.scenarios)
         self.tracestate = TraceState(len(self.scenarios))
-        self._init_reporting()
-
+        self.active_model = ModelSpace()
         while not self.tracestate.coverage_reached():
             i_candidate = self.tracestate.next_candidate(retry=allow_duplicate_scenarios)
             if i_candidate is None:
                 if not self.tracestate.can_rewind():
                     break
-                tail = self.tracestate.rewind()
+                tail = self._rewind()
                 logger.debug("Having to roll back up to "
                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
+                self.active_model.new_scenario_scope()
                 inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
                                                         retry_flag=allow_duplicate_scenarios)
                 if inserted:
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing():
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
-                        self.tracestate.rewind()
+                        self._rewind()
                     elif self.tracestate.coverage_drought > self.DROUGHT_LIMIT:
                         logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
                                      "Roll back to last coverage increase and try something else.")
-                        for i in range(self.DROUGHT_LIMIT+1):
-                            self.tracestate.rewind()
+                        self._rewind(drought_recovery=True)
                         self._report_tracestate_to_user()
+                        logger.debug(f"last state:\n{self.active_model.get_status_text()}")
 
     def __last_candidate_changed_nothing(self):
         if len(self.tracestate) < 2:
@@ -153,36 +161,49 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
-        if self._scenario_can_execute(candidate, self.tracestate.model):
-            new_model = self._process_scenario(candidate, self.tracestate.model)
-            self.tracestate.confirm_full_scenario(index, candidate, new_model)
+        candidate = self._generate_scenario_variant(candidate, self.active_model)
+        if not candidate:
+            self.active_model.end_scenario_scope()
+            self.tracestate.reject_scenario(index)
             self._report_tracestate_to_user()
+            return False
+
+        confirmed_candidate, new_model = self._process_scenario(candidate, self.active_model)
+        if confirmed_candidate:
+            self.active_model = new_model
+            self.active_model.end_scenario_scope()
+            self.tracestate.confirm_full_scenario(index, confirmed_candidate, self.active_model)
+            logger.debug(f"Inserted scenario {confirmed_candidate.src_id}, {confirmed_candidate.name}")
+            self._report_tracestate_to_user()
+            logger.debug(f"last state:\n{self.active_model.get_status_text()}")
             return True
 
-        if self._scenario_needs_refinement(candidate, self.tracestate.model):
-            part1, part2 = self._split_refinement_candidate(candidate, self.tracestate.model)
-            exit_conditions = part2.steps[0].model_info['OUT']
-            part2.steps[0].model_info['OUT'] = []
+        part1, part2 = self._split_candidate_if_refinement_needed(candidate, self.active_model)
+        if part2:
+            exit_conditions = part2.steps[1].model_info['OUT']
             part1.name = f"{part1.name} (part {self.tracestate.highest_part(index)+1})"
-            new_model = self._process_scenario(part1, self.tracestate.model)
+            part1, new_model = self._process_scenario(part1, self.active_model)
             self.tracestate.push_partial_scenario(index, part1, new_model)
+            self.active_model = new_model
             self._report_tracestate_to_user()
-            self.tracestate.reject_scenario(index) # Scenario cannot refine itself
+            logger.debug(f"last state:\n{self.active_model.get_status_text()}")
 
             i_refine = self.tracestate.next_candidate(retry=retry_flag)
             if i_refine is None:
                 logger.debug("Refinement needed, but there are no scenarios left")
-                self.tracestate.rewind()
+                self._rewind()
                 self._report_tracestate_to_user()
                 return False
             while i_refine is not None:
+                self.active_model.new_scenario_scope()
                 m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
                 if m_inserted:
                     insert_valid_here = True
                     try:
-                        updated_model = self.tracestate.model
+                        # Check exit condition before finalizing refinement and inserting the tail part
+                        model_scratchpad = self.active_model.copy()
                         for expr in exit_conditions:
-                            if updated_model.process_expression(expr, part2.steps[0].emb_args) is False:
+                            if model_scratchpad.process_expression(expr, part2.steps[1].emb_args) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -193,132 +214,177 @@ class SuiteProcessors:
                             return True
                     else:
                         logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
+                        logger.debug(f"last state:\n{self.active_model.get_status_text()}")
                     logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
-                    self.tracestate.rewind()
+                    self._rewind()
                     self._report_tracestate_to_user()
                 i_refine = self.tracestate.next_candidate(retry=retry_flag)
-            self.tracestate.rewind()
+            self._rewind()
             self._report_tracestate_to_user()
             return False
 
+        self.active_model.end_scenario_scope()
         self.tracestate.reject_scenario(index)
         self._report_tracestate_to_user()
         return False
 
-    @staticmethod
-    def _scenario_needs_refinement(scenario, model):
-        m = model.copy()
-        for step in scenario.steps:
-            if 'error' in step.model_info:
-                return False
-            if step.gherkin_kw in ['given', 'when']:
-                for expr in step.model_info['IN']:
-                    try:
-                        if m.process_expression(expr, step.emb_args) is False:
-                            return False
-                    except Exception:
-                        return False
-            if step.gherkin_kw in ['when', 'then']:
-                step_completes = False
-                for expr in step.model_info['OUT']:
-                    try:
-                        if m.process_expression(expr, step.emb_args) is False:
-                            break
-                    except Exception:
-                        break
-                else:
-                    step_completes = True
-                if not step_completes:
-                    if step.gherkin_kw == 'when':
-                        logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step.keyword}")
-                        return True
-                    return False
-        return False
+    def _rewind(self, drought_recovery=False):
+        tail = self.tracestate.rewind()
+        while drought_recovery and self.tracestate.coverage_drought:
+            tail = self.tracestate.rewind()
+        self.active_model = self.tracestate.model or ModelSpace()
+        return tail
 
     @staticmethod
-    def _split_refinement_candidate(scenario, model):
+    def _split_candidate_if_refinement_needed(scenario, model):
         m = model.copy()
-        for i in range(len(scenario.steps)):
-            step = scenario.steps[i]
+        scenario = scenario.copy()
+        no_split = (scenario, None)
+        for step in scenario.steps:
+            if 'error' in step.model_info:
+                return no_split
             if step.gherkin_kw in ['given', 'when']:
                 for expr in step.model_info['IN']:
-                    m.process_expression(expr, step.emb_args)
+                    try:
+                        if m.process_expression(expr, step.emb_args) is False:
+                            return no_split
+                    except Exception:
+                        return no_split
             if step.gherkin_kw in ['when', 'then']:
                 for expr in step.model_info['OUT']:
                     refine_here = False
                     try:
                         if m.process_expression(expr, step.emb_args) is False:
-                             refine_here = True
+                            if step.gherkin_kw == 'when':
+                                logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step}")
+                                refine_here = True
+                            else:
+                                return no_split
                     except Exception:
-                        refine_here = True
+                        return no_split
                     if refine_here:
-                        front, back = scenario.split_at_step(i)
-                        edge_step = Step('Log', f"Refinement follows for step: {step.keyword}", parent=scenario)
+                        front, back = scenario.split_at_step(scenario.steps.index(step))
+                        edge_step = Step('Log', f"Refinement follows for step: {step}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
                         edge_step.emb_args = StepArguments(step.emb_args)
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', f"Refinement completed for step: {step.keyword}", parent=scenario)
-                        edge_step.gherkin_kw = step.gherkin_kw
-                        edge_step.model_info = dict(IN=[], OUT=step.model_info['OUT'])
-                        edge_step.emb_args = StepArguments(step.emb_args)
-                        back.steps[0] = copy.deepcopy(back.steps[0])
-                        back.steps[0].model_info = dict(IN=[], OUT=[])
+                        edge_step = Step('Log', f"Refinement completed for step: {step}", parent=scenario)
+                        edge_step.model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
-                        return front, back
-        assert False, "_split_refinement_candidate() called on non-refineable scenario"
+                        back.steps[1] = back.steps[1].copy()
+                        back.steps[1].model_info['IN'] = []
+                        return (front, back)
+        return no_split
 
     @staticmethod
     def _process_scenario(scenario, model):
         m = model.copy()
-        for step in scenario.steps:
-            for expr in SuiteProcessors._relevant_expressions(step):
-                m.process_expression(expr, step.emb_args)
-        return m
-
-    @staticmethod
-    def _scenario_can_execute(scenario, model):
-        m = model.copy()
+        scenario = scenario.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
-                logger.debug(f"Error in scenario {scenario.name} at step {step.keyword}: {step.model_info['error']}")
-                return False
+                logger.debug(f"Error in scenario {scenario.name} at step {step}: {step.model_info['error']}")
+                return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
                     if m.process_expression(expr, step.emb_args) is False:
-                        logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: {expr} is False")
-                        logger.debug(f"last state:\n{m.get_status_text()}")
-                        return False
+                        raise Exception(False)
                 except Exception as err:
-                    logger.debug(f"Unable to insert scenario {scenario.name} due to step {step.keyword}: [{expr}] {err}")
-                    logger.debug(f"last state:\n{m.get_status_text()}")
-                    return False
-        return True
+                    logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, "
+                                 f"due to step '{step}': [{expr}] {err}")
+                    return None, None
+        return scenario, m
 
     @staticmethod
     def _relevant_expressions(step):
         expressions = []
         if 'IN' not in step.model_info or 'OUT' not in step.model_info:
-            raise Exception(f"Model info incomplete for step: {step.keyword}")
+            raise Exception(f"Model info incomplete for step: {step}")
         if step.gherkin_kw in ['given', 'when']:
             expressions += step.model_info['IN']
         if step.gherkin_kw in ['when', 'then']:
             expressions += step.model_info['OUT']
         return expressions
 
-    def _init_reporting(self):
-        self.shufflemap = [self.flat_suite.scenarios.index(s)+1 for s in self.scenarios]
-        logger.debug("Use these numbers to reference scenarios from traces\n\t" +
-                     "\n\t".join([f"{i+1}: {s.name}" for i, s in enumerate(self.flat_suite.scenarios)]))
+    def _generate_scenario_variant(self, scenario, model):
+        m = model.copy()
+        scenario = scenario.copy()
+        scenarios_in_refinement = self.tracestate.find_scenarios_with_active_refinement()
+
+        # reuse previous solution for all parts in split-up scenario
+        for sir in scenarios_in_refinement:
+            if sir.src_id == scenario.src_id:
+                return scenario
+
+        # collect set of constraints
+        subs = SubstitutionMap()
+        try:
+            for step in scenario.steps:
+                if 'MOD' in step.model_info:
+                    for expr in step.model_info['MOD']:
+                        modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
+                        org_example = step.emb_args[modded_arg].org_value
+                        if step.gherkin_kw == 'then':
+                            constraint = None # No new constraints are processed for then-steps
+                            if org_example not in subs.substitutions:
+                                # if a then-step signals the first use of an example value, it is considered a new definition
+                                subs.substitute(org_example, [org_example])
+                                continue
+                        if not constraint and org_example not in subs.substitutions:
+                            raise ValueError(f"No options to choose from at first assignment to {org_example}")
+                        if constraint and constraint != '.*':
+                            options =  m.process_expression(constraint, step.emb_args)
+                            if options == 'exec':
+                                raise ValueError(f"Invalid constraint for argument substitution: {expr}")
+                            if not options:
+                                raise ValueError(f"Constraint on modifer did not yield any options: {expr}")
+                            if not is_list_like(options):
+                                raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
+                        else:
+                            options = None
+                        subs.substitute(org_example, options)
+        except Exception as err:
+            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
+                         f"    In step {step}: {err}")
+            return None
+
+        try:
+            subs.solve()
+        except ValueError as err:
+            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n    {err}: {subs}")
+            return None
+
+        # Update scenario with generated values
+        if subs.solution:
+            logger.debug(f"Example variant generated with argument substitution: {subs}")
+        scenario.data_choices = subs
+        for step in scenario.steps:
+            if 'MOD' in step.model_info:
+                for expr in step.model_info['MOD']:
+                    modded_arg, _ = self._parse_modifier_expression(expr, step.emb_args)
+                    org_example = step.emb_args[modded_arg].org_value
+                    step.emb_args[modded_arg].value = subs.solution[org_example]
+        return scenario
+
+    @staticmethod
+    def _parse_modifier_expression(expression, args):
+        if expression.startswith('${'):
+            for var in args:
+                if expression.casefold().startswith(var.arg.casefold()):
+                    assignment_expr = expression.replace(var.arg, '', 1).strip()
+                    if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
+                        break # not an assignment
+                    constraint = assignment_expr.replace('=', '', 1).strip()
+                    return var.arg, constraint
+        raise ValueError(f"Invalid argument substitution: {expression}")
 
     def _report_tracestate_to_user(self):
         user_trace = "["
-        for id in [s.id for s in self.tracestate]:
-            index = int(id.split('.')[0])
-            part = f".{id.split('.')[1]}" if '.' in id else ""
-            user_trace += f"{self.shufflemap[index]}{part}, "
+        for snapshot in self.tracestate:
+            part = f".{snapshot.id.split('.')[1]}" if '.' in snapshot.id else ""
+            user_trace += f"{snapshot.scenario.src_id}{part}, "
         user_trace = user_trace[:-2] + "]" if ',' in user_trace else "[]"
-        reject_trace = [self.shufflemap[i] for i in self.tracestate.tried]
+        reject_trace = [self.scenarios[i].src_id for i in self.tracestate.tried]
         logger.debug(f"Trace: {user_trace} Reject: {reject_trace}")
 
     def _report_tracestate_wrapup(self):

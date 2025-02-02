@@ -4,10 +4,6 @@ Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 
 *** Test Cases ***
-leading scenario
-    When Johan buys a birthday card
-    then there is a blank birthday card available
-
 simple argument
     Given there is a birthday card
     when Gertjan writes their name on the birthday card
@@ -66,6 +62,10 @@ argument values are kept as-is when used as value in the model
     and the birthday card has 'Jeanne d'Arc' written on it
     and the birthday card has '藤原拓海' written on it
     then the model includes these specific values
+
+leading scenario
+    When Johan buys a birthday card
+    then there is a blank birthday card available
 
 *** Keywords ***
 a user introduces ${term} as new domain term to the model

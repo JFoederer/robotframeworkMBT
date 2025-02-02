@@ -19,6 +19,16 @@ before departing on a trans-Atlantic voyage to New York, USA.
 The return trip is scheduled from New York to Plymouth in England, back to
 Cherbourg, and finally to Southampton.
 
+### Example: Olympic-class ocean liners can complete the Atlantic crossing from Southampton to New York in 1 week
+
+> Given Titanic is scheduled for the voyage to New York  
+> and the date is 1912-04-10  
+> When Titanic sails from Southampton to New York  
+> then the date is 1912-04-17
+
+![Titanic Maiden Voyage Route](Titanic-route.png)
+(Route image made with https://umap.openstreetmap.fr)
+
 ### Example: The itinerary from Southampton to New York
 
 > Given Titanic is docked in the port of Southampton  
@@ -27,30 +37,16 @@ Cherbourg, and finally to Southampton.
 > and Titanic sails from Queenstown to New York  
 > Then Titanic's voyage is complete
 
-### Example: Olympic-class ocean liners can complete the Atlantic crossing from Southampton to New York in 1 week
-
-![Titanic Maiden Voyage Route](Titanic-route.png)
-(Route image made with https://umap.openstreetmap.fr)
-
-> Given Titanic is scheduled for the voyage to New York  
-> and Titanic is docked in the port of Southampton  
-> and the date is 1912-04-10  
-> When Titanic sails from Southampton to New York  
-> then Titanic is docked in the port of New York  
-> and the date is 1912-04-17
-
-### Example: Olympic-class ocean liners can complete the Atlantic crossing from New York to Southampton in 1 week
+### Example: The itinerary from New York to Southampton
 
 ![Titanic Return Voyage Route](Titanic-return.png)
 (Route image made with https://umap.openstreetmap.fr)
 
-> Given Titanic is scheduled for the voyage to Southampton  
-> and Titanic is docked in the port of New York  
-> and the date is 1912-04-20  
-> When Titanic sails from New York to Southampton  
-> then Titanic is docked in the port of Southampton  
-> and the date is 1912-04-27
-
+> Given Titanic is docked in the port of New York  
+> When Titanic sails from New York to Plymouth  
+> and Titanic sails from Plymouth to Cherbourg  
+> and Titanic sails from Cherbourg to Southampton  
+> Then Titanic's return voyage is complete
 
 ## Rule: It is possible for Olympic-class ocean liners to complete all legs of the voyage
 
@@ -78,9 +74,7 @@ circumstances encoutered along its journey.
 
 > Given Titanic is docked in the port of Queenstown  
 > When Titanic departs for the port of New York  
-> and Titanic sails the Atlantic  
-> and Titanic crosses Iceberg alley  
-> and Titanic sails the Atlantic  
+> and Titanic crosses area Atlantic ocean  
 > and Titanic arrives in the port of New York  
 > then Titanic is docked in the port of New York
 

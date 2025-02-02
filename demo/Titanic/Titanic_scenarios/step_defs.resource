@@ -6,7 +6,7 @@ Resource          ../domain_lib/Titanic.resource
 Titanic is scheduled for the voyage to New York
     [Documentation]    *model info*
     ...    :IN: new Titanic | Titanic.destination='New York' | Titanic.port=Southampton
-    ...    new Date | Date.now='1912-04-10'
+    ...         new Voyage | Voyage.date= '1912-04-10' | Voyage.ports_visited= 1
     ...    :OUT: None
     Spawn titanic at location Southampton
     Log    Dear crew, your ship has been assigned to the trip to New York. You are due for departure from the port of Southampton at noon on 1912-04-10.
@@ -14,8 +14,9 @@ Titanic is scheduled for the voyage to New York
 
 Titanic is docked in the port of ${port}
     [Documentation]    *model info*
+    ...    :MOD: ${port}= [${port}]
     ...    :IN: Titanic.port == ${port}
-    ...    :OUT: Titanic.port == ${port}
+    ...    :OUT: Titanic.port == ${port} | Voyage.ports_visited+= 1
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Check that    Titanic's speed    equals    0
 
@@ -42,11 +43,12 @@ Titanic arrives in the port of ${port}
 
 Titanic crosses area ${area}
     [Documentation]    *model info*
-    ...    :IN: Titanic.port == None
-    ...    :OUT: None
+    ...    :IN: Titanic.port == None | Titanic.location= 'Iceberg alley' if ${area} == 'Atlantic ocean' else None
+    ...    :OUT: Titanic.location != 'Iceberg alley'
     Check that    Map area where 'Titanic's position' is located    Equals    ${area}
     Check that    Titanic's speed    Is Greater Than    0
     Move Titanic out of current area
+    Check that    Map area where 'Titanic's position' is located    does not equal    ${area}
 
 Titanic sails the Atlantic
     [Documentation]    *model info*
@@ -65,6 +67,7 @@ Titanic is sailing Iceberg alley
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: Titanic.location == 'Iceberg alley'
+    Move Titanic out of current area
     Check that    Map area where 'Titanic's position' is located    Equals    Iceberg alley
     Log    Brrr, that's a bit chilly
 
@@ -80,7 +83,7 @@ Titanic hits a huge iceberg
     [Documentation]    *model info*
     ...    :IN: Titanic.location == 'Iceberg alley'
     ...    :OUT: None
-    Spawn iceberg at coordinate latitude 45.2135 longitude -47.4618
+    Spawn iceberg at coordinate latitude 44.6135 longitude -48.2618
     log    Iceberg, right ahead!
     Move Titanic out of current area
 
@@ -99,12 +102,31 @@ Titanic starts to sink
 
 Titanic's voyage is complete
     [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: Date.now='1912-04-17' | Titanic.destination=None
+    ...    :IN: Voyage.date == '1912-04-17'
+    ...    :OUT: Voyage.date='1912-04-17' | Titanic.destination=None
     log    Dear passengers, this is the final destination of this journey. Please remember to collect all your personal belongings when disembarking.
 
 the date is ${date}
     [Documentation]    *model info*
-    ...    :IN: Date.now == ${date}
-    ...    :OUT: Date.now == ${date}
+    ...    :IN: Voyage.date == ${date}
+    ...    :OUT: Voyage.date == ${date}
     Check that    Current date of Journey    equals    ${date}
+
+Titanic sails from ${port A} to ${port B} again
+    [Documentation]    *model info*
+    ...    :MOD: ${port A}= [port for port in [Southampton, Queenstown, Cherbourg, Plymouth] if port == Titanic.port]
+    ...          ${port B}= [port for port in [Southampton, Queenstown, Cherbourg, Plymouth] if port != Titanic.port]
+    ...    :IN: Titanic.port == ${port A}
+    ...    :OUT: Titanic.port= ${port B}
+    Point titanic towards location ${port B}
+    Titanic moves full speed ahead
+    Move Titanic out of current area
+    Move Titanic out of current area
+    Check that    Map area where 'Titanic's position' is located    Equals    ${port B}
+    Titanic stops
+
+Titanic visited at least ${n} ports
+    [Documentation]    *model info*
+    ...    :IN: Voyage.ports_visited >= ${n}
+    ...    :OUT: Voyage.ports_visited >= ${n}
+    log    Wow! Did we already visit ${n} ports!?

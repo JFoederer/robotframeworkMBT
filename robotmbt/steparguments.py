@@ -41,10 +41,15 @@ class StepArguments(list):
     def fill_in_args(self, text, as_code=False):
         result = text
         for arg in self:
-            sub = arg.codestring if as_code else arg.value
+            sub = arg.codestring if as_code else str(arg.value)
             result = result.replace(arg.arg, sub)
         return result
 
+    def __getitem__(self, key):
+        for steparg in self:
+            if key.casefold() == steparg.arg.casefold():
+                return steparg
+        return super()[key]
 
 class StepArgument:
     def __init__(self, arg_name, value):

@@ -1,4 +1,4 @@
-import numpy as np
+import math
 
 from simulation.iceberg import Iceberg
 from simulation.titanic_in_ocean import TitanicInOcean
@@ -73,7 +73,7 @@ class MapAnimation:
     def update_floating_objects(self, floating_objects):
         if not self.plot_initialized:
             return
-        
+
         # Clear the floating objects plot
         for artist in self.ax.lines:
             if isinstance(artist.get_gid(), str) and 'floating_object' in artist.get_gid():
@@ -89,12 +89,12 @@ class MapAnimation:
                 angle_degrees = obj.direction
 
                 # Convert angle to radians
-                angle_radians = np.deg2rad(angle_degrees)
+                angle_radians = math.radians(angle_degrees)
                 aspect_ratio = self.ax.get_data_ratio()
 
                 # Compute the arrow components
-                dx = np.sin(angle_radians)
-                dy = np.cos(angle_radians)
+                dx = math.sin(angle_radians)
+                dy = math.cos(angle_radians)
 
                 # Draw the arrow
                 self.ax.annotate("", xy=(obj.longitude + dx, obj.latitude + dy), xytext=(obj.longitude, obj.latitude),

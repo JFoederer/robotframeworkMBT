@@ -13,11 +13,12 @@ locations = {
     'Southampton': LocationOnGrid(latitude=50.909698, longitude=-1.404351),
     'Cherbourg': LocationOnGrid(latitude=49.630001, longitude=-1.620000),
     'Queenstown': LocationOnGrid(latitude=51.850334, longitude=-8.294286),
+    'Plymouth': LocationOnGrid(latitude=49.51036, longitude=-5.14305),
     'New York': LocationOnGrid(latitude=40.730610, longitude=-73.935242)
 }
 
 areas = {
-    'The English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.41), LocationOnGrid(latitude=51.9, longitude=-8.2)),
+    'the English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.35), LocationOnGrid(latitude=51.850334, longitude=-8.294286)),
     'Iceberg alley': AreaOnGrid(LocationOnGrid(latitude=43, longitude=-45), LocationOnGrid(latitude=48, longitude=-50))
 }
 

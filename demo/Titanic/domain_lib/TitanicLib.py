@@ -21,6 +21,9 @@ class TitanicLib:
     @keyword("Point titanic towards location ${location}")
     def point_titanic_towards(self, location):
         titanic = TitanicInOcean.instance
+        if titanic.sunk:
+            self.builtin.log(f"Pointing towards Davy Jones' locker")
+            return
         port_location = self.builtin.run_keyword(f"Location of port {location}")
         new_direction = titanic.calculate_direction(port_location)
 
@@ -37,6 +40,9 @@ class TitanicLib:
     @keyword("Titanic moves full speed ahead")
     def titanic_full_speed(self):
         titanic = TitanicInOcean.instance
+        if titanic.sunk:
+            self.builtin.log(f"There seems to be an issue with the throttle")
+            return
         titanic.titanic.throttle = 1
         titanic.speed = 700  # TODO Figure out what this speed means. Does time calculation make sense?!?!
         self.builtin.log(f"Here we go through the new location with speed {titanic.speed}")
