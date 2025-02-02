@@ -14,7 +14,7 @@ there is a blank birthday card available
     [Documentation]    *model info*
     ...    :IN: birthday_card.names==[]
     ...    :OUT: birthday_card.names=[]
-    Log    The card has balloons on the front, but the inside looks a bit empy
+    Log    The card has balloons on the front, but the inside looks a bit empty
 
 there is a birthday card
     [Documentation]    *model info*
@@ -110,11 +110,11 @@ the pencil is ready for writing
     ...    :OUT: scenario.pencil==sharp
     Log    I can work with this
 
-${sender} writes ${recepient}'s address on the birthday card
+${sender} writes ${recipient}'s address on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card
-    ...    :OUT: birthday_card.recepient = ${recepient}
-    Log    Writing ${recepient}'s name and address on the card
+    ...    :OUT: birthday_card.recipient = ${recipient}
+    Log    Writing ${recipient}'s name and address on the card
 
 ${person} puts the birthday card in the mail
     [Documentation]    *model info*
@@ -122,16 +122,16 @@ ${person} puts the birthday card in the mail
     ...    :OUT: birthday_card.is_mailed = True
     Log    put it in the mailbox
 
-a birthday card for ${recepient} was put in the mail
+a birthday card for ${recipient} was put in the mail
     [Documentation]    *model info*
-    ...    :IN: birthday_card.is_mailed | birthday_card.recepient == ${recepient}
-    ...    :OUT: birthday_card.is_mailed | birthday_card.recepient == ${recepient}
-    Log    a birthday card for ${recepient} was put in the mail
+    ...    :IN: birthday_card.is_mailed | birthday_card.recipient == ${recipient}
+    ...    :OUT: birthday_card.is_mailed | birthday_card.recipient == ${recipient}
+    Log    a birthday card for ${recipient} was put in the mail
 
-the postal service delivers the birthday card to ${recepient}'s mailbox
+the postal service delivers the birthday card to ${recipient}'s mailbox
     [Documentation]    *model info*
     ...    :IN: birthday_card.is_mailed
-    ...    :OUT: birthday_card.is_delivered = True | birthday_card.mailbox = ${recepient}
+    ...    :OUT: birthday_card.is_delivered = True | birthday_card.mailbox = ${recipient}
     Log    Something fell on the doormat
 
 ${person} received the birthday card

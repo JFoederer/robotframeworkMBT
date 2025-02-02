@@ -118,35 +118,35 @@ the birthday celebrant's name, ${name}, is not written on the card
     ...    :OUT: party.host not in birthday_card.names
     Should not contain    ${names}    ${name}
 
-${sender} writes ${recepient}'s address on the birthday card
+${sender} writes ${recipient}'s address on the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${sender}= party.guests | ${recepient}= [party.host]
+    ...    :MOD: ${sender}= party.guests | ${recipient}= [party.host]
     ...    :IN: birthday_card
-    ...    :OUT: birthday_card.recepient = ${recepient}
-    Set suite variable    \${address of}    ${recepient}
-    Log    Writing ${recepient}'s name and address on the card
+    ...    :OUT: birthday_card.recipient = ${recipient}
+    Set suite variable    \${address of}    ${recipient}
+    Log    Writing ${recipient}'s name and address on the card
 
-${sender} tries to write ${recepient}'s address on the birthday card
+${sender} tries to write ${recipient}'s address on the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${sender}= party.guests | ${recepient}= .*
+    ...    :MOD: ${sender}= party.guests | ${recipient}= .*
     ...    :IN: birthday_card
     ...    :OUT: None
-    IF   '${recepient}' == '${celebrant}'
-        Set suite variable    \${address_of}    ${recepient}
-        Log    Writing ${recepient}'s name and address on the card
+    IF   '${recipient}' == '${celebrant}'
+        Set suite variable    \${address_of}    ${recipient}
+        Log    Writing ${recipient}'s name and address on the card
     ELSE
         Set suite variable    \${address_of}    ${empty}
         Log    Getting stopped by a friend
     END
 
-${recepient}'s address is on the birthday card
+${recipient}'s address is on the birthday card
     [Documentation]    *model info*
-    ...    :MOD: ${recepient}= [party.host]
+    ...    :MOD: ${recipient}= [party.host]
     ...    :IN: birthday_card.address == party.host
     ...    :OUT: birthday_card.address = party.host
-    Should be equal    ${recepient}    ${celebrant}
+    Should be equal    ${recipient}    ${celebrant}
     Should be equal    ${address of}    ${celebrant}
-    Log    The card is addressed to ${recepient}
+    Log    The card is addressed to ${recipient}
 
 ${person} alerts ${other person} that it is ${celebrant}'s birthday
     [Documentation]    *model info*
@@ -157,11 +157,11 @@ ${person} alerts ${other person} that it is ${celebrant}'s birthday
     Should not be equal    ${address of}    ${celebrant}
     Log    Uhm ${other person}? You do relize that it is ${celebrant}'s birthday?
 
-${person} confirms ${recepient}'s address
+${person} confirms ${recipient}'s address
     [Documentation]    *model info*
-    ...    :MOD: ${person}= party.guests | ${recepient}= [party.host]
-    ...    :IN: ${recepient} == party.host
-    ...    :OUT: ${recepient} == party.host
+    ...    :MOD: ${person}= party.guests | ${recipient}= [party.host]
+    ...    :IN: ${recipient} == party.host
+    ...    :OUT: ${recipient} == party.host
     Should contain    ${guests}    ${person}
-    Should be equal    ${recepient}    ${celebrant}
-    Log    Yes, that is correct. This is ${recepient}'s address?
+    Should be equal    ${recipient}    ${celebrant}
+    Log    Yes, that is correct. This is ${recipient}'s address?

@@ -4,7 +4,7 @@ Documentation     This suite focuses on data variation based on equivalence part
 ...               other. In one of the two cases the example values are identical. We must assume
 ...               that the author chose to use the same example value for a purpose, therefore the
 ...               model must also keep the values identical under data variation. The other case
-...               tales the opposite situation. The author chose two different example values,
+...               takes the opposite situation. The author chose two different example values,
 ...               therefore the model must also ensure two different values are selected. Note: In
 ...               opposition to regular use, the background contradicts the examples. This is to
 ...               force this suite to fail when data variation is not applied at all.
@@ -20,11 +20,14 @@ Background
     When Johan buys a birthday card
     then there is a blank birthday card available
 
-A namesake of the birthday celebrant writes their name on the card
+A namesake of the birthday celebrant writes their name and the address
     Given there is a birthday card
     and Bahar is the birthday celebrant
     when Bahar writes their name on the birthday card
-    then the birthday celebrant's name, Bahar, is written on the card
+    and Bahar writes Bahar's address on the birthday card
+    then the birthday card has 'Bahar' written on it
+    and the birthday celebrant's name, Bahar, is written on the card
+    and Bahar's address is on the birthday card
 
 Another friend writes their name on the card
     Given there is a birthday card
