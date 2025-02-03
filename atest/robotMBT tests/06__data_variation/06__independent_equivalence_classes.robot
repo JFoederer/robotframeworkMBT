@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation     This suite focuses on data variation based on equivalence partitioning. An action
-...               step, or when-step, oftentimes uses data from just a sigle equivalence class. In
-...               that case, the when-step's modifier can specify its data directly. This allows an
+...               step, or when-step, often uses data from just a single equivalence class. In that
+...               case, the when-step's modifier can directly specify its data. This allows an
 ...               example value to be used for the first time in a scenario in the when-step. This
 ...               is demonstrated in the example using _when ${person} writes..._. Other situations
 ...               require a when-step (_when ${person} tries to write..._) to deal with multiple

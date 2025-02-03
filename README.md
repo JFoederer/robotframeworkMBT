@@ -6,15 +6,15 @@
 
 This project is an extension to [Robot framework](https://robotframework.org/) for model-based testing. The term model-based testing, or MBT in short, has been used in many different ways. Within this context two modelling aspects are most important. The first is about domain modelling using a domain specific language, or DSL. [Robot framework](https://robotframework.org/) already has great support for this aspect, which is why it was used as a base. The second aspect is about test case generation.
 
-Test case generation introduces a more dynamic approach to executing a test suite. A typical traditional test suite is executed front to back. For maintainability reasons, test cases are often kept independent of each other. The down side to this approach is that there is little variation and often a lot of duplication, mostly during the setup phases.
+Test case generation introduces a more dynamic approach to executing a test suite. A typical traditional test suite is executed front to back. For maintainability reasons, test cases are often kept independent of each other. The downside to this approach is that there is little variation and often a lot of duplication, mostly during the setup phases.
 
 With this project we aim to get the best of both worlds. Allowing testers to write small, independent scenarios that are automatically combined and expanded. Finding more issues in less time, by focusing on effectively reaching the desired coverage.
 
 ## Approach
 
-The popular _Given-When-Then_ style is used to capture behaviour in scenarios, following the Specification by example approach. In Specification by example you specify a system by writing down the minimum set of key examples to clearly convey the intended behaviour of the system. As a tester you need to go beyond these examples and verify that the system behaves as intended for the broader expressed intent. Roughly speaking this implies that expansion is needed over two axis: _when_ and _what_.
+The popular _Given-When-Then_ style is used to capture behaviour in scenarios, following the Specification by example approach. In Specification by example, you specify a system by writing down the minimum set of key examples to clearly convey the intended behaviour of the system. As a tester you need to go beyond these examples and verify that the system behaves as intended for the broader expressed intent. Roughly speaking this implies that variations need to be tested covering two axis: _when_ and _what_.
 
-The _when_ is about sequencing and entry conditions. When, or in which exact state, do you start a scenario? Given-steps define the entry condition for a scenario, which can be less or more specific. The less specific the condition is, the more situations there are in which the specified behaviour should hold. It can be challenging to find and select a good set of concrete situations to use as a starting point. We build on the assumption that for a well specified system, any scenario's entry condition can be reached by drawing from the broader set of specifications.
+The _when_ is about sequencing and entry conditions. When, or in which exact state, do you start a scenario? Given-steps define the entry condition for a scenario, which can be less or more specific. The less specific the condition is, the more situations there are in which the specified behaviour should hold. It can be challenging to find and select a good set of concrete situations to use as a starting point. We build on the assumption that, for a well specified system, any scenario's entry condition can be reached via a sequence of other scenarios. There can be many valid and relevant variations to do so.
 
 The _what_ reflects on the fact that examples are just that, examples. There can be many more, equally valid examples. As a tester you want to explore the available options and confirm that the system functions as expected under all possible operating conditions.
 
@@ -22,7 +22,7 @@ RobotMBT offers features to cover both _when_ and _what_ variations.
 
 ## Capabilities
 
-RobotMBT is suitable for sequencing complete scenarios, including action refinement for when-steps. Concrete example scenarios can be generalised for added data-driven variation. When all steps are properly annotated with modelling info, the library can resolve their dependencies and figure out the correct execution order. Each run a new trace is generated from the available options.
+RobotMBT is suitable for sequencing complete scenarios, including action refinement for when-steps. Concrete example scenarios can be generalised for added data-driven variation. When all steps are properly annotated with modelling info, the library can resolve their dependencies and figure out the correct execution order. Each run a new test sequence is generated from the available options.
 
 To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without leftovers. The same scenario can be inserted multiple times if repetition helps to reach the entry condition for later scenarios.
 
@@ -44,7 +44,7 @@ Suite Setup    Treat this test suite model-based
 
 ## How to model
 
-Modelling can be done directy from [Robot framework](https://robotframework.org/), without the need for additional tooling besides [RobotMBT](https://github.com/JFoederer/robotframeworkMBT).
+Modelling can be done directly from [Robot framework](https://robotframework.org/), without the need for additional tooling besides [RobotMBT](https://github.com/JFoederer/robotframeworkMBT).
 
 ### The basics
 
@@ -61,7 +61,7 @@ Preparing for a birthday party
     then the postcard is a birthday card
 ```
 
-Mapping the dependencies between scenarios is done by annotating the steps with modelling info. Modelling info is added to the documentation of the step as shown below. Regular documentation can still be added, as long as `*model info*` starts on a new line and a whiteline is included after the last `:OUT:` expression.
+Mapping the dependencies between scenarios is done by annotating the steps with modelling info. Modelling info is added to the documentation of the step as shown below. Regular documentation can still be added, as long as `*model info*` starts on a new line and a white line is included after the last `:OUT:` expression.
 
 ```
 you buy a new postcard
@@ -95,15 +95,15 @@ There are three typical kinds of steps:
 * __Action__  
   When-steps perform an action on the system that alters its state. These steps can have dependencies stated in their `:IN:` conditions that are needed before starting the action. Statements in the `:OUT:` expressions indicate what changes are expected by executing this action.
 * __Stative__  
-  Stative steps express a truth value. Like, _you have a blank postcard_. For these steps the `:IN:` expression is a condition. The `:OUT:` part is either identical to the `:IN:` condition or a statement. If the when-action already sets the property, then you use a condition in the `:OUT:` part. Statements, like assigning a new property, are useful to express the result of a scenario. For instance to express indirect effects of an action, or when the result of an action depends on the given system state. The step implementation of stative steps consists purely of checks.
+  Stative steps express a truth value. Like, _you have a blank postcard_. For these steps, the `:IN:` expression is a condition. The `:OUT:` part is either identical to the `:IN:` condition or a statement. If the when-action already sets the property, then you use a condition in the `:OUT:` part. Statements, like assigning a new property, are useful to express the result of a scenario. For instance, to express indirect effects of an action, or when the result of an action depends on the given system state. The step implementation of stative steps consists purely of checks.
 * __Refinement__  
   Action refinement allows you to build hierarchy into your scenarios. The `:IN:` and `:OUT:` expressions are only conditions (checks), but the `:IN:` and `:OUT:` expressions are different. If for any step the `:OUT:` expression is reached for evaluation, but fails, this signals the need for refinement. A single full scenario can be inserted if all `:IN:` conditions match at the current position and the pending `:OUT:` conditions are satisfied after insertion.
 
 ### Keeping your models clean
 
-Clean models start with tidy model info. If multiple expressions are needed you can separate them in the `*model info*` by using the pipe symbol (`|`) or by starting the next expression on a new line. A single expression cannot be split over multiple lines. Try to keep expressions simple. If expressions start becoming complex, maybe the model data needs an update.
+Clean models start with tidy model info. If multiple expressions are needed, you can separate them in the `*model info*` by using the pipe symbol (`|`) or by starting the next expression on a new line. A single expression cannot be split over multiple lines. Try to keep expressions simple. If expressions start becoming complex, maybe the model data needs an update.
 
-Choosing the right model data is essential. It defines how your steps and scenarios interact. A good aproach is to do a domain analysis and organise your model data to reflect the structure of the domain. Choosing the right domain terms will make your life a lot easier when debugging modelling errors. Keep ownership local, so that only a relatively small amount of steps create and modify the data within a certain domain term.
+Choosing the right model data is essential. It defines how your steps and scenarios interact. A good approach is to do a domain analysis and organise your model data to reflect the structure of the domain. Choosing the right domain terms will make your life a lot easier when debugging modelling errors. Keep ownership local, so that only a relatively small number of steps create and modify the data within a certain domain term.
 
 You can keep your models small by deleting domain terms that are no longer relevant (e.g. `del postcard`). For local data, scenario variables can be used. Similar to regular domain terms, you have access to the predefined term `scenario`. Any properties assigned to `scenario` are automatically cleared at the end of the scenario.
 
@@ -157,22 +157,32 @@ ${sender} writes the address of ${receiver} on the birthday card
 
 When a step has multiple arguments, any of them can have a modifier. Arguments without a modifier will keep the value from the scenario text. Modifiers are separated by a pipe symbol (`|`) or by starting on a new line. Each modifier is assigned a list of options. Since `birthday.guests` is already a list, it can be use directly. List comprehensions are an easy way to filter out relevant options from a larger list. The scalar value `Tannaz` for the celebrant is turned into a list using the square brackets (`[ ]`).
 
-If an example value is used multiple times in a scenario, like `Johan` in the above scenario, then RobotMBT makes sure that all modifiers refering to this example value are combined. So, given `Frederique` has the birthday card, then `Frederique` will also write the address, because the respective given- and when-steps refer to the same example value. There must be at least one example value that is a valid option for each of the steps in order to generate a scenario.
+If an example value is used multiple times in a scenario, like `Johan` in the above scenario, then RobotMBT makes sure that all modifiers referring to this example value are combined. So, given `Frederique` has the birthday card, then `Frederique` will also write the address, because the respective given- and when-steps refer to the same example value. There must be at least one example value that is a valid option for each of the steps in order to generate a scenario.
 
-The opposite is also true. Any example values that differ in the original scenario text, are guaranteed to get distinct values in the generated scenario. That means that in the above example, where `Johan` sends a card to `Tannaz`, you can be sure that the generated scenario will not include a variant where `Tannaz` sends a birthday card to herself, even if `Tannaz` were a valid option for both arguments. If however, this is a relevant scenario for you, you can include it as a new key example in your test suite.
+The opposite is also true. Any example values that differ in the original scenario text, are guaranteed to get distinct values in the generated scenario. That means that in the above example, where `Johan` sends a card to `Tannaz`, you can be sure that the generated scenario will not include a variant where `Tannaz` sends a birthday card to herself, even if `Tannaz` were a valid option for both arguments. If, however, this is a relevant scenario for you, you can include it as a new key example in your test suite.
 
 #### Technicalities
 
 Please note that all modifiers in the scenario are processed before processing the regular `:IN:` and `:OUT:` expressions. This implies that when model data is used in a modifier, that it will use the model data as it is at the start of the scenario. Any updates to the model data during the scenario steps do not affect the possible choices for the example values.
 
-It is possible to use the argument value itself as one of the options. Using the actual argument as the only option (e.g. `:MOD: ${receiver}= [${receiver}]`) can force all other steps into a specific option chosen directly from the scenario. For situations where you do not need to further constrain the options, there is the special `.*` notation (e.g. `:MOD: ${sender}= .*`). This will keep the available options as-is.
+It is possible to use the argument value itself as one of the options. Using the actual argument as the only option (e.g. `:MOD: ${receiver}= [${receiver}]`) can force all other steps into a specific option, chosen directly from the scenario. For this to work, the single option must be a valid option for all steps using the same example value.
+
+It is not possible to add new options to an existing example value. Any constraints set by a previous modifier still hold, meaning that any new option values will not fit that constraint and will be filtered out. Adding the same option value multiple times to a single option list has no affect.
+
+It is possible for a step to keep the same options. The special `.*` notation lets you keep the available options as-is. Preceding steps must then supply the possible options. Some steps can, or must, deal with multiple independent sets of options that must not be mixed, because the expected results should differ. Suppose you have a set of valid and invalid passwords. You might be reluctant to include the superset of these as options to an authentication step. Instead, you can use `:MOD: ${password}= .*` as the modifier for that step. Like in the when-step for this scenario:
+
+```
+Given 'secret' is too weak a password
+When user tries to update their password to 'secret'
+then the password is rejected
+```
 
 In a then-step, modifiers behave slightly different. In then-steps no new option constraints are accepted for an argument. Its value must already have been determined during the given- and when-steps. In other words, regardless of the actual modifier, the expression behaves as if it were `.*`. The exception to this is when a then-step signals the first use of a new example value. In that case the argument value from the original scenario text is used.
 
 #### Limitations
 
-This first implementation for variable data considers strict equivalence classes only. This means that all variants are considered equal for all purposes. If, for a certain scenario, a single valid example variant has been generated and executed, then this scenario is considered covered. There are no options yet to indicate deeper coverage targets based on data variations. It also implies that whenever any variant is valid, all scenario variants must be valid. And that regardsless of which variant is chosen, the exact same scenarios can be chosen as the next one. This does however not mean that once a variant is chosen, that this variant will be used througout the whole trace. If a scenario is selected multiple times in the same trace, then each occurance will get new randomly selected data.
+This first implementation for variable data considers strict equivalence classes only. This means that all variants are considered equal for all purposes. If, for a certain scenario, a single valid example variant has been generated and executed, then this scenario is considered covered. There are no options yet to indicate deeper coverage targets based on data variations. It also implies that whenever any variant is valid, all scenario variants must be valid. And that regardless of which variant is chosen, the exact same scenarios can be chosen as the next one. This does however not mean that once a variant is chosen, that this variant will be used throughout the whole trace. If a scenario is selected multiple times in the same trace, then each occurrence will get new randomly selected data.
 
 ## Disclaimer
 
-Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent and no deprecation warnings are being issued yet.
+Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent, and no deprecation warnings are being issued yet.
