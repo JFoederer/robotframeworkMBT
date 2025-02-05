@@ -3,14 +3,15 @@ Documentation     This test suite focuses on the initialisation of model data fr
 ...               scenarios with data variation. If certain data from the system under test is
 ...               predefined externally and you need to get this data into your model, then one
 ...               simple way of achieving this is to hard code the values into the model info. An
-...               alternative way, as demonstrated in this test suite, is to separate the model
-...               structure from the model data. The given-step from the background defines the
-...               structure of the model data, but leaves some of the values empty. The then-steps
-...               are used to fill the model with concrete data. This is useful in the generic
-...               sense from the concept of separation of concerns and has pratical applications
-...               when there are, for instance, multiple variants of the system under test that
-...               are deployed with different settings. The model can then be made to fit the
-...               configuration without altering model code.
+...               alternative way, as demonstrated in this test suite, is to only include the model
+...               structure in the model info and take the values from the step arguments. The
+...               given-step from the background defines the structure of the model data, but
+...               leaves some of the values empty. The then-steps are used to fill the model
+...               with concrete data. This is useful in the generic sense, from the concept of
+...               separation of concerns, and has pratical applications when there are, for
+...               instance, multiple variants of the system under test that are deployed with
+...               different settings. The model can then be made to fit the configuration without
+...               altering model code.
 Suite Setup       Treat this test suite Model-based
 Library           robotmbt
 
