@@ -31,7 +31,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-from robot.libraries.BuiltIn import BuiltIn
 
 from .steparguments import StepArgument, StepArguments
 
@@ -69,6 +68,8 @@ class Scenario:
         self.setup = None    # Can be a single step or None
         self.teardown = None # Can be a single step or None
         self.steps = []
+        self.src_id = None
+        self.data_choices = {}
 
     @property
     def longname(self):
@@ -86,7 +87,8 @@ class Scenario:
 
     def copy(self):
         duplicate = copy.copy(self)
-        duplicate.steps = self.steps[:]
+        duplicate.steps = [step.copy() for step in self.steps]
+        duplicate.data_choices = self.data_choices.copy()
         return duplicate
 
     def split_at_step(self, stepindex):
@@ -96,12 +98,12 @@ class Scenario:
         stepindex 1 the first step is in the first part, the other in the last part, and so on.
         """
         assert stepindex <= len(self.steps), "Split index out of range. Not enough steps in scenario."
-        front = Scenario(self.name, self.parent)
-        front.setup = self.setup
+        front = self.copy()
+        front.teardown = None
         front.steps = self.steps[:stepindex]
-        back = Scenario(self.name, self.parent)
+        back = self.copy()
         back.steps = self.steps[stepindex:]
-        back.teardown = self.teardown
+        back.setup = None
         return front, back
 
 class Step:
@@ -121,13 +123,20 @@ class Step:
                                   # The `vocab.attribute` form can then be used to express relations
                                   # between properties from the domain vocabulaire.
                                   # Custom processors can define their own attributes.
-        self.__extract_data_from_robot()
 
     def __str__(self):
-        return f"Step: {self.keyword}"
+        return self.keyword
 
     def __repr__(self):
-        return str(self) + f" with model info: {self.model_info}"
+        return f"Step: '{self}' with model info: {self.model_info}"
+
+    def copy(self):
+        cp = Step(self.org_step, *self.args, parent=self.parent)
+        cp.gherkin_kw = self.gherkin_kw
+        cp.signature = self.signature
+        cp.emb_args = StepArguments(self.emb_args)
+        cp.model_info = self.model_info.copy()
+        return cp
 
     def has_error(self):
         return 'error' in self.model_info
@@ -160,17 +169,18 @@ class Step:
         """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
         return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword
 
-    def __extract_data_from_robot(self):
+    def add_robot_dependent_data(self, robot_kw):
+        """
+        robot_kw must be Robot Framework's keyword object from Robot's runner context
+        """
         try:
-            runner = BuiltIn()._namespace.get_runner(self.org_step)
-            kw = runner.keyword
-            if kw.error:
-                raise ValueError(kw.error)
-            if kw.embedded:
+            if robot_kw.error:
+                raise ValueError(robot_kw.error)
+            if robot_kw.embedded:
                 self.emb_args = StepArguments([StepArgument(*match) for match in
-                                 zip(kw.embedded.args, kw.embedded.match(self.kw_wo_gherkin).groups())])
-            self.signature = kw.name
-            self.model_info = self.__parse_model_info(kw._doc)
+                                 zip(robot_kw.embedded.args, robot_kw.embedded.match(self.kw_wo_gherkin).groups())])
+            self.signature = robot_kw.name
+            self.model_info = self.__parse_model_info(robot_kw._doc)
         except Exception as ex:
             self.model_info['error']=str(ex)
 

@@ -30,8 +30,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import sys
 import unittest
+
 from robotmbt.modelspace import ModelSpace, ModellingError
+
 
 class TestModelSpace(unittest.TestCase):
     def setUp(self):
@@ -85,20 +88,6 @@ class TestModelSpace(unittest.TestCase):
         self.assertIs(self.m.process_expression('foo1.bar == 13'), True)
         self.assertIs(self.m.process_expression('foo2.bar == 1313'), True)
         self.assertIs(self.m.process_expression('foo1.bar < foo2.bar'), True)
-
-    def test_fail_when_comparing_undefined_name(self):
-        with self.assertRaises(ModellingError) as cm:
-            self.m.process_expression('foo.bar == foobar')
-        self.assertEqual(str(cm.exception), "bar used before assignment")
-
-    def test_fail_when_comparing_unknown_property(self):
-        self.m.add_prop('foo')
-        with self.assertRaises(ModellingError) as cm:
-            self.m.process_expression('foo.bar == foobar')
-        self.assertEqual(str(cm.exception), "bar used before assignment")
-        with self.assertRaises(ModellingError) as cm:
-            self.m.process_expression('foo.bar.foobar = 13')
-        self.assertEqual(str(cm.exception), "bar used before assignment")
 
     def test_statements_return_exec(self):
         self.m.add_prop('foo')
@@ -169,6 +158,13 @@ class TestModelSpace(unittest.TestCase):
         self.m.process_expression('foo.bar.append(bar1)')
         self.assertIs(self.m.process_expression('bar1 in foo.bar'), True)
 
+    def test_nested_attributes(self):
+        self.m.process_expression('new foo1')
+        self.m.process_expression('foo1.add_prop(bar1)')
+        self.m.process_expression('foo1.bar1.foo2 = barbar')
+        self.m.process_expression('foo1.bar1.foo3 = barbar')
+        self.assertIs(self.m.process_expression('foo1.bar1.foo2 == foo1.bar1.foo3'), True)
+
     def test_fail_on_naming_conflict_property_exists(self):
         self.m.process_expression('new foo1')
         self.assertRaises(ModellingError, self.m.process_expression, 'new foo1')
@@ -197,6 +193,10 @@ class TestModelSpace(unittest.TestCase):
     def test_fail_exists_check_before_using_new_with_stripping(self):
         self.assertRaises(NameError, self.m.process_expression, ' foo ')
 
+    def test_fail_exists_check_before_setting_property(self):
+        self.m.process_expression('new foo')
+        self.assertRaises(ModellingError, self.m.process_expression, 'foo.bar')
+
     def test_fail_exists_check_after_using_del(self):
         self.m.process_expression('new foo')
         self.assertIn('foo', dir(self.m))
@@ -205,6 +205,33 @@ class TestModelSpace(unittest.TestCase):
 
     def test_del_fails_if_property_does_not_exist(self):
         self.assertRaises(ModellingError, self.m.process_expression, 'del foo')
+
+    def test_fail_when_checking_undefined_name_with_attribute(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar')
+        self.assertEqual(str(cm.exception), "foo used before definition")
+
+    def test_fail_when_comparing_undefined_name(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar == foobar')
+        self.assertEqual(str(cm.exception), "foo used before definition")
+
+    def test_fail_when_assigning_to_undefined_name(self):
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar = 13')
+        if sys.version_info >= (3, 13):
+            self.assertEqual(str(cm.exception), "foo used before definition")
+        else:
+            self.assertEqual(str(cm.exception), "None used before assignment") # <-- Known issue in Python 3.10/11/12
+
+    def test_fail_when_comparing_unknown_property(self):
+        self.m.add_prop('foo')
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar == foobar')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('foo.bar.foobar = 13')
+        self.assertEqual(str(cm.exception), "bar used before assignment")
 
     def test_copies_have_all_data(self):
         self.m.process_expression('new foo1')
@@ -241,6 +268,140 @@ class TestModelSpace(unittest.TestCase):
             self.assertTrue(m1 == m2)
         m2.process_expression('foo1.bar1 = 13')
         self.assertFalse(m1 == m2)
+
+
+class TestScenarioScopeVars(unittest.TestCase):
+    def setUp(self):
+        self.m = ModelSpace()
+
+    def test_scenario_scope_var_cannot_be_user_defined(self):
+        self.assertRaises(ModellingError, self.m.process_expression, 'new scenario')
+
+    def test_scenario_scope_var_cannot_be_user_removed(self):
+        self.assertRaises(ModellingError, self.m.process_expression, 'del scenario')
+
+    def test_initial_scenario_scope_cannot_be_ended(self):
+        self.assertRaises(AssertionError, self.m.end_scenario_scope)
+        self.m.new_scenario_scope()
+        self.m.end_scenario_scope()
+        self.assertRaises(AssertionError, self.m.end_scenario_scope)
+
+    def test_scenario_scope_is_unavailable_outside_scenarios(self):
+        self.assertRaises(NameError, self.m.process_expression, 'scenario')
+        self.assertRaises(ModellingError, self.m.process_expression, 'scenario.foo = bar')
+        self.m.new_scenario_scope()
+        self.m.end_scenario_scope()
+        self.assertRaises(NameError, self.m.process_expression, 'scenario')
+        self.assertRaises(ModellingError, self.m.process_expression, 'scenario.foo = bar')
+
+    def test_scenario_scope_is_available_inside_scenarios(self):
+        self.m.new_scenario_scope()
+        self.assertIsNotNone(self.m.process_expression('scenario'))
+        self.m.process_expression('scenario.foo = bar')
+        self.assertEqual(self.m.process_expression('scenario.foo'), 'bar')
+
+    def test_scenario_used_as_literal(self):
+        self.m.process_expression('new foo')
+        self.assertRaises(ModellingError, self.m.process_expression, 'foo.bar = scenario')
+        self.m.process_expression('foo.bar = "scenario"')
+        self.assertEqual(self.m.process_expression('foo.bar'), "scenario")
+
+    def test_scenario_used_as_attribute_name(self):
+        self.m.process_expression('new foo')
+        self.m.process_expression('foo.scenario = bar')
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.assertEqual(self.m.process_expression('scenario.foo'), self.m.process_expression('foo.scenario'))
+
+    def test_scenario_var_is_unavailable_outside_scenario(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.m.end_scenario_scope()
+        self.assertRaises(ModellingError, self.m.process_expression, 'scenario.bar == bar')
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('scenario.bar == bar')
+        self.assertIsInstance(cm.exception, ModellingError)
+        self.assertTrue(str(cm.exception).startswith("Accessing scenario scope while there is no scenario active"))
+
+    def test_scenario_var_is_unavailable_in_next_scenario(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.m.end_scenario_scope()
+        self.m.new_scenario_scope()
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('scenario.bar == bar')
+        self.assertIsInstance(cm.exception, ModellingError)
+        self.assertEqual(str(cm.exception), "bar used before assignment")
+
+    def test_scenario_var_is_available_in_nested_scope(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.m.new_scenario_scope()
+        self.assertEqual(self.m.process_expression('scenario.foo'), 'bar')
+
+    def test_scenario_var_can_be_modified_inside_nested_scope(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.m.new_scenario_scope()
+        self.assertEqual(self.m.process_expression('scenario.foo'), 'bar')
+        self.m.process_expression('scenario.foo = barbar')
+        self.assertEqual(self.m.process_expression('scenario.foo'), 'barbar')
+
+    def test_scenario_var_modification_from_nested_scope_is_visible_in_outer_scope(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.m.new_scenario_scope()
+        self.assertEqual(self.m.process_expression('scenario.foo'), 'bar')
+        self.m.process_expression('scenario.foo = barbar')
+        self.m.end_scenario_scope()
+        self.assertEqual(self.m.process_expression('scenario.foo'), 'barbar')
+
+    def test_new_scenario_var_from_nested_scope_is_unavailable_in_outer_scope(self):
+        self.m.new_scenario_scope()
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.assertTrue(self.m.process_expression('scenario.foo == bar'))
+        self.m.end_scenario_scope()
+        with self.assertRaises(ModellingError) as cm:
+            self.m.process_expression('scenario.foo == bar')
+        self.assertIsInstance(cm.exception, ModellingError)
+        self.assertEqual(str(cm.exception), "foo used before assignment")
+
+    def test_scenario_vars_appear_in_status_text(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo = bar')
+        self.assertEqual(self.m.get_status_text(), "scenario:\n"
+                                                   "    foo=bar\n")
+
+    def test_scenario_vars_appear_last_in_status_text(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('new aa')
+        self.m.process_expression('aa.A = 1')
+        self.m.process_expression('scenario.foo = bar')
+        self.m.process_expression('new zz')
+        self.m.process_expression('zz.Z = 26')
+        self.assertTrue(self.m.get_status_text().endswith( "scenario:\n"
+                                                            "    foo=bar\n"))
+
+    def test_exclude_scenario_vars_from_status_text_when_empty(self):
+        self.m.new_scenario_scope()
+        self.assertEqual(self.m.get_status_text(), "")
+
+    def test_scenario_var_starting_with_underscore(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario._foo = _bar')
+        self.assertEqual(self.m.get_status_text(), "scenario:\n"
+                                                   "    _foo=_bar\n")
+
+    def test_scenario_var_status_text_from_nested_scope(self):
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo1 = bar1')
+        self.m.new_scenario_scope()
+        self.m.process_expression('scenario.foo2 = bar2')
+        self.assertEqual(self.m.get_status_text(), "scenario:\n"
+                                                   "    foo1=bar1\n"
+                                                   "    foo2=bar2\n")
+
 
 if __name__ == '__main__':
     unittest.main()

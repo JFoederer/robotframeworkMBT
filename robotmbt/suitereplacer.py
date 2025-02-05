@@ -52,8 +52,12 @@ class SuiteReplacer:
     @keyword(name="Treat this test suite Model-based")
     def treat_model_based(self):
         """
-        Iterate through the suite and if all keywords also have a modelling variant (prefix 'model')
-        then replace the contents with a generated trace.
+        Add this keyword to a suite setup to treat that test suite model-based.
+
+        In a model-based test suite the test cases are used as building blocks for generating new
+        test traces each run, rather than just following the traditional linear path. Based on the
+        model info that is included in the test steps, the test cases are modifed, mixed and
+        matched to create unique traces and achieve more test coverage quicker.
         """
         self.robot_suite = self.current_suite
 
@@ -74,10 +78,14 @@ class SuiteReplacer:
 
         if in_suite.setup and parent is not None:
             logger.debug(f"    with setup: {in_suite.setup.name}")
-            out_suite.setup = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
+            step_info = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
+            step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+            out_suite.setup = step_info
         if in_suite.teardown and parent is not None:
             logger.debug(f"    with teardown: {in_suite.teardown.name}")
-            out_suite.teardown = Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
+            step_info =Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
+            step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+            out_suite.teardown = step_info
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
@@ -85,14 +93,19 @@ class SuiteReplacer:
             logger.debug(f"  test case: {tc.name}")
             if tc.setup:
                 logger.debug(f"    with setup: {tc.setup.name}")
-                scenario.setup = Step(tc.setup.name, *tc.setup.args, parent=scenario)
+                step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
+                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                scenario.setup = step_info
             if tc.teardown:
                 logger.debug(f"    with teardown: {tc.teardown.name}")
-                scenario.teardown = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
+                step_info = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
+                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                scenario.teardown = step_info
             logger.debug('    ' + '\n    '.join([st.name + " " + " ".join([str(s) for s in st.args]) for st in tc.body]))
             last_gwt = None
             for step_def in tc.body:
                 step_info = Step(step_def.name, *step_def.args, parent=scenario, prev_gherkin_kw=last_gwt)
+                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.steps.append(step_info)
                 last_gwt = step_info.gherkin_kw
 

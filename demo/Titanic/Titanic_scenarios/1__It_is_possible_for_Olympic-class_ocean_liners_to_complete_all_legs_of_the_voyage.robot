@@ -19,8 +19,6 @@ Cherbourg to Queenstown leg
 Queenstown to New York leg
     Given Titanic is docked in the port of Queenstown
     When Titanic departs for the port of New York
-    and Titanic sails the Atlantic
-    and Titanic crosses Iceberg alley
-    and Titanic sails the Atlantic
+    and Titanic crosses area Atlantic ocean
     and Titanic arrives in the port of New York
     then Titanic is docked in the port of New York

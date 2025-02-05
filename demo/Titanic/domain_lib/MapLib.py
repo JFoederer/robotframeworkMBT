@@ -21,15 +21,15 @@ class MapLib:
         'Southampton': LocationOnGrid(latitude=50.909698, longitude=-1.404351),
         'Cherbourg': LocationOnGrid(latitude=49.630001, longitude=-1.620000),
         'Queenstown': LocationOnGrid(latitude=51.850334, longitude=-8.294286),
+        'Plymouth': LocationOnGrid(latitude=49.51036, longitude=-5.14305),
         'New York': LocationOnGrid(latitude=40.730610, longitude=-73.935242)
     }
 
     areas = {
-        'the English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.41), LocationOnGrid(latitude=51.9, longitude=-8.2)),
+        'the English Channel': AreaOnGrid(LocationOnGrid(latitude=49.5, longitude=-1.35), LocationOnGrid(latitude=51.850334, longitude=-8.294286)),
         'Iceberg alley': AreaOnGrid(LocationOnGrid(latitude=43, longitude=-45), LocationOnGrid(latitude=48, longitude=-50))
     }
 
-    # atlantic_area = AreaOnGrid(LocationOnGrid(latitude=40, longitude=-1.41), LocationOnGrid(latitude=51.9, longitude=-74))
     atlantic_area = AreaOnGrid(LocationOnGrid(latitude=35, longitude=-1.41), LocationOnGrid(latitude=65, longitude=-74))
 
     LOCATION_AREA_THRESHOLD = 0.1
@@ -60,7 +60,10 @@ class MapLib:
         @param long: longitude of iceberg
         """
         iceberg = Iceberg(longitude=long, latitude=lat)
-        self.ocean.floating_objects.append(iceberg)
+        if isinstance(self.ocean.floating_objects[-1], Iceberg):
+            self.ocean.floating_objects[-1] = iceberg
+        else:
+            self.ocean.floating_objects.append(iceberg)
 
     @keyword("Location of port ${harbour}")
     def location_of_(self, harbour):

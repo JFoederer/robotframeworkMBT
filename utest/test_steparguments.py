@@ -31,7 +31,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-
 from robotmbt.steparguments import StepArgument, StepArguments
 
 
@@ -215,12 +214,19 @@ class TestStepArguments(unittest.TestCase):
         args = StepArguments([StepArgument('foo1', '3bar'), # 3bar needs to be converted to a valid identifier
                               StepArgument('foo2', '3bar')])
         assignment = "${foo1} = 'magic'"
-        exec(args.fill_in_args(assignment, as_code=True), locals())
+        lc = locals()
+        exec(args.fill_in_args(assignment, as_code=True), lc)
         expr = "${foo2} == 'magic'"
-        # both foo1 and foo1 should map to the same identfier, because they were passed the same value.
+        # both foo1 and foo2 should map to the same identfier, because they were passed the same value.
         # If it is not a valid identifier, the exec command fails,
-        # otherwise it is assigned the fixed string value, ready for comparison
-        self.assertTrue(eval(args.fill_in_args(expr, as_code=True), locals()))
+        # otherwise it is assigned the fixed string value 'magic', ready for comparison
+        self.assertTrue(eval(args.fill_in_args(expr, as_code=True), lc))
+
+    def test_robot_arguments_can_be_non_string(self):
+        args = StepArguments([StepArgument('foo1', 1),
+                              StepArgument('foo2', None)])
+        self.assertEqual('1', args.fill_in_args('${foo1}'))
+        self.assertEqual('None', args.fill_in_args('${foo2}'))
 
     def test_new_argument_sets_are_independent_of_their_source(self):
         arg1 = StepArgument('foo1', 'bar1')
@@ -234,6 +240,20 @@ class TestStepArguments(unittest.TestCase):
         self.assertEqual(arg2.value, 'extra bar')
         self.assertEqual(arg.value, 'new value')
         self.assertEqual(arg.org_value, 'bar2')
+
+    def test_arguments_can_be_indexed_by_robot_name(self):
+        arg1 = StepArgument('foo1', 'bar1')
+        arg2 = StepArgument('foo2', 'bar2')
+        argset = StepArguments([arg1, arg2])
+        self.assertEqual(argset['${foo1}'].value, 'bar1')
+        self.assertEqual(argset['${foo2}'].value, 'bar2')
+
+    def test_arguments_indices_are_case_insensitive(self):
+        arg1 = StepArgument('foo1', 'bar1')
+        arg2 = StepArgument('FOO2', 'bar2')
+        argset = StepArguments([arg1, arg2])
+        self.assertEqual(argset['${FoO1}'].value, 'bar1')
+        self.assertEqual(argset['${foo2}'].value, 'bar2')
 
 
 if __name__ == '__main__':
