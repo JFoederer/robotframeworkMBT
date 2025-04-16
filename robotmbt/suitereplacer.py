@@ -42,7 +42,7 @@ class SuiteReplacer:
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'
     ROBOT_LISTENER_API_VERSION = 3
 
-    def __init__(self, processor='process_test_suite', processor_lib=None,):
+    def __init__(self, processor='process_test_suite', processor_lib=None):
         self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite = None
         self.robot_suite = None

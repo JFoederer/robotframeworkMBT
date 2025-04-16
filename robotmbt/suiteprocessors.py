@@ -33,8 +33,6 @@
 import copy
 import random
 
-from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
-from robot.api.deco import not_keyword
 from robot.api import logger
 from robot.utils import is_list_like
 
@@ -45,11 +43,9 @@ from .tracestate import TraceState
 from .steparguments import StepArguments
 
 class SuiteProcessors:
-    @not_keyword
-    def echo(self, in_suite, coverage='*'):
+    def echo(self, in_suite):
         return in_suite
 
-    @not_keyword
     def flatten(self, in_suite):
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
@@ -78,8 +74,7 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    @not_keyword
-    def process_test_suite(self, in_suite, coverage='*'):
+    def process_test_suite(self, in_suite):
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -94,11 +89,11 @@ class SuiteProcessors:
         random.shuffle(self.scenarios)
 
         # a short trace without the need for repeating scenarios is preferred
-        self.try_to_reach_full_coverage(allow_duplicate_scenarios=False)
+        self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
 
         if not self.tracestate.coverage_reached():
             logger.debug("Direct trace not available. Allowing repetition of scenarios")
-            self.try_to_reach_full_coverage(allow_duplicate_scenarios=True)
+            self._try_to_reach_full_coverage(allow_duplicate_scenarios=True)
             if not self.tracestate.coverage_reached():
                 raise Exception("Unable to compose a consistent suite")
 
@@ -106,7 +101,7 @@ class SuiteProcessors:
         self._report_tracestate_wrapup()
         return self.out_suite
 
-    def try_to_reach_full_coverage(self, allow_duplicate_scenarios):
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
         self.tracestate = TraceState(len(self.scenarios))
         self.active_model = ModelSpace()
         while not self.tracestate.coverage_reached():
