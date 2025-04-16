@@ -5,20 +5,23 @@ Library           robotmbt    processor_lib=MyProcessor
 
 *** Test Cases ***
 fail on empty model info
+    Confirm expected error then pass execution    empty model info    When present, *model info* cannot be empty
     empty model info
 
 fail when colon syntax isn't used
+    Confirm expected error then pass execution    non-colon model info    *model info* expected format: :<attr>: <expr>|<expr>
     non-colon model info
 
 fail when colon syntax is used incorrectly
+    Confirm expected error then pass execution    forgotten opening colon    *model info* expected format: :<attr>: <expr>|<expr>
     forgotten opening colon
 
 fail on non-existing keyword
-    Confirm expected error then pass execution    3    No keyword with name 'non-existing keyword' found.
+    Confirm expected error then pass execution    non-existing keyword    No keyword with name 'non-existing keyword' found.
     non-existing keyword
 
 fail on non-existing step with prefix
-    Confirm expected error then pass execution    4    No keyword with name 'when non-existing step' found.
+    Confirm expected error then pass execution    non-existing step    No keyword with name 'when non-existing step' found.
     when non-existing step
 
 *** Keywords ***
@@ -26,30 +29,27 @@ Expect failing suite processing
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: None
-    Run keyword and expect error    Error(s) detected*    Treat this test suite Model-based
-    Set suite variable    ${expected_error_detected}    ${True}
+    ${msg}=    Run keyword and expect error    Error(s) detected*    Treat this test suite Model-based
+    Set suite variable    ${full_message}    ${msg}
 
 empty model info
     [Documentation]    *model info*
-    @{errors}=    Reported errors
-    Should be equal    ${errors[0].kw_wo_gherkin}    empty model info
+    Fail    Unreachable keyword executed
 
 non-colon model info
     [Documentation]    *model info*
     ...    *IN* Alfa
     ...    *OUT* Beta | Gamma delta | Epsilon
-    @{errors}=    Reported errors
-    Should be equal    ${errors[1].kw_wo_gherkin}    non-colon model info
+    Fail    Unreachable keyword executed
 
 forgotten opening colon
     [Documentation]    *model info*
     ...    IN: Alfa
     ...    OUT: Beta | Gamma delta | Epsilon
-    @{errors}=    Reported errors
-    Should be equal    ${errors[2].kw_wo_gherkin}    forgotten opening colon
+    Fail    Unreachable keyword executed
 
 Confirm expected error then pass execution
-    [Arguments]    ${index}    ${error_message}
+    [Arguments]    ${step_name}    ${error_message}
     [Documentation]    *model info*
     ...    :IN: None
     ...    :OUT: None
@@ -58,8 +58,5 @@ Confirm expected error then pass execution
     ...    then this keyword causes the remainder of the scenario to be skipped and
     ...    the test passes. When inserted without the correct error, the scenario
     ...    will fail.
-    @{errors}=    Reported errors
-    Should be equal    ${errors[${index}].model_info['error']}    ${error_message}
-    IF    ${expected_error_detected}
-        Pass execution    Accepting intentionally unexecutable scenario
-    END
+    Should Contain    ${full_message}    ${step_name} FAILED: ${error_message}
+    Pass execution    Accepting intentionally unexecutable scenario

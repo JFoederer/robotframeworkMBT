@@ -1,9 +1,5 @@
-from robot.api.deco import not_keyword
-
 class MyProcessor:
-    ROBOT_LIBRARY_SCOPE = 'GLOBAL'
 
-    @not_keyword
     def process_test_suite(self, in_suite):
         self.in_suite = in_suite
         self._fail_on_step_errors()
@@ -17,7 +13,7 @@ class MyProcessor:
 
     def _fail_on_step_errors(self):
         if self.in_suite.has_error():
-            raise Exception("Error(s) detected in at least one step")
-
-    def reported_errors(self):
-        return self.in_suite.steps_with_errors()
+            msg = "\n".join(["Error(s) detected in at least one step"] +
+                            [f"{step.kw_wo_gherkin} FAILED: {step.model_info['error']}"
+                             for  step in self.in_suite.steps_with_errors()])
+            raise Exception(msg)
