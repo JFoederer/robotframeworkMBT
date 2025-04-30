@@ -46,11 +46,29 @@ class SuiteReplacer:
         self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite = None
         self.robot_suite = None
-        self.processor_lib = processor_lib
-        self.processor = processor
+        self.processor_lib_name = processor_lib
+        self.processor_name = processor
+        self._processor_lib = None
+        self._processor_method = None
+        self.processor_options = {}
+
+    @property
+    def processor_lib(self):
+        if self._processor_lib is None:
+            self._processor_lib = SuiteProcessors() if self.processor_lib_name is None \
+                                                    else Robot.get_library_instance(self.processor_lib_name)
+        return self._processor_lib
+
+    @property
+    def processor_method(self):
+        if self._processor_method is None:
+            if not hasattr(self.processor_lib, self.processor_name):
+                Robot.fail(f"Processor '{self.processor_name}' not available for model-based processor library {self.processor_lib_name}")
+            self._processor_method = getattr(self._processor_lib, self.processor_name)
+        return self._processor_method
 
     @keyword(name="Treat this test suite Model-based")
-    def treat_model_based(self):
+    def treat_model_based(self, **kwargs):
         """
         Add this keyword to a suite setup to treat that test suite model-based.
 
@@ -58,18 +76,33 @@ class SuiteReplacer:
         test traces each run, rather than just following the traditional linear path. Based on the
         model info that is included in the test steps, the test cases are modifed, mixed and
         matched to create unique traces and achieve more test coverage quicker.
+
+        Any arguments are handled as if using keyword `Update model-based options`
         """
         self.robot_suite = self.current_suite
 
         logger.info(f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
+        self.update_model_based_options(**kwargs)
         master_suite = self.__process_robot_suite(self.robot_suite, parent=None)
-
-        processor_lib = SuiteProcessors() if self.processor_lib is None \
-                                            else Robot.get_library_instance(self.processor_lib)
-        processor_method = getattr(processor_lib, self.processor)
-        modelbased_suite = processor_method(master_suite)
+        modelbased_suite = self.processor_method(master_suite, **self.processor_options)
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
+
+    @keyword("Set model-based options")
+    def set_model_based_options(self, **kwargs):
+        """
+        Use one or more named arguments to set any options as listed for the selected
+        model-based processor. Removes all previously set options.
+        """
+        self.processor_options = kwargs
+
+    @keyword("Update model-based options")
+    def update_model_based_options(self, **kwargs):
+        """
+        Use one or more named arguments to set or update any options as listed for the selected
+        model-based processor. Keeps any previously set options.
+        """
+        self.processor_options.update(kwargs)
 
     def __process_robot_suite(self, in_suite, parent):
         logger.debug(f"processing test suite: {in_suite.name}")
