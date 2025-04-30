@@ -9,4 +9,4 @@ Library           robotmbt    processor_lib=SuiteRepeater
 
 *** Test Cases ***
 only test case
-    Set Global Variable         ${test_count}  ${test_count+1}
+    Set Global Variable    ${test_count}    ${test_count+1}
