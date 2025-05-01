@@ -26,9 +26,6 @@ fail on non-existing step with prefix
 
 *** Keywords ***
 Expect failing suite processing
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
     ${msg}=    Run keyword and expect error    Error(s) detected*    Treat this test suite Model-based
     Set suite variable    ${full_message}    ${msg}
 
