@@ -32,9 +32,8 @@
 
 from .version import VERSION
 from .suitereplacer import SuiteReplacer
-from .suiteprocessors import SuiteProcessors
 
-class robotmbt(SuiteReplacer, SuiteProcessors):
+class robotmbt(SuiteReplacer):
     """
     Process test suites on-the-fly to optimise test suite execution
     """

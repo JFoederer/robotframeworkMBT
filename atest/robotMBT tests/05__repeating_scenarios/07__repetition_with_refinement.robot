@@ -24,5 +24,5 @@ low-level scenario
 
 At least 3 people can write their name on the card
     Given the birthday card has 2 names written on it
-    when Someone writes their name on the birthday card
+    when Someone writes their name in pen on the birthday card
     then the birthday card has 3 names written on it
