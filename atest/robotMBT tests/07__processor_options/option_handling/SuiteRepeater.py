@@ -15,7 +15,7 @@ class SuiteRepeater:
         for i in range(len(out_suite.scenarios)):
             out_suite.scenarios[i] = out_suite.scenarios[i].copy()
             if i:
-                out_suite.scenarios[i].name += f" - Rep {i}"
+                out_suite.scenarios[i].name += f" (rep {i})"
         return out_suite
 
     def mandatory_repeat_argument(self, in_suite, *, repeat, bonus_scenario=False):
