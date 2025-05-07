@@ -406,7 +406,7 @@ class RobotKwStub:
         self._doc = "*model info*\n:IN: None\n:OUT: None"
         self.error = False
         self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
-                                        match= lambda _: SimpleNamespace(groups=lambda: ['foo_value', 'bar_value']))
+                                        parse_args= lambda _: ['foo_value', 'bar_value'])
 
 
 if __name__ == '__main__':
