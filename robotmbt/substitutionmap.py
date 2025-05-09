@@ -71,7 +71,7 @@ class SubstitutionMap:
         while unsolved_subs:
             unsolved_subs.sort(key=lambda i: len(substitutions[i].optionset))
             example_value = unsolved_subs[0]
-            solution[example_value] = random.choice(list(substitutions[example_value].optionset))
+            solution[example_value] = random.choice(sorted(substitutions[example_value].optionset))
             subs_stack.append(example_value)
             others_list = []
             try:
