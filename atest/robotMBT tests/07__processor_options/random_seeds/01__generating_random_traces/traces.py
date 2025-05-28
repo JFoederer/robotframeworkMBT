@@ -5,7 +5,7 @@ class traces:
     def reset_traces(self):
         self.traces = {}
 
-    @keyword("Trace '${n}' test number ${m} is executed")
+    @keyword("Trace '${n}', scenario number ${m} is executed")
     def add_test(self, trace, test_id:str):
         """*model info*
         :IN:  None

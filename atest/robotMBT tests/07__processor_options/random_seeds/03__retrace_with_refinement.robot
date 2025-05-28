@@ -14,43 +14,43 @@ Library           robotmbt
 
 *** Test Cases ***
 high-level A
-    test A is executed
+    scenario A is executed
     when refining high-level scenario
 
 high-level B
-    test B is executed
+    scenario B is executed
     when refining high-level scenario
 
 mid-level X
-    test X is executed
+    scenario X is executed
     when refining mid-level scenario
 
 mid-level Y
-    test Y is executed
+    scenario Y is executed
     when refining mid-level scenario
 
 low-level 1
-    test 1 is executed
+    scenario 1 is executed
     when refinement is done by low-level scenario
 
 low-level 2
-    test 2 is executed
+    scenario 2 is executed
     when refinement is done by low-level scenario
 
 low-level 3
-    test 3 is executed
+    scenario 3 is executed
     when refinement is done by low-level scenario
 
 low-level 4
-    test 4 is executed
+    scenario 4 is executed
     when refinement is done by low-level scenario
 
 low-level 5
-    test 5 is executed
+    scenario 5 is executed
     when refinement is done by low-level scenario
 
 low-level 6
-    test 6 is executed
+    scenario 6 is executed
     when refinement is done by low-level scenario
 
 *** Keywords ***
@@ -72,7 +72,7 @@ refinement is done by low-level scenario
     ...    :OUT: scenario.level = low
     VAR    ${exe_check}    ${True}
 
-test ${n} is executed
+scenario ${n} is executed
     [Documentation]    *model info*
     ...    :IN:  None
     ...    :OUT: None
