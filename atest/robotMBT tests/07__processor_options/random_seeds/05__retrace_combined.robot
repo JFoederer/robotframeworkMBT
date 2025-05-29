@@ -5,8 +5,8 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               trace string. There are a number of things to take into account with this test
 ...               suite.
 ...               The run must always start with the leading scenario, inserting A, followed by a
-...               center loop, inserting P, Q or R at random a number of times, followed by a tail
-...               of scenarios X and Y in order.
+...               center loop, inserting P, Q, R, S or T at random a number of times, followed by
+...               a tail of scenarios X and Y in order.
 ...               X is constructed in such a way that it can follow the center loop whenever
 ...               scenario P was chosen. Since X is readily available after each P, it is expected
 ...               to be inserted while the loop still needs to continue further. This forces a
@@ -16,7 +16,7 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               Both low-level scenarios are equally valid, the only difference is that the data
 ...               choice is included either once or twice.
 Suite Setup       Treat this test suite Model-based    seed=gujuqt-iakm-oexo-xnu-huba
-Suite Teardown    Should be equal    ${trace}    AQPPQPRQPXY
+Suite Teardown    Should be equal    ${trace}    ATQQPRSPRPXY
 Library           robotmbt
 
 *** Test Cases ***
@@ -41,12 +41,12 @@ low-level center loop double
     and executing scenario P with choice
     then scenario P is executed from choice
 
-trailing scenario
+first trailing scenario
     given scenario P is the latest scenario
     when executing scenario X
     then scenario X is executed
 
-trailing scenario after loop
+second trailing scenario
     given scenario X is the latest scenario
     and trace length is longer than 9
     when executing scenario Y
@@ -80,14 +80,14 @@ executing scenario ${x} with choice
 
 scenario ${x} is executed from choice
     [Documentation]    *model info*
-    ...    :MOD: ${x} = ['P', 'Q', 'R']
+    ...    :MOD: ${x} = ['P', 'Q', 'R', 'S', 'T']
     ...    :IN:  trace.scenarios[-1] == ${x}
     ...    :OUT: trace.scenarios[-1] == ${x}
     Should Be Equal    ${trace}[-1]    ${x}
 
 scenario is refined into ${x} with choice
     [Documentation]    *model info*
-    ...    :MOD: ${x} = [x for x  in ('P', 'Q', 'R') if x != trace.scenarios[-1]]
+    ...    :MOD: ${x} = [x for x  in ('P', 'Q', 'R', 'S', 'T') if x != trace.scenarios[-1]]
     ...    :IN:  trace.scenarios[-1] != ${x} | scenario.choice = ${x}
     ...    :OUT: trace.scenarios[-1] == ${x}
     Should Be Equal    ${trace}[-1]    ${x}
