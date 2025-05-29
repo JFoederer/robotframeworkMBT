@@ -261,12 +261,13 @@ class SuiteProcessors:
                         return no_split
                     if refine_here:
                         front, back = scenario.split_at_step(scenario.steps.index(step))
-                        edge_step = Step('Log', f"Refinement follows for step: {step}", parent=scenario)
+                        remaining_steps = '\n\t'.join([step.keyword, '- '*35] + [s.keyword for s in back.steps[1:]])
+                        edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
                         edge_step.emb_args = StepArguments(step.emb_args)
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', f"Refinement completed for step: {step}", parent=scenario)
+                        edge_step = Step('Log', f"Refinement ready, completing step", parent=scenario)
                         edge_step.model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
                         back.steps[1] = back.steps[1].copy()
