@@ -74,7 +74,7 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite):
+    def process_test_suite(self, in_suite, *, seed='new'):
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -86,6 +86,8 @@ class SuiteProcessors:
         self.scenarios = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                 "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+
+        self._init_randomiser(seed)
         random.shuffle(self.scenarios)
 
         # a short trace without the need for repeating scenarios is preferred
@@ -259,12 +261,13 @@ class SuiteProcessors:
                         return no_split
                     if refine_here:
                         front, back = scenario.split_at_step(scenario.steps.index(step))
-                        edge_step = Step('Log', f"Refinement follows for step: {step}", parent=scenario)
+                        remaining_steps = '\n\t'.join([step.keyword, '- '*35] + [s.keyword for s in back.steps[1:]])
+                        edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
                         edge_step.emb_args = StepArguments(step.emb_args)
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', f"Refinement completed for step: {step}", parent=scenario)
+                        edge_step = Step('Log', f"Refinement ready, completing step", parent=scenario)
                         edge_step.model_info = dict(IN=[], OUT=[])
                         back.steps.insert(0, edge_step)
                         back.steps[1] = back.steps[1].copy()
@@ -387,3 +390,40 @@ class SuiteProcessors:
         for step in self.tracestate:
             logger.info(step.scenario.name)
             logger.debug(f"model\n{step.model.get_status_text()}\n")
+
+    @staticmethod
+    def _init_randomiser(seed):
+        if isinstance(seed, str):
+            seed = seed.strip()
+        if str(seed).lower() == 'none':
+            logger.debug(f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
+        elif str(seed).lower() == 'new':
+            new_seed = SuiteProcessors._generate_seed()
+            logger.debug(f"seed={new_seed} (use seed to rerun this trace)")
+            random.seed(new_seed)
+        else:
+            logger.debug(f"seed={seed} (as provided)")
+            random.seed(seed)
+
+    @staticmethod
+    def _generate_seed():
+        """Creates a random string of 5 words between 3 and 6 letters long"""
+        vowels = ['a', 'e', 'i', 'o', 'u', 'y']
+        consonants = ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z']
+
+        words = []
+        for word in range(5):
+            prior_choice = random.choice([vowels, consonants])
+            last_choice =  random.choice([vowels, consonants])
+            string = random.choice(prior_choice) + random.choice(last_choice) # add first two letters
+            for letter in range(random.randint(1, 4)):                        # add 1 to 4 more letters
+                if prior_choice is last_choice:
+                    new_choice = consonants if prior_choice is vowels else vowels
+                else:
+                    new_choice = random.choice([vowels, consonants])
+                prior_choice = last_choice
+                last_choice = new_choice
+                string += random.choice(new_choice)
+            words.append(string)
+        seed = '-'.join(words)
+        return seed

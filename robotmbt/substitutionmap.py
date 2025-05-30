@@ -71,7 +71,7 @@ class SubstitutionMap:
         while unsolved_subs:
             unsolved_subs.sort(key=lambda i: len(substitutions[i].optionset))
             example_value = unsolved_subs[0]
-            solution[example_value] = random.choice(list(substitutions[example_value].optionset))
+            solution[example_value] = random.choice(substitutions[example_value].optionset)
             subs_stack.append(example_value)
             others_list = []
             try:
@@ -113,7 +113,9 @@ class SubstitutionMap:
 class Constraint:
     def __init__(self, constraint):
         try:
-            self.optionset = set(constraint)
+            # Keep the items in optionset unique. Refrain from using Python sets
+            # due to non-deterministic behaviour when using random seeding.
+            self.optionset = list(dict.fromkeys(constraint))
         except:
             self.optionset = None
         if not self.optionset or isinstance(constraint, str):
@@ -131,7 +133,7 @@ class Constraint:
 
     def add_constraint(self, constraint):
         if constraint is None: return
-        self.optionset = self.optionset.intersection(constraint)
+        self.optionset = [opt for opt in self.optionset if opt in constraint]
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')
 
@@ -139,15 +141,15 @@ class Constraint:
         try:
             self.optionset.remove(option)
             self.removed_stack.append(option)
-        except KeyError:
+        except ValueError:
             self.removed_stack.append(Placeholder)
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')
 
     def undo_remove(self):
         last_item = self.removed_stack.pop()
-        if last_item is not Placeholder:
-            self.optionset.add(last_item)
+        if last_item is not Placeholder and last_item not in self.optionset:
+            self.optionset.append(last_item)
 
 
 class Placeholder:

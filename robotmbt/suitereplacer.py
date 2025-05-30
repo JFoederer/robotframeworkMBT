@@ -105,17 +105,14 @@ class SuiteReplacer:
         self.processor_options.update(kwargs)
 
     def __process_robot_suite(self, in_suite, parent):
-        logger.debug(f"processing test suite: {in_suite.name}")
         out_suite = Suite(in_suite.name, parent)
         out_suite.filename = in_suite.source
 
         if in_suite.setup and parent is not None:
-            logger.debug(f"    with setup: {in_suite.setup.name}")
             step_info = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
             step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.setup = step_info
         if in_suite.teardown and parent is not None:
-            logger.debug(f"    with teardown: {in_suite.teardown.name}")
             step_info =Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
             step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.teardown = step_info
@@ -123,18 +120,14 @@ class SuiteReplacer:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
             scenario = Scenario(tc.name, parent=out_suite)
-            logger.debug(f"  test case: {tc.name}")
             if tc.setup:
-                logger.debug(f"    with setup: {tc.setup.name}")
                 step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.setup = step_info
             if tc.teardown:
-                logger.debug(f"    with teardown: {tc.teardown.name}")
                 step_info = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.teardown = step_info
-            logger.debug('    ' + '\n    '.join([st.name + " " + " ".join([str(s) for s in st.args]) for st in tc.body]))
             last_gwt = None
             for step_def in tc.body:
                 step_info = Step(step_def.name, *step_def.args, parent=scenario, prev_gherkin_kw=last_gwt)
