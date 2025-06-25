@@ -178,7 +178,7 @@ class Step:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
                 self.emb_args = StepArguments([StepArgument(*match) for match in
-                                 zip(robot_kw.embedded.args, robot_kw.embedded.match(self.kw_wo_gherkin).groups())])
+                                 zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)
         except Exception as ex:
