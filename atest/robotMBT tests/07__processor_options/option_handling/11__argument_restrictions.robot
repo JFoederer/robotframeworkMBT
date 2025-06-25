@@ -1,6 +1,6 @@
 *** Settings ***
-Library           SuiteRepeater.py
-Library           robotmbt    processor_lib=SuiteRepeater    processor=mandatory_repeat_argument
+Library           suiterepeater.py
+Library           robotmbt    processor_lib=suiterepeater    processor=mandatory_repeat_argument
 
 *** Test Cases ***
 arguments can be mandatory

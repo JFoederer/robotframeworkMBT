@@ -1,5 +1,8 @@
 import copy
 
+from robot.api.deco import library
+
+@library(auto_keywords=None, listener=True)
 class SuiteRepeater:
     """
     Given a test suite, repeats all scenarios 'repeat' times (default=1)
@@ -15,7 +18,7 @@ class SuiteRepeater:
         for i in range(len(out_suite.scenarios)):
             out_suite.scenarios[i] = out_suite.scenarios[i].copy()
             if i:
-                out_suite.scenarios[i].name += f" (rep {i})"
+                out_suite.scenarios[i].name += f" (rep {i+1})"
         return out_suite
 
     def mandatory_repeat_argument(self, in_suite, *, repeat, bonus_scenario=False):

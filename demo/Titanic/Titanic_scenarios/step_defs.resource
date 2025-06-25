@@ -37,13 +37,13 @@ Titanic departs for the port of ${port}
 Titanic arrives in the port of ${port}
     [Documentation]    *model info*
     ...    :IN: Titanic.port == None
-    ...    :OUT: Titanic.port = ${port}
+    ...    :OUT: Titanic.port = ${port} | Titanic.location = 'port'
     Check that    Map area where 'Titanic's position' is located    Equals    ${port}
     Titanic stops
 
 Titanic crosses area ${area}
     [Documentation]    *model info*
-    ...    :IN: Titanic.port == None | Titanic.location= 'Iceberg alley' if ${area} == 'Atlantic ocean' else None
+    ...    :IN: Titanic.port == None | Titanic.location= 'Iceberg alley' if ${area} == 'Atlantic ocean' else 'port'
     ...    :OUT: Titanic.location != 'Iceberg alley'
     Check that    Map area where 'Titanic's position' is located    Equals    ${area}
     Check that    Titanic's speed    Is Greater Than    0

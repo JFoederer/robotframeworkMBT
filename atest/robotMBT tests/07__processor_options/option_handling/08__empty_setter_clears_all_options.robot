@@ -4,8 +4,8 @@ Suite Setup       Run keywords    Set suite variable    ${test_count}    ${0}
 ...                        AND    Set model-based options
 ...                        AND    Treat this test suite Model-based
 Suite Teardown    Should be equal    ${test_count}    ${1}
-Library           SuiteRepeater.py
-Library           robotmbt    processor_lib=SuiteRepeater
+Library           suiterepeater.py
+Library           robotmbt    processor_lib=suiterepeater
 
 *** Test Cases ***
 only test case

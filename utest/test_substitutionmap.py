@@ -281,7 +281,7 @@ class TestConstraint(unittest.TestCase):
         self.assertEqual(len(c.optionset), 3)
         c.add_constraint(['two', 'two', 'three', 'three', 'four', 'four'])
         self.assertEqual(len(c.optionset), 2)
-        self.assertSetEqual(c.optionset, set(['two', 'three']))
+        self.assertEqual(c.optionset, ['two', 'three'])
 
     def test_available_options_can_be_reviewed(self):
         c = Constraint(['one', 'two', 'three'])
@@ -375,6 +375,11 @@ class TestConstraint(unittest.TestCase):
         self.assertIn('two', cc.optionset)
         self.assertNotIn('three', c.optionset)
         self.assertNotIn('one', cc.optionset)
+
+    def test_constraint_copies_keep_order(self):
+        c = Constraint(['two', 'one', 'three', 'thirteen'])
+        cc = c.copy()
+        self.assertEqual(c.optionset, cc.optionset)
 
 
 if __name__ == '__main__':
