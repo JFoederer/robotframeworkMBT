@@ -6,11 +6,13 @@ Documentation     This test suite takes a single basic birthday card scenario, b
 ...               has :IN: None, the second was already constructed as a when-step and the last
 ...               keyword has the same condition for both the :IN: and the : OUT: conditions.
 Suite Setup       Treat this test suite Model-based
-Resource          ../../resources/birthday_cards_flat.resource
+Resource          ../../resources/birthday_cards_action-driven.resource
 Library           robotmbt
 
 *** Test Cases ***
-Action-driven scenario omitting given-when-then
-    Johan buys a birthday card
-    Johan writes their name on the birthday card
-    The birthday card has 'Johan' written on it
+Keyword with return value and model info
+    Buy a birthday card
+    Write name 'Johan' on the birthday card
+    Write name 'Frederique' on the birthday card
+    ${name list}=    Names written on the birthday card
+    Extra check on ${name list} and model info    Johan    Frederique
