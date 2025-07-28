@@ -295,12 +295,14 @@ class SuiteProcessors:
 
     @staticmethod
     def _relevant_expressions(step):
+        if step.gherkin_kw is None and not step.model_info:
+            return [] # model info is optional for action keywords
         expressions = []
         if 'IN' not in step.model_info or 'OUT' not in step.model_info:
             raise Exception(f"Model info incomplete for step: {step}")
-        if step.gherkin_kw in ['given', 'when']:
+        if step.gherkin_kw in ['given', 'when', None]:
             expressions += step.model_info['IN']
-        if step.gherkin_kw in ['when', 'then']:
+        if step.gherkin_kw in ['when', 'then', None]:
             expressions += step.model_info['OUT']
         return expressions
 
