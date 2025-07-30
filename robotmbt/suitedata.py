@@ -107,14 +107,16 @@ class Scenario:
         return front, back
 
 class Step:
-    def __init__(self, steptext, *args, parent, prev_gherkin_kw=None):
+    def __init__(self, steptext, *args, parent, assign=(), prev_gherkin_kw=None):
         self.org_step = steptext  # first cell of the Robot line, including step_kw, excluding args
-        self.parent = parent      # Parent scenario for easy searching and processing
-        self.args = args          # positional and named arguments taken directly from Robot
+        self.parent = parent      # Parent scenario for easy searching and processing.
+        self.args = args          # positional and named arguments taken directly from Robot.
+        self.assign = assign      # For when a keyword's return value is assigned to a variable.
+                                  # Taken directly from Robot.
         self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
-                                  # 'given', 'when', 'then' or None for non-bdd keywords
-        self.signature = None     # Robot keyword with its embedded arguments in ${...} notation
-        self.emb_args = StepArguments() # embedded arguments list of StepArgument objects
+                                  # 'given', 'when', 'then' or None for non-bdd keywords.
+        self.signature = None     # Robot keyword with its embedded arguments in ${...} notation.
+        self.emb_args = StepArguments() # embedded arguments list of StepArgument objects.
         self.model_info = dict()  # Modelling information is available as a dictionary.
                                   # The standard format is dict(IN=[], OUT=[]) and can
                                   # optionally contain an error field.
@@ -131,7 +133,7 @@ class Step:
         return f"Step: '{self}' with model info: {self.model_info}"
 
     def copy(self):
-        cp = Step(self.org_step, *self.args, parent=self.parent)
+        cp = Step(self.org_step, *self.args, parent=self.parent, assign=self.assign)
         cp.gherkin_kw = self.gherkin_kw
         cp.signature = self.signature
         cp.emb_args = StepArguments(self.emb_args)

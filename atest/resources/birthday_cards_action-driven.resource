@@ -20,15 +20,17 @@ Names written on the birthday card
     ...    :OUT: modelcheck.out_condition = birthday_card.names[-1]
     RETURN    ${names}
 
-Extra check on ${var} and model info    ${first}    ${last}
+Extra check on ${var} and model info
+    [Arguments]    ${first}    ${last}
     [Documentation]    *model info*
-    ...    :IN: modelcheck.in_condition == ${var}[0] | modelcheck.out_condition == ${var}[-1]
+    ...    :IN: modelcheck.in_condition == ${first} | modelcheck.out_condition == ${last}
     ...    :OUT: del modelcheck
     Should Contain    ${var}    ${first}
     Should Contain    ${var}    ${last}
 
 Number of names written on the birthday card
-    RETURN    Get length    ${names}
+    ${length}=    Get length    ${names}
+    RETURN    ${length}
 
 Writing the birthday card
     [Documentation]    *model info*

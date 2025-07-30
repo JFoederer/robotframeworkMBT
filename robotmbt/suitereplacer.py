@@ -130,7 +130,8 @@ class SuiteReplacer:
                 scenario.teardown = step_info
             last_gwt = None
             for step_def in tc.body:
-                step_info = Step(step_def.name, *step_def.args, parent=scenario, prev_gherkin_kw=last_gwt)
+                step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
+                                 prev_gherkin_kw=last_gwt)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.steps.append(step_info)
                 last_gwt = step_info.gherkin_kw
@@ -166,7 +167,7 @@ class SuiteReplacer:
                                                 args=tc.teardown.args,
                                                 type='teardown')
             for step in tc.steps:
-                new_tc.body.create_keyword(name=step.keyword, args=step.args)
+                new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.args)
 
     def _start_suite(self, suite, result):
         self.current_suite = suite
