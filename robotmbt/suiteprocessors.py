@@ -240,19 +240,19 @@ class SuiteProcessors:
         for step in scenario.steps:
             if 'error' in step.model_info:
                 return no_split
-            if step.gherkin_kw in ['given', 'when']:
-                for expr in step.model_info['IN']:
+            if step.gherkin_kw in ['given', 'when', None]:
+                for expr in step.model_info.get('IN', []):
                     try:
                         if m.process_expression(expr, step.emb_args) is False:
                             return no_split
                     except Exception:
                         return no_split
-            if step.gherkin_kw in ['when', 'then']:
-                for expr in step.model_info['OUT']:
+            if step.gherkin_kw in ['when', 'then', None]:
+                for expr in step.model_info.get('OUT', []):
                     refine_here = False
                     try:
                         if m.process_expression(expr, step.emb_args) is False:
-                            if step.gherkin_kw == 'when':
+                            if step.gherkin_kw in ['when', None]:
                                 logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step}")
                                 refine_here = True
                             else:
