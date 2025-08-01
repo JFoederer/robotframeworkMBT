@@ -135,7 +135,8 @@ class SuiteReplacer:
                                      prev_gherkin_kw=last_gwt)
                     step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                     scenario.steps.append(step_info)
-                    last_gwt = step_info.gherkin_kw
+                    if step_info.gherkin_kw:
+                        last_gwt = step_info.gherkin_kw
                 elif isinstance(step_def, rmodel.Var):
                     scenario.steps.append(Step('VAR', step_def.name, *step_def.value, parent=scenario))
                 else:
