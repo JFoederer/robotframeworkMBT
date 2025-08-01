@@ -1,10 +1,8 @@
 *** Settings ***
-Documentation     This test suite takes a single basic birthday card scenario, but uses the step
-...               definitions previously used as given-when-then steps for action-driven testing
-...               instead. Action keywords process their :IN: and : OUT: conditions like when
-...               steps. The way this scenario is constructed works because the first keyword
-...               has :IN: None, the second was already constructed as a when-step and the last
-...               keyword has the same condition for both the :IN: and the : OUT: conditions.
+Documentation     In 'classical' action-driven testing it is common to have keywords return data to
+...               the test case that is then stored in a variable. This test case confirms that
+...               variables van be used and that the model info from assignment steps is
+...               processed.
 Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_action-driven.resource
 Library           robotmbt

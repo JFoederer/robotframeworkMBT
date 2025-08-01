@@ -130,12 +130,18 @@ class SuiteReplacer:
                 scenario.teardown = step_info
             last_gwt = None
             for step_def in tc.body:
-                step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
-                                 prev_gherkin_kw=last_gwt)
-                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
-                scenario.steps.append(step_info)
-                last_gwt = step_info.gherkin_kw
-
+                if isinstance(step_def, rmodel.Keyword):
+                    step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
+                                     prev_gherkin_kw=last_gwt)
+                    step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                    scenario.steps.append(step_info)
+                    last_gwt = step_info.gherkin_kw
+                elif isinstance(step_def, rmodel.Var):
+                    scenario.steps.append(Step('VAR', step_def.name, *step_def.value, parent=scenario))
+                else:
+                    unsupported_step = Step(str(step_def), parent=scenario)
+                    unsupported_step.model_info['error'] = f"Robot construct not supported"
+                    scenario.steps.append(unsupported_step)
             out_suite.scenarios.append(scenario)
         return out_suite
 
@@ -167,7 +173,10 @@ class SuiteReplacer:
                                                 args=tc.teardown.args,
                                                 type='teardown')
             for step in tc.steps:
-                new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.args)
+                if step.keyword == 'VAR':
+                    new_tc.body.create_var(step.args[0], step.args[1:])
+                else:
+                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.args)
 
     def _start_suite(self, suite, result):
         self.current_suite = suite
