@@ -108,7 +108,8 @@ class Scenario:
 
 class Step:
     def __init__(self, steptext, *args, parent, assign=(), prev_gherkin_kw=None):
-        self.org_step = steptext  # first cell of the Robot line, including step_kw, excluding args
+        self.org_step = steptext  # first keyword cell of the Robot line, including step_kw,
+                                  # excluding positional args, excluding variable assignment.
         self.parent = parent      # Parent scenario for easy searching and processing.
         self.args = args          # positional and named arguments taken directly from Robot.
         self.assign = assign      # For when a keyword's return value is assigned to a variable.
@@ -145,6 +146,11 @@ class Step:
 
     def get_error(self):
         return self.model_info.get('error')
+
+    @property
+    def full_keyword(self):
+        """The full keyword text, including its arguments and return value assignment"""
+        return "    ".join(str(p) for p in (*self.assign, self.keyword, *self.args))
 
     @property
     def keyword(self):

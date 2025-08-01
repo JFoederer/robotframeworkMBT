@@ -261,7 +261,8 @@ class SuiteProcessors:
                         return no_split
                     if refine_here:
                         front, back = scenario.split_at_step(scenario.steps.index(step))
-                        remaining_steps = '\n\t'.join([step.keyword, '- '*35] + [s.keyword for s in back.steps[1:]])
+                        remaining_steps = '\n\t'.join([step.full_keyword, '- '*35] + [s.full_keyword for s in back.steps[1:]])
+                        remaining_steps = SuiteProcessors.escape_robot_vars(remaining_steps)
                         edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
@@ -274,6 +275,12 @@ class SuiteProcessors:
                         back.steps[1].model_info['IN'] = []
                         return (front, back)
         return no_split
+
+    @staticmethod
+    def escape_robot_vars(text):
+        for seq in ("${", "@{", "%{", "&{", "*{"):
+            text = text.replace(seq, "\\" + seq)
+        return text
 
     @staticmethod
     def _process_scenario(scenario, model):
