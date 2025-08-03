@@ -3,8 +3,8 @@ Documentation     Currently only linear sequential scenarios are supported for m
 ...               other constructs are used, the modelling should fail and report an error message.
 ...               Note that contrary to most failure detection scenarios, this sceanrio is not
 ...               skipped after detecting the failure. When modelling fails, the scenario is kept
-...               as-is. The way this scenario is constructed allows it pass as a regular action-
-...               driven test. No modelling is needed to successfully complete the checks.
+...               as-is. The way this scenario is constructed allows it to pass as a regular
+...               action-driven test. No modelling is needed to successfully complete the checks.
 Suite Setup       Run keyword and expect error    *Robot construct not supported*    Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_action-driven.resource
 Library           robotmbt
@@ -17,4 +17,4 @@ Modelling fails if unsupported Robot constructs are used
         Write name '${name}' on the birthday card
     END
     ${n_names}=    Number of names written on the birthday card
-    Should Be Equal    ${n_names}    ${2}
+    Should be equal    ${n_names}    ${2}

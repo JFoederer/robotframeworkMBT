@@ -32,6 +32,9 @@ Names written on the birthday card
     [Documentation]    *model info*
     ...    :IN: new modelcheck | modelcheck.in_condition = birthday_card.names[0]
     ...    :OUT: modelcheck.out_condition = birthday_card.names[-1]
+    ...
+    ...    The model info in this step is used to refer to the :IN: and :OUT: expressions
+    ...    explicitely to confirm proper processing. It has no meaning for the scenarios.
     RETURN    ${names}
 
 Extra check on ${var} and model info
@@ -39,10 +42,11 @@ Extra check on ${var} and model info
     [Documentation]    *model info*
     ...    :IN: modelcheck.in_condition == ${first} | modelcheck.out_condition == ${last}
     ...    :OUT: del modelcheck
-    Should Contain    ${var}    ${first}
-    Should Contain    ${var}    ${last}
+    Should contain    ${var}    ${first}
+    Should contain    ${var}    ${last}
 
 Number of names written on the birthday card
+    [Documentation]    Deliberately unmodelled
     ${length}=    Get length    ${names}
     RETURN    ${length}
 
@@ -51,4 +55,4 @@ Writing the birthday card
     ...    :IN: len(birthday_card.names) == 0
     ...    :OUT: len(birthday_card.names) == 2
     ${n_names}=    Get length    ${names}
-    Should Be Equal    ${n_names}    ${2}
+    Should be equal    ${n_names}    ${2}

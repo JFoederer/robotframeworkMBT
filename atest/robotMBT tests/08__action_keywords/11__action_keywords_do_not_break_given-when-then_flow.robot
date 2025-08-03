@@ -18,28 +18,28 @@ leading scenario
 
 Interrupted givens
     Given there is a blank birthday card available
-    Log    Given-When-Then flow interrupted by action keyword
+    Log    Given-block interrupted by action keyword, 'and' treated as Given
     and fail if :OUT: is processed
 
 Interrupted whens
     when Johan writes their name on the birthday card
-    Log    Given-When-Then flow interrupted by action keyword
+    Log    When-block interrupted by action keyword, 'and' treated as When
     and fail if :OUT: is processed without :IN:
 
 Interrupted thens
     then the birthday card has 'Johan' written on it
-    Log    Given-When-Then flow interrupted by action keyword
+    Log    Then-block interrupted by action keyword, 'and' treated as Then
     and fail if :IN: is processed
 
 Double interrupt
     then the birthday card has 'Johan' written on it
-    Log    Given-When-Then flow interrupted by action keyword
+    Log    Then-block interrupted by action keyword, 'and' treated as Then
     Log    Second interruption
     and fail if :IN: is processed
 
 Interrupt followed by but-step
     then the birthday card has 'Johan' written on it
-    Log    Given-When-Then flow interrupted by action keyword
+    Log    Then-block interrupted by action keyword, 'but' treated as Then
     but fail if :IN: is processed
 
 

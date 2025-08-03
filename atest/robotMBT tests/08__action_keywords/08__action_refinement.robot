@@ -13,7 +13,7 @@ Action keyword with refinement scenario
     Buy a birthday card
     Writing the birthday card
     ${n_names}=    Number of names written on the birthday card
-    Should Be Equal    ${n_names}    ${2}
+    Should be equal    ${n_names}    ${2}
 
 Writing 2 names on the birthday card
     Write name 'Johan' on the birthday card

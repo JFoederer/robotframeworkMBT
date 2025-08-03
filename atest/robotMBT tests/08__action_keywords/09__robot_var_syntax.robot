@@ -14,7 +14,7 @@ Variable definition using Robot's VAR syntax
     Write name 'Frederique' on the birthday card
     ${n_names}=    Number of names written on the birthday card
     VAR    ${two}=    ${2}
-    Should Be Equal    ${n_names}    ${two}
+    Should be equal    ${n_names}    ${two}
     @{actual names}=    Names written on the birthday card
     VAR    @{expected names}=    Johan    Frederique
-    Should Be Equal    ${actual names}    ${expected names}
+    Should be equal    ${actual names}    ${expected names}

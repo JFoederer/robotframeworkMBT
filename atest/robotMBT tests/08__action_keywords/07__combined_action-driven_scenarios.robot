@@ -10,10 +10,10 @@ Library           robotmbt
 trailing scenario
     Write name 'Frederique' on the birthday card
     ${n_names}=    Number of names written on the birthday card
-    Should Be Equal    ${n_names}    ${2}
+    Should be equal    ${n_names}    ${2}
 
 leading scenario
     Buy a birthday card
     Write name 'Johan' on the birthday card
     ${n_names}=    Number of names written on the birthday card
-    Should Be Equal    ${n_names}    ${1}
+    Should be equal    ${n_names}    ${1}
