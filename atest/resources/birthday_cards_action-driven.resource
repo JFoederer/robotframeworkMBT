@@ -14,6 +14,20 @@ Write name '${name}' on the birthday card
     Log    Writing '${name}' on the birthday card
     Set suite variable    @{names}    @{names}    ${name}
 
+Write name '${name}' on the birthday card (with modifer)
+    [Documentation]    *model info*
+    ...    :MOD: ${name}= [name for name in (Johan, Frederique) if name not in birthday_card.names]
+    ...    :IN: birthday_card
+    ...    :OUT: birthday_card.names.append(${name})
+    Log    Writing '${name}' on the birthday card
+    Set suite variable    @{names}    @{names}    ${name}
+
+Write ${name} as third unique name on the birthday card
+    [Documentation]    *model info*
+    ...    :IN: len(set(birthday_card.names)) == 2 | ${name} not in birthday_card.names
+    ...    :OUT: birthday_card.names.append(${name})
+    Set suite variable    @{names}    @{names}    ${name}
+
 Names written on the birthday card
     [Documentation]    *model info*
     ...    :IN: new modelcheck | modelcheck.in_condition = birthday_card.names[0]
