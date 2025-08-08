@@ -187,10 +187,38 @@ class Step:
             if robot_kw.embedded:
                 self.emb_args = StepArguments([StepArgument(*match) for match in
                                  zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
+            self.emb_args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)
         except Exception as ex:
             self.model_info['error']=str(ex)
+
+    def __handle_non_embedded_arguments(self, robot_argspec):
+        result = []
+        if not robot_argspec.argument_names:
+            return result
+        argument_names = list(robot_argspec.argument_names)
+        robot_args = [a for a in robot_argspec]
+        p_args, n_args = robot_argspec.map([a for a in self.args if '=' not in a],
+                                           [a.split('=', 1) for a in self.args if '=' in a])
+        for arg in robot_argspec:
+            if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
+                break
+            result += [StepArgument(argument_names.pop(0), p_args.pop(0))]
+            robot_args.pop(0)
+            if not p_args:
+                break
+        if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
+            result += [StepArgument(argument_names.pop(0), p_args)]
+        free = {}
+        for name, value in n_args:
+            if name in argument_names:
+                result += [StepArgument(name, value)]
+            else:
+                free[name] = value
+        if free:
+            result += [StepArgument(argument_names[-1], free)]
+        return result
 
     def __parse_model_info(self, docu):
         model_info = dict()

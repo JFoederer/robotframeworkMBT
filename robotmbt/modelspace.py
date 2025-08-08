@@ -103,7 +103,8 @@ class ModelSpace:
         for p in self.props:
             exec(f"{p} = self.props['{p}']", local_locals)
         for v in self.values:
-            exec(f"{v} = '{self.values[v]}'", local_locals)
+            value = f"'{self.values[v]}'" if isinstance(self.values[v], str) else self.values[v]
+            exec(f"{v} = {value}", local_locals)
         try:
             result = eval(expr, local_locals)
         except SyntaxError:
@@ -141,7 +142,9 @@ class ModelSpace:
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
         matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
-        self.values[missing_name] = matching_args[0].replace("'", r"\'") if matching_args else missing_name
+        self.values[missing_name] = matching_args[0] if matching_args else missing_name
+        if isinstance(self.values[missing_name], str):
+            self.values[missing_name] = self.values[missing_name].replace("'", r"\'")
 
     @staticmethod
     def _is_new_vocab_expression(expression):

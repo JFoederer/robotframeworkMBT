@@ -404,6 +404,7 @@ class RobotKwStub:
     def __init__(self):
         self.name = "step with ${foo} and ${bar} as arguments"
         self._doc = "*model info*\n:IN: None\n:OUT: None"
+        self.args = SimpleNamespace(argument_names=[])
         self.error = False
         self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
                                         parse_args= lambda _: ['foo_value', 'bar_value'])
