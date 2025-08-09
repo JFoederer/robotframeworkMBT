@@ -198,6 +198,9 @@ class Step:
         result = []
         p_args, n_args = robot_argspec.map([a for a in self.args if '=' not in a or r'\=' in a],
                                            [a.split('=', 1) for a in self.args if '=' in a and r'\=' not in a])
+        if p_args == [None]:
+            # for some reason .map() returns [None] instead of the empty list when there are no arguments
+            p_args= []
         ArgumentValidator(robot_argspec).validate(p_args, n_args)
         robot_args = [a for a in robot_argspec]
         argument_names = list(robot_argspec.argument_names)
