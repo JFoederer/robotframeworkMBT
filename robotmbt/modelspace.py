@@ -142,9 +142,12 @@ class ModelSpace:
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
         matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
-        self.values[missing_name] = matching_args[0] if matching_args else missing_name
-        if isinstance(self.values[missing_name], str):
-            self.values[missing_name] = self.values[missing_name].replace("'", r"\'")
+        value = matching_args[0] if matching_args else missing_name
+        if isinstance(value, str):
+            for esc_char in "$@&=": # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
+                value = value.replace(f'\\{esc_char}', f'\\\\{esc_char}')
+            value = value.replace("'", r"\'") # Needed because we use single quotes in low level processing later on
+        self.values[missing_name] = value
 
     @staticmethod
     def _is_new_vocab_expression(expression):

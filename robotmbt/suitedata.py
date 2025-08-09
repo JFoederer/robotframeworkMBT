@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
+from robot.running.arguments.argumentvalidator import ArgumentValidator
 
 from .steparguments import StepArgument, StepArguments
 
@@ -195,12 +196,11 @@ class Step:
 
     def __handle_non_embedded_arguments(self, robot_argspec):
         result = []
-        if not robot_argspec.argument_names:
-            return result
-        argument_names = list(robot_argspec.argument_names)
+        p_args, n_args = robot_argspec.map([a for a in self.args if '=' not in a or r'\=' in a],
+                                           [a.split('=', 1) for a in self.args if '=' in a and r'\=' not in a])
+        ArgumentValidator(robot_argspec).validate(p_args, n_args)
         robot_args = [a for a in robot_argspec]
-        p_args, n_args = robot_argspec.map([a for a in self.args if '=' not in a],
-                                           [a.split('=', 1) for a in self.args if '=' in a])
+        argument_names = list(robot_argspec.argument_names)
         for arg in robot_argspec:
             if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
                 break

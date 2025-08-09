@@ -47,10 +47,7 @@ forgotten opening colon
 
 Confirm expected error then pass execution
     [Arguments]    ${step_name}    ${error_message}
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
-    ...
+    [Documentation]
     ...    If the scenario is inserted after proper detection of the expected error,
     ...    then this keyword causes the remainder of the scenario to be skipped and
     ...    the test passes. When inserted without the correct error, the scenario

@@ -1,6 +1,6 @@
 *** Settings ***
-Documentation     This test suites focuses on variations in which keywords receive arguments and
-...               how they are made available for use in the models.
+Documentation     This test suite focuses on variations in which keywords receive arguments and how
+...               they are made available for use in the models.
 ...               Note that in this suite the value checks are included (hard coded) in the :OUT:
 ...               expressions of the keyword. This is because we need to check that all data lands
 ...               correctly in the model.
@@ -16,7 +16,7 @@ Embedded argument
 
 Positional arguments
     Keyword with positional argument    Green
-    Keyword with multiple positional arguments    Green    pos2=Red
+    Keyword with multiple positional arguments    Green    Red
 
 Variable number of arguments
     Keyword with variable number of arguments    Green    Red    Blue
@@ -42,10 +42,10 @@ Keyword without arguments
     ...    :OUT: new args
     No Operation
 
-Keyword with ${emb_var} as embedded argument
+Keyword with ${emb_arg} as embedded argument
     [Documentation]    *model info*
-    ...    :IN: args.emb_var = ${emb_var}
-    ...    :OUT: args.emb_var == Green
+    ...    :IN: args.emb_arg = ${emb_arg}
+    ...    :OUT: args.emb_arg == Green
     No Operation
 
 Keyword with positional argument

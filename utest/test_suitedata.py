@@ -31,6 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+from unittest.mock import patch
+
 from types import SimpleNamespace
 
 from robotmbt.suitedata import Suite, Scenario, Step
@@ -356,14 +358,16 @@ class TestSteps(unittest.TestCase):
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.kw_wo_gherkin, e)
 
-    def test_arguments_are_part_of_the_step_str(self):
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_arguments_are_part_of_the_step_str(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
         self.assertNotIn('error', step.model_info)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
 
-    def test_modified_arguments_are_part_of_the_step_str(self):
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_modified_arguments_are_part_of_the_step_str(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
@@ -378,7 +382,8 @@ class TestSteps(unittest.TestCase):
         step.add_robot_dependent_data(kw)
         self.assertEqual(step.model_info['error'], 'keyword error')
 
-    def test_model_info_is_loaded(self):
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_model_info_is_loaded(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         kw = RobotKwStub()
         kw._doc = """*model info*
@@ -404,11 +409,15 @@ class RobotKwStub:
     def __init__(self):
         self.name = "step with ${foo} and ${bar} as arguments"
         self._doc = "*model info*\n:IN: None\n:OUT: None"
-        self.args = SimpleNamespace(argument_names=[])
+        self.args = self.argstub()
         self.error = False
         self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
                                         parse_args= lambda _: ['foo_value', 'bar_value'])
 
+    class argstub:
+        argument_names = []
+        map = lambda x,y,z: ([], [])
+        __iter__ = lambda _: iter([])
 
 if __name__ == '__main__':
     unittest.main()
