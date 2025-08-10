@@ -51,13 +51,28 @@ class StepArguments(list):
                 return steparg
         return super()[key]
 
+    @property
+    def modified(self):
+        return any([arg.modified for arg in self])
+
 class StepArgument:
-    def __init__(self, arg_name, value):
-        self.arg = "${%s}" % arg_name
+    EMBEDDED = 'EMBEDDED'
+    POSITIONAL = 'POSITIONAL'
+    VAR_POS = 'VAR_POS'
+    NAMED = 'NAMED'
+    FREE_NAMED = 'FREE_NAMED'
+
+    def __init__(self, arg_name, value, kind=None):
+        self.name = arg_name
         self.org_value = value
+        self.kind = kind
         self._value = None
         self._codestr = None
         self.value = value
+
+    @property
+    def arg(self):
+        return "${%s}" % self.name
 
     @property
     def value(self):
@@ -69,11 +84,15 @@ class StepArgument:
         self._codestr = self.make_codestring(value)
 
     @property
+    def modified(self):
+        return self.org_value != self.value
+
+    @property
     def codestring(self):
         return self._codestr
 
     def copy(self):
-        cp = StepArgument(self.arg.strip('${}'), self.value)
+        cp = StepArgument(self.arg.strip('${}'), self.value, self.kind)
         cp.org_value = self.org_value
         return cp
 

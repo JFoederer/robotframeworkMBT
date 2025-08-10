@@ -40,7 +40,7 @@ from .substitutionmap import SubstitutionMap
 from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
-from .steparguments import StepArguments
+from .steparguments import StepArgument, StepArguments
 
 class SuiteProcessors:
     def echo(self, in_suite):
@@ -266,11 +266,10 @@ class SuiteProcessors:
                         edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
+                        edge_step.detached = True
                         edge_step.args = StepArguments(step.args)
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', f"Refinement ready, completing step", parent=scenario)
-                        edge_step.model_info = dict(IN=[], OUT=[])
-                        back.steps.insert(0, edge_step)
+                        back.steps.insert(0, Step('Log', f"Refinement ready, completing step", parent=scenario))
                         back.steps[1] = back.steps[1].copy()
                         back.steps[1].model_info['IN'] = []
                         return (front, back)
@@ -330,6 +329,8 @@ class SuiteProcessors:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
                         modded_arg, constraint = self._parse_modifier_expression(expr, step.args)
+                        if step.args[modded_arg].kind != StepArgument.EMBEDDED:
+                            raise ValueError("Modifers are currently only supported for embedded arguments.")
                         org_example = step.args[modded_arg].org_value
                         if step.gherkin_kw == 'then':
                             constraint = None # No new constraints are processed for then-steps

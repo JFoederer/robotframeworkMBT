@@ -119,6 +119,7 @@ class Step:
                                   # 'given', 'when', 'then' or None for non-bdd keywords.
         self.signature = None     # Robot keyword with its embedded arguments in ${...} notation.
         self.args = StepArguments() # embedded arguments list of StepArgument objects.
+        self.detached = False     # Decouples StepArguments from the step text (refinement use case)
         self.model_info = dict()  # Modelling information is available as a dictionary.
                                   # The standard format is dict(IN=[], OUT=[]) and can
                                   # optionally contain an error field.
@@ -139,6 +140,7 @@ class Step:
         cp.gherkin_kw = self.gherkin_kw
         cp.signature = self.signature
         cp.args = StepArguments(self.args)
+        cp.detached = self.detached
         cp.model_info = self.model_info.copy()
         return cp
 
@@ -163,7 +165,23 @@ class Step:
     @property
     def posnom_args_str(self):
         """A tuple with all arguments in Robot accepted text format ('posA' , 'posB', 'named1=namedA')"""
-        return self.org_pn_args
+        if self.detached or not self.args.modified:
+            return self.org_pn_args
+        result = []
+        for arg in self.args:
+            if arg.kind == arg.POSITIONAL:
+                result.append(arg.value)
+            elif arg.kind == arg.VAR_POS:
+                for vararg in arg.value:
+                    result.append(vararg)
+            elif arg.kind == arg.NAMED:
+                result.append(f"{arg.name}={arg.value}")
+            elif arg.kind == arg.FREE_NAMED:
+                for name, value in arg.value.items():
+                    result.append(f"{name}={value}")
+            else:
+                continue
+        return tuple(result)
 
     @property
     def gherkin_kw(self):
@@ -191,7 +209,7 @@ class Step:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
-                self.args = StepArguments([StepArgument(*match) for match in
+                self.args = StepArguments([StepArgument(*match, kind=StepArgument.EMBEDDED) for match in
                                            zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
@@ -212,20 +230,20 @@ class Step:
         for arg in robot_argspec:
             if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
                 break
-            result += [StepArgument(argument_names.pop(0), p_args.pop(0))]
+            result += [StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL)]
             robot_args.pop(0)
             if not p_args:
                 break
         if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
-            result += [StepArgument(argument_names.pop(0), p_args)]
+            result += [StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS)]
         free = {}
         for name, value in n_args:
             if name in argument_names:
-                result += [StepArgument(name, value)]
+                result += [StepArgument(name, value, kind=StepArgument.NAMED)]
             else:
                 free[name] = value
         if free:
-            result += [StepArgument(argument_names[-1], free)]
+            result += [StepArgument(argument_names[-1], free, kind=StepArgument.FREE_NAMED)]
         return result
 
     def __parse_model_info(self, docu):
