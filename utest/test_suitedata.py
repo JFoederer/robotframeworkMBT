@@ -359,7 +359,7 @@ class TestSteps(unittest.TestCase):
             self.assertEqual(s.kw_wo_gherkin, e)
 
     @patch('robotmbt.suitedata.ArgumentValidator')
-    def test_arguments_are_part_of_the_step_str(self, mock):
+    def test_embedded_arguments_are_part_of_the_step_str(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
@@ -367,13 +367,44 @@ class TestSteps(unittest.TestCase):
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
 
     @patch('robotmbt.suitedata.ArgumentValidator')
-    def test_modified_arguments_are_part_of_the_step_str(self, mock):
+    def test_modified_embedded_arguments_are_part_of_the_step_str(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
         self.assertNotIn('error', step.model_info)
         step.emb_args['${bar}'].value = 'new bar'
         self.assertEqual(str(step), RobotKwStub.STEPTEXT.replace('bar_value', 'new bar'))
+
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_all_arguments_are_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=namedA', parent=None)
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
+
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_return_value_assignment_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output}',), parent=None)
+        self.assertEqual(step.full_keyword, "${output}    " + RobotKwStub.STEPTEXT)
+
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_return_value_assignment_with_eq_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output}=',), parent=None)
+        self.assertEqual(step.full_keyword, "${output}=    " + RobotKwStub.STEPTEXT)
+
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_return_value_assignment_with_eq_after_space_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output} =',), parent=None)
+        self.assertEqual(step.full_keyword, "${output} =    " + RobotKwStub.STEPTEXT)
+
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_return_value_multi_assignment_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output1}', '${output2}='), parent=None)
+        self.assertEqual(step.full_keyword, "${output1}    ${output2}=    " + RobotKwStub.STEPTEXT)
+
+    @patch('robotmbt.suitedata.ArgumentValidator')
+    def test_positional_and_named_arguments_are_available_in_robot_tuple_format(self, mock):
+        argtuple = 'posA', 'pos2=posB', 'named1=namedA'
+        step = Step(RobotKwStub.STEPTEXT, *argtuple, parent=None)
+        self.assertTupleEqual(step.posnom_args_str, argtuple)
 
     def test_keyword_errors_become_model_errors(self):
         step = Step(RobotKwStub.STEPTEXT, parent=None)

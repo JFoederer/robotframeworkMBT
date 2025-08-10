@@ -8,7 +8,6 @@ Escaped argument values
     Keyword with escaped argument values    esc\=assign    this is \${no var}    warning:\t\u26A0
 
 Naming positional agrument
-    Comment    Extra check needed to confirm pos2 is kept visable in the kw execution
     Keywword with positional and named arguments    Green    pos2=Red    named1=Blue
 
 Argument with default value

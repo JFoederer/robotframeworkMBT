@@ -37,22 +37,23 @@ Names written on the birthday card
     ...    explicitely to confirm proper processing. It has no meaning for the scenarios.
     RETURN    ${names}
 
-Extra check on ${var} and model info
-    [Arguments]    ${first}    ${last}
-    [Documentation]    *model info*
-    ...    :IN: modelcheck.in_condition == ${first} | modelcheck.out_condition == ${last}
-    ...    :OUT: del modelcheck
-    Should contain    ${var}    ${first}
-    Should contain    ${var}    ${last}
-
 Number of names written on the birthday card
     [Documentation]    Deliberately unmodelled
     ${length}=    Get length    ${names}
     RETURN    ${length}
 
 Writing the birthday card
-    [Documentation]    *model info*
+    [Documentation]    Keyword for refinement
+    ...    *model info*
     ...    :IN: len(birthday_card.names) == 0
     ...    :OUT: len(birthday_card.names) == 2
     ${n_names}=    Get length    ${names}
     Should be equal    ${n_names}    ${2}
+
+Extra check on ${names} and model info
+    [Arguments]    ${first}    ${last}
+    [Documentation]    *model info*
+    ...    :IN: modelcheck.in_condition == ${first} | modelcheck.out_condition == ${last}
+    ...    :OUT: del birthday_card | del modelcheck
+    Should contain    ${names}    ${first}
+    Should contain    ${names}    ${last}

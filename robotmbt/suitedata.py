@@ -111,8 +111,8 @@ class Step:
     def __init__(self, steptext, *args, parent, assign=(), prev_gherkin_kw=None):
         self.org_step = steptext  # first keyword cell of the Robot line, including step_kw,
                                   # excluding positional args, excluding variable assignment.
+        self.org_pn_args = args   # positional and named arguments as parsed from Robot text ('posA' , 'posB', 'named1=namedA')
         self.parent = parent      # Parent scenario for easy searching and processing.
-        self.args = args          # positional and named arguments taken directly from Robot.
         self.assign = assign      # For when a keyword's return value is assigned to a variable.
                                   # Taken directly from Robot.
         self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
@@ -135,7 +135,7 @@ class Step:
         return f"Step: '{self}' with model info: {self.model_info}"
 
     def copy(self):
-        cp = Step(self.org_step, *self.args, parent=self.parent, assign=self.assign)
+        cp = Step(self.org_step, *self.org_pn_args, parent=self.parent, assign=self.assign)
         cp.gherkin_kw = self.gherkin_kw
         cp.signature = self.signature
         cp.emb_args = StepArguments(self.emb_args)
@@ -150,8 +150,8 @@ class Step:
 
     @property
     def full_keyword(self):
-        """The full keyword text, including its arguments and return value assignment"""
-        return "    ".join(str(p) for p in (*self.assign, self.keyword, *self.args))
+        """The full keyword text, quad space separated, including its arguments and return value assignment"""
+        return "    ".join(str(p) for p in (*self.assign, self.keyword, *self.posnom_args_str))
 
     @property
     def keyword(self):
@@ -159,6 +159,11 @@ class Step:
             return self.org_step
         s = f"{self.step_kw} {self.signature}" if self.step_kw else self.signature
         return self.emb_args.fill_in_args(s)
+
+    @property
+    def posnom_args_str(self):
+        """A tuple with all arguments in Robot accepted text format ('posA' , 'posB', 'named1=namedA')"""
+        return self.org_pn_args
 
     @property
     def gherkin_kw(self):
@@ -196,8 +201,8 @@ class Step:
 
     def __handle_non_embedded_arguments(self, robot_argspec):
         result = []
-        p_args, n_args = robot_argspec.map([a for a in self.args if '=' not in a or r'\=' in a],
-                                           [a.split('=', 1) for a in self.args if '=' in a and r'\=' not in a])
+        p_args, n_args = robot_argspec.map([a for a in self.org_pn_args if '=' not in a or r'\=' in a],
+                                           [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a])
         if p_args == [None]:
             # for some reason .map() returns [None] instead of the empty list when there are no arguments
             p_args= []

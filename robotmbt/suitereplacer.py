@@ -156,28 +156,28 @@ class SuiteReplacer:
             new_suite.resource = target_suite.resource
             if subsuite.setup:
                 new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword,
-                                                 args=subsuite.setup.args,
+                                                 args=subsuite.setup.posnom_args_str,
                                                  type='setup')
             if subsuite.teardown:
                 new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword,
-                                                    args=subsuite.teardown.args,
+                                                    args=subsuite.teardown.posnom_args_str,
                                                     type='teardown')
             self.__generateRobotSuite(subsuite, new_suite)
         for tc in suite_model.scenarios:
             new_tc = target_suite.tests.create(name=tc.name)
             if tc.setup:
                 new_tc.setup= rmodel.Keyword(name=tc.setup.keyword,
-                                             args=tc.setup.args,
+                                             args=tc.setup.posnom_args_str,
                                              type='setup')
             if tc.teardown:
                 new_tc.teardown= rmodel.Keyword(name=tc.teardown.keyword,
-                                                args=tc.teardown.args,
+                                                args=tc.teardown.posnom_args_str,
                                                 type='teardown')
             for step in tc.steps:
                 if step.keyword == 'VAR':
-                    new_tc.body.create_var(step.args[0], step.args[1:])
+                    new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
                 else:
-                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.args)
+                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
 
     def _start_suite(self, suite, result):
         self.current_suite = suite

@@ -14,3 +14,11 @@ Keyword with return value and model info
     Write name 'Frederique' on the birthday card
     ${name list}=    Names written on the birthday card
     Extra check on ${name list} and model info    Johan    Frederique
+
+Keyword with multiple return values
+    Buy a birthday card
+    Write name 'Johan' on the birthday card
+    Write name 'Frederique' on the birthday card
+    ${name1}    ${name2}=    Names written on the birthday card
+    VAR    @{name list}=    ${name1}    ${name2}
+    Extra check on ${name list} and model info    Johan    Frederique
