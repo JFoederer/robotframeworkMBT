@@ -372,7 +372,7 @@ class TestSteps(unittest.TestCase):
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
         self.assertNotIn('error', step.model_info)
-        step.emb_args['${bar}'].value = 'new bar'
+        step.args['${bar}'].value = 'new bar'
         self.assertEqual(str(step), RobotKwStub.STEPTEXT.replace('bar_value', 'new bar'))
 
     @patch('robotmbt.suitedata.ArgumentValidator')

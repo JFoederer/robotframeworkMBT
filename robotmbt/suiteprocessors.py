@@ -200,7 +200,7 @@ class SuiteProcessors:
                         # Check exit condition before finalizing refinement and inserting the tail part
                         model_scratchpad = self.active_model.copy()
                         for expr in exit_conditions:
-                            if model_scratchpad.process_expression(expr, part2.steps[1].emb_args) is False:
+                            if model_scratchpad.process_expression(expr, part2.steps[1].args) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -243,7 +243,7 @@ class SuiteProcessors:
             if step.gherkin_kw in ['given', 'when', None]:
                 for expr in step.model_info.get('IN', []):
                     try:
-                        if m.process_expression(expr, step.emb_args) is False:
+                        if m.process_expression(expr, step.args) is False:
                             return no_split
                     except Exception:
                         return no_split
@@ -251,7 +251,7 @@ class SuiteProcessors:
                 for expr in step.model_info.get('OUT', []):
                     refine_here = False
                     try:
-                        if m.process_expression(expr, step.emb_args) is False:
+                        if m.process_expression(expr, step.args) is False:
                             if step.gherkin_kw in ['when', None]:
                                 logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step}")
                                 refine_here = True
@@ -266,7 +266,7 @@ class SuiteProcessors:
                         edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
-                        edge_step.emb_args = StepArguments(step.emb_args)
+                        edge_step.args = StepArguments(step.args)
                         front.steps.append(edge_step)
                         edge_step = Step('Log', f"Refinement ready, completing step", parent=scenario)
                         edge_step.model_info = dict(IN=[], OUT=[])
@@ -292,7 +292,7 @@ class SuiteProcessors:
                 return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    if m.process_expression(expr, step.emb_args) is False:
+                    if m.process_expression(expr, step.args) is False:
                         raise Exception(False)
                 except Exception as err:
                     logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, "
@@ -329,8 +329,8 @@ class SuiteProcessors:
             for step in scenario.steps:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
-                        modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
-                        org_example = step.emb_args[modded_arg].org_value
+                        modded_arg, constraint = self._parse_modifier_expression(expr, step.args)
+                        org_example = step.args[modded_arg].org_value
                         if step.gherkin_kw == 'then':
                             constraint = None # No new constraints are processed for then-steps
                             if org_example not in subs.substitutions:
@@ -340,7 +340,7 @@ class SuiteProcessors:
                         if not constraint and org_example not in subs.substitutions:
                             raise ValueError(f"No options to choose from at first assignment to {org_example}")
                         if constraint and constraint != '.*':
-                            options =  m.process_expression(constraint, step.emb_args)
+                            options =  m.process_expression(constraint, step.args)
                             if options == 'exec':
                                 raise ValueError(f"Invalid constraint for argument substitution: {expr}")
                             if not options:
@@ -368,9 +368,9 @@ class SuiteProcessors:
         for step in scenario.steps:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
-                    modded_arg, _ = self._parse_modifier_expression(expr, step.emb_args)
-                    org_example = step.emb_args[modded_arg].org_value
-                    step.emb_args[modded_arg].value = subs.solution[org_example]
+                    modded_arg, _ = self._parse_modifier_expression(expr, step.args)
+                    org_example = step.args[modded_arg].org_value
+                    step.args[modded_arg].value = subs.solution[org_example]
         return scenario
 
     @staticmethod

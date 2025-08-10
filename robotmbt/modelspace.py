@@ -89,8 +89,8 @@ class ModelSpace:
         else:
             self.props.pop('scenario')
 
-    def process_expression(self, expression, emb_args=StepArguments()):
-        expr = emb_args.fill_in_args(expression.strip(), as_code=True)
+    def process_expression(self, expression, step_args=StepArguments()):
+        expr = step_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
             return 'exec'
@@ -112,15 +112,15 @@ class ModelSpace:
                 exec(expr, local_locals)
                 result = 'exec'
             except NameError as missing:
-                self.__add_alias(missing.name, emb_args)
-                result = self.process_expression(expression, emb_args)
+                self.__add_alias(missing.name, step_args)
+                result = self.process_expression(expression, step_args)
             except AttributeError as err:
                 self.__handle_attribute_error(err)
         except NameError as missing:
             if missing.name == expr:
                 raise # Putting only a name in an expression can be used as exists check
-            self.__add_alias(missing.name, emb_args)
-            result = self.process_expression(expression, emb_args)
+            self.__add_alias(missing.name, step_args)
+            result = self.process_expression(expression, step_args)
         except AttributeError as err:
             self.__handle_attribute_error(err)
 
@@ -137,11 +137,11 @@ class ModelSpace:
             raise ModellingError(f"{err.obj} used before definition")
         raise ModellingError(f"{err.name} used before assignment")
 
-    def __add_alias(self, missing_name, emb_args):
+    def __add_alias(self, missing_name, step_args):
         if missing_name == 'scenario':
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
-        matching_args = [arg.value for arg in emb_args if arg.codestring == missing_name]
+        matching_args = [arg.value for arg in step_args if arg.codestring == missing_name]
         value = matching_args[0] if matching_args else missing_name
         if isinstance(value, str):
             for esc_char in "$@&=": # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='

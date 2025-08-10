@@ -118,7 +118,7 @@ class Step:
         self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
                                   # 'given', 'when', 'then' or None for non-bdd keywords.
         self.signature = None     # Robot keyword with its embedded arguments in ${...} notation.
-        self.emb_args = StepArguments() # embedded arguments list of StepArgument objects.
+        self.args = StepArguments() # embedded arguments list of StepArgument objects.
         self.model_info = dict()  # Modelling information is available as a dictionary.
                                   # The standard format is dict(IN=[], OUT=[]) and can
                                   # optionally contain an error field.
@@ -138,7 +138,7 @@ class Step:
         cp = Step(self.org_step, *self.org_pn_args, parent=self.parent, assign=self.assign)
         cp.gherkin_kw = self.gherkin_kw
         cp.signature = self.signature
-        cp.emb_args = StepArguments(self.emb_args)
+        cp.args = StepArguments(self.args)
         cp.model_info = self.model_info.copy()
         return cp
 
@@ -158,7 +158,7 @@ class Step:
         if not self.signature:
             return self.org_step
         s = f"{self.step_kw} {self.signature}" if self.step_kw else self.signature
-        return self.emb_args.fill_in_args(s)
+        return self.args.fill_in_args(s)
 
     @property
     def posnom_args_str(self):
@@ -191,9 +191,9 @@ class Step:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
-                self.emb_args = StepArguments([StepArgument(*match) for match in
-                                 zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
-            self.emb_args += self.__handle_non_embedded_arguments(robot_kw.args)
+                self.args = StepArguments([StepArgument(*match) for match in
+                                           zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
+            self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)
         except Exception as ex:
