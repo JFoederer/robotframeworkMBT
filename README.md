@@ -1,4 +1,4 @@
-# robotframeworkMBT - the oneliner
+# RobotMBT - the oneliner
 
  Model-based testing in Robot framework with test case generation
 
@@ -88,6 +88,8 @@ The second scenario has a dependency to the first scenario, due to the given-ste
 * when-steps evaluate both the `:IN:` and `:OUT:` expressions
 * then-steps evaluate only the `:OUT:` expressions
 
+Note: Action keywords, i.e. keywords without one of these prefixes, behave as when-steps.
+
 If evaluation of any expression fails or is False, then the scenario cannot be executed at the current position. By properly annotating all steps to reflect their impact on the system or its environment, you can model the intended relations between scenarios. This forms the specification model. The step implementations use keywords to connect to, and interact with, the system under test. The keywords perform actions and check outputs to verify the specified behaviour.
 
 There are three typical kinds of steps:
@@ -97,7 +99,7 @@ There are three typical kinds of steps:
 * __Stative__  
   Stative steps express a truth value. Like, _you have a blank postcard_. For these steps, the `:IN:` expression is a condition. The `:OUT:` part is either identical to the `:IN:` condition or a statement. If the when-action already sets the property, then you use a condition in the `:OUT:` part. Statements, like assigning a new property, are useful to express the result of a scenario. For instance, to express indirect effects of an action, or when the result of an action depends on the given system state. The step implementation of stative steps consists purely of checks.
 * __Refinement__  
-  Action refinement allows you to build hierarchy into your scenarios. The `:IN:` and `:OUT:` expressions are only conditions (checks), but the `:IN:` and `:OUT:` expressions are different. If for any step the `:OUT:` expression is reached for evaluation, but fails, this signals the need for refinement. A single full scenario can be inserted if all `:IN:` conditions match at the current position and the pending `:OUT:` conditions are satisfied after insertion.
+  Action refinement allows for hierarchy in scenarios by delegating implementation of a when-step to another scenario. The `:IN:` and `:OUT:` expressions of the when-step contain conditions (checks), but the `:IN:` and `:OUT:` expressions contradict. A single full scenario can be inserted to resolve the contradiction. For a scenario to be a valid refinement, all `:IN:` conditions must match at the current position and the pending `:OUT:` conditions must be satisfied after insertion. The step implementation should check and confirm the end state of the system under test after refinement.
 
 ### Keeping your models clean
 
@@ -182,6 +184,8 @@ In a then-step, modifiers behave slightly different. In then-steps no new option
 #### Limitations
 
 This first implementation for variable data considers strict equivalence classes only. This means that all variants are considered equal for all purposes. If, for a certain scenario, a single valid example variant has been generated and executed, then this scenario is considered covered. There are no options yet to indicate deeper coverage targets based on data variations. It also implies that whenever any variant is valid, all scenario variants must be valid. And that regardless of which variant is chosen, the exact same scenarios can be chosen as the next one. This does however not mean that once a variant is chosen, that this variant will be used throughout the whole trace. If a scenario is selected multiple times in the same trace, then each occurrence will get new randomly selected data.
+
+Modifiers are currently only supported for embedded arguments.
 
 ## Configuration options
 
