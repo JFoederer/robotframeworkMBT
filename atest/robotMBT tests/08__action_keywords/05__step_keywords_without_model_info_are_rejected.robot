@@ -1,6 +1,6 @@
 *** Settings ***
-Documentation     Contrary to action keywords, bahviour driven steps are expected to be at the
-...               center of your modelling. Steps starting with any of the bdd prefixes that do
+Documentation     Contrary to action keywords, bahaviour-driven steps are expected to be at the
+...               heart of your modelling. Steps starting with any of the bdd prefixes that do
 ...               not have modeling info will be rejected.
 Suite Setup       Run keyword and expect error    Model info incomplete for step: When Log    Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_action-driven.resource

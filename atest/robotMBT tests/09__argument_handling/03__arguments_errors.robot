@@ -1,5 +1,5 @@
 *** Settings ***
-Documentation     This test suite shows that faulty argument usage is reoprted. I.e. when the
+Documentation     This test suite shows that faulty argument usage is reported. I.e. when the
 ...               provided arguments do not match the keyword's signature.
 Suite Setup       Expect failing suite processing
 Library           robotmbt
