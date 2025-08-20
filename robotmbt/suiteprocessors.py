@@ -40,7 +40,7 @@ from .substitutionmap import SubstitutionMap
 from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
-from .steparguments import StepArguments
+from .steparguments import StepArgument, StepArguments
 
 class SuiteProcessors:
     def echo(self, in_suite):
@@ -200,7 +200,7 @@ class SuiteProcessors:
                         # Check exit condition before finalizing refinement and inserting the tail part
                         model_scratchpad = self.active_model.copy()
                         for expr in exit_conditions:
-                            if model_scratchpad.process_expression(expr, part2.steps[1].emb_args) is False:
+                            if model_scratchpad.process_expression(expr, part2.steps[1].args) is False:
                                  insert_valid_here = False
                                  break
                     except Exception:
@@ -240,19 +240,19 @@ class SuiteProcessors:
         for step in scenario.steps:
             if 'error' in step.model_info:
                 return no_split
-            if step.gherkin_kw in ['given', 'when']:
-                for expr in step.model_info['IN']:
+            if step.gherkin_kw in ['given', 'when', None]:
+                for expr in step.model_info.get('IN', []):
                     try:
-                        if m.process_expression(expr, step.emb_args) is False:
+                        if m.process_expression(expr, step.args) is False:
                             return no_split
                     except Exception:
                         return no_split
-            if step.gherkin_kw in ['when', 'then']:
-                for expr in step.model_info['OUT']:
+            if step.gherkin_kw in ['when', 'then', None]:
+                for expr in step.model_info.get('OUT', []):
                     refine_here = False
                     try:
-                        if m.process_expression(expr, step.emb_args) is False:
-                            if step.gherkin_kw == 'when':
+                        if m.process_expression(expr, step.args) is False:
+                            if step.gherkin_kw in ['when', None]:
                                 logger.debug(f"Refinement needed for scenario: {scenario.name}\nat step: {step}")
                                 refine_here = True
                             else:
@@ -261,19 +261,25 @@ class SuiteProcessors:
                         return no_split
                     if refine_here:
                         front, back = scenario.split_at_step(scenario.steps.index(step))
-                        remaining_steps = '\n\t'.join([step.keyword, '- '*35] + [s.keyword for s in back.steps[1:]])
+                        remaining_steps = '\n\t'.join([step.full_keyword, '- '*35] + [s.full_keyword for s in back.steps[1:]])
+                        remaining_steps = SuiteProcessors.escape_robot_vars(remaining_steps)
                         edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
                         edge_step.model_info = dict(IN=step.model_info['IN'], OUT=[])
-                        edge_step.emb_args = StepArguments(step.emb_args)
+                        edge_step.detached = True
+                        edge_step.args = StepArguments(step.args)
                         front.steps.append(edge_step)
-                        edge_step = Step('Log', f"Refinement ready, completing step", parent=scenario)
-                        edge_step.model_info = dict(IN=[], OUT=[])
-                        back.steps.insert(0, edge_step)
+                        back.steps.insert(0, Step('Log', f"Refinement ready, completing step", parent=scenario))
                         back.steps[1] = back.steps[1].copy()
                         back.steps[1].model_info['IN'] = []
                         return (front, back)
         return no_split
+
+    @staticmethod
+    def escape_robot_vars(text):
+        for seq in ("${", "@{", "%{", "&{", "*{"):
+            text = text.replace(seq, "\\" + seq)
+        return text
 
     @staticmethod
     def _process_scenario(scenario, model):
@@ -285,7 +291,7 @@ class SuiteProcessors:
                 return None, None
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    if m.process_expression(expr, step.emb_args) is False:
+                    if m.process_expression(expr, step.args) is False:
                         raise Exception(False)
                 except Exception as err:
                     logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, "
@@ -295,12 +301,14 @@ class SuiteProcessors:
 
     @staticmethod
     def _relevant_expressions(step):
+        if step.gherkin_kw is None and not step.model_info:
+            return [] # model info is optional for action keywords
         expressions = []
         if 'IN' not in step.model_info or 'OUT' not in step.model_info:
             raise Exception(f"Model info incomplete for step: {step}")
-        if step.gherkin_kw in ['given', 'when']:
+        if step.gherkin_kw in ['given', 'when', None]:
             expressions += step.model_info['IN']
-        if step.gherkin_kw in ['when', 'then']:
+        if step.gherkin_kw in ['when', 'then', None]:
             expressions += step.model_info['OUT']
         return expressions
 
@@ -320,8 +328,10 @@ class SuiteProcessors:
             for step in scenario.steps:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
-                        modded_arg, constraint = self._parse_modifier_expression(expr, step.emb_args)
-                        org_example = step.emb_args[modded_arg].org_value
+                        modded_arg, constraint = self._parse_modifier_expression(expr, step.args)
+                        if step.args[modded_arg].kind != StepArgument.EMBEDDED:
+                            raise ValueError("Modifers are currently only supported for embedded arguments.")
+                        org_example = step.args[modded_arg].org_value
                         if step.gherkin_kw == 'then':
                             constraint = None # No new constraints are processed for then-steps
                             if org_example not in subs.substitutions:
@@ -331,7 +341,7 @@ class SuiteProcessors:
                         if not constraint and org_example not in subs.substitutions:
                             raise ValueError(f"No options to choose from at first assignment to {org_example}")
                         if constraint and constraint != '.*':
-                            options =  m.process_expression(constraint, step.emb_args)
+                            options =  m.process_expression(constraint, step.args)
                             if options == 'exec':
                                 raise ValueError(f"Invalid constraint for argument substitution: {expr}")
                             if not options:
@@ -359,9 +369,9 @@ class SuiteProcessors:
         for step in scenario.steps:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
-                    modded_arg, _ = self._parse_modifier_expression(expr, step.emb_args)
-                    org_example = step.emb_args[modded_arg].org_value
-                    step.emb_args[modded_arg].value = subs.solution[org_example]
+                    modded_arg, _ = self._parse_modifier_expression(expr, step.args)
+                    org_example = step.args[modded_arg].org_value
+                    step.args[modded_arg].value = subs.solution[org_example]
         return scenario
 
     @staticmethod

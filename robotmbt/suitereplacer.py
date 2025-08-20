@@ -130,11 +130,19 @@ class SuiteReplacer:
                 scenario.teardown = step_info
             last_gwt = None
             for step_def in tc.body:
-                step_info = Step(step_def.name, *step_def.args, parent=scenario, prev_gherkin_kw=last_gwt)
-                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
-                scenario.steps.append(step_info)
-                last_gwt = step_info.gherkin_kw
-
+                if isinstance(step_def, rmodel.Keyword):
+                    step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
+                                     prev_gherkin_kw=last_gwt)
+                    step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                    scenario.steps.append(step_info)
+                    if step_info.gherkin_kw:
+                        last_gwt = step_info.gherkin_kw
+                elif isinstance(step_def, rmodel.Var):
+                    scenario.steps.append(Step('VAR', step_def.name, *step_def.value, parent=scenario))
+                else:
+                    unsupported_step = Step(str(step_def), parent=scenario)
+                    unsupported_step.model_info['error'] = f"Robot construct not supported"
+                    scenario.steps.append(unsupported_step)
             out_suite.scenarios.append(scenario)
         return out_suite
 
@@ -148,25 +156,28 @@ class SuiteReplacer:
             new_suite.resource = target_suite.resource
             if subsuite.setup:
                 new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword,
-                                                 args=subsuite.setup.args,
+                                                 args=subsuite.setup.posnom_args_str,
                                                  type='setup')
             if subsuite.teardown:
                 new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword,
-                                                    args=subsuite.teardown.args,
+                                                    args=subsuite.teardown.posnom_args_str,
                                                     type='teardown')
             self.__generateRobotSuite(subsuite, new_suite)
         for tc in suite_model.scenarios:
             new_tc = target_suite.tests.create(name=tc.name)
             if tc.setup:
                 new_tc.setup= rmodel.Keyword(name=tc.setup.keyword,
-                                             args=tc.setup.args,
+                                             args=tc.setup.posnom_args_str,
                                              type='setup')
             if tc.teardown:
                 new_tc.teardown= rmodel.Keyword(name=tc.teardown.keyword,
-                                                args=tc.teardown.args,
+                                                args=tc.teardown.posnom_args_str,
                                                 type='teardown')
             for step in tc.steps:
-                new_tc.body.create_keyword(name=step.keyword, args=step.args)
+                if step.keyword == 'VAR':
+                    new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
+                else:
+                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
 
     def _start_suite(self, suite, result):
         self.current_suite = suite

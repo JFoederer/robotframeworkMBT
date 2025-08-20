@@ -24,17 +24,11 @@ At least 42 people can write their name on the card
 
 *** Keywords ***
 Expect failing suite processing
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
     Run keyword and expect error    Unable to compose*    Treat this test suite Model-based
     Set suite variable    ${expected_error_detected}    ${True}
 
 Skip when unreachable
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
-    ...
+    [Documentation]
     ...    If the scenario is inserted after proper detection of the expected error,
     ...    then this keyword causes the remainder of the scenario to be skipped and
     ...    the test passes. When inserted without detected error, the scenario will

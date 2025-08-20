@@ -35,14 +35,8 @@ Suite setup
     Treat this test suite Model-based
 
 Test setup
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
     Set Suite Variable    ${test_count}    ${test_count+1}
 
 Check order
     [Arguments]    ${order}
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
     Should be equal    ${test_count}    ${order}

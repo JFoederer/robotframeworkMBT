@@ -37,7 +37,4 @@ Enter test suite
     Treat this test suite Model-based
 
 Increase test count
-    [Documentation]    *model info*
-    ...    :IN: None
-    ...    :OUT: None
     Set suite variable    ${test_count}    ${test_count+1}

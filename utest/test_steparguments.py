@@ -77,6 +77,14 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg1.org_value, 7)
         self.assertEqual(arg1.value, 8)
 
+    def test_modified_property(self):
+        arg1 = StepArgument('foo', 7)
+        self.assertFalse(arg1.modified)
+        arg1.value = 8
+        self.assertTrue(arg1.modified)
+        arg1.value = 7
+        self.assertFalse(arg1.modified)
+
     def test_copies_are_the_same(self):
         arg1 = StepArgument('foo', 7)
         arg2 = arg1.copy()
@@ -93,13 +101,15 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg2.value, 8)
 
     def test_copies_are_independent(self):
-        arg1 = StepArgument('foo', 7)
+        arg1 = StepArgument('foo', 7, StepArgument.POSITIONAL)
         arg1.value = 8
         arg2 = arg1.copy()
         arg2.value = 13
+        arg2.kind = StepArgument.NAMED
         self.assertEqual(arg2.value, 13)
         self.assertEqual(arg1.value, 8)
         self.assertEqual(arg1.org_value, arg2.org_value)
+        self.assertNotEqual(arg1.kind, arg2.kind)
 
     def test_bool_and_none_values_are_kept_for_code(self):
         arg1 = StepArgument('foo', None)
@@ -255,6 +265,13 @@ class TestStepArguments(unittest.TestCase):
         self.assertEqual(argset['${FoO1}'].value, 'bar1')
         self.assertEqual(argset['${foo2}'].value, 'bar2')
 
+    def test_set_is_modified_if_any_arg_is_modified(self):
+        arg1 = StepArgument('foo1', 'bar1')
+        arg2 = StepArgument('foo2', 'bar2')
+        argset = StepArguments([arg1, arg2])
+        self.assertFalse(argset.modified)
+        argset['${foo2}'].value = 'bar3'
+        self.assertTrue(argset.modified)
 
 if __name__ == '__main__':
     unittest.main()

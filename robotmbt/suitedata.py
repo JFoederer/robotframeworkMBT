@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
+from robot.running.arguments.argumentvalidator import ArgumentValidator
 
 from .steparguments import StepArgument, StepArguments
 
@@ -107,14 +108,18 @@ class Scenario:
         return front, back
 
 class Step:
-    def __init__(self, steptext, *args, parent, prev_gherkin_kw=None):
-        self.org_step = steptext  # first cell of the Robot line, including step_kw, excluding args
-        self.parent = parent      # Parent scenario for easy searching and processing
-        self.args = args          # positional and named arguments taken directly from Robot
+    def __init__(self, steptext, *args, parent, assign=(), prev_gherkin_kw=None):
+        self.org_step = steptext  # first keyword cell of the Robot line, including step_kw,
+                                  # excluding positional args, excluding variable assignment.
+        self.org_pn_args = args   # positional and named arguments as parsed from Robot text ('posA' , 'posB', 'named1=namedA')
+        self.parent = parent      # Parent scenario for easy searching and processing.
+        self.assign = assign      # For when a keyword's return value is assigned to a variable.
+                                  # Taken directly from Robot.
         self.gherkin_kw = self.step_kw if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
-                                  # 'given', 'when', 'then' or None for non-bdd keywords
-        self.signature = None     # Robot keyword with its embedded arguments in ${...} notation
-        self.emb_args = StepArguments() # embedded arguments list of StepArgument objects
+                                  # 'given', 'when', 'then' or None for non-bdd keywords.
+        self.signature = None     # Robot keyword with its embedded arguments in ${...} notation.
+        self.args = StepArguments() # embedded arguments list of StepArgument objects.
+        self.detached = False     # Decouples StepArguments from the step text (refinement use case)
         self.model_info = dict()  # Modelling information is available as a dictionary.
                                   # The standard format is dict(IN=[], OUT=[]) and can
                                   # optionally contain an error field.
@@ -131,10 +136,11 @@ class Step:
         return f"Step: '{self}' with model info: {self.model_info}"
 
     def copy(self):
-        cp = Step(self.org_step, *self.args, parent=self.parent)
+        cp = Step(self.org_step, *self.org_pn_args, parent=self.parent, assign=self.assign)
         cp.gherkin_kw = self.gherkin_kw
         cp.signature = self.signature
-        cp.emb_args = StepArguments(self.emb_args)
+        cp.args = StepArguments(self.args)
+        cp.detached = self.detached
         cp.model_info = self.model_info.copy()
         return cp
 
@@ -145,11 +151,37 @@ class Step:
         return self.model_info.get('error')
 
     @property
+    def full_keyword(self):
+        """The full keyword text, quad space separated, including its arguments and return value assignment"""
+        return "    ".join(str(p) for p in (*self.assign, self.keyword, *self.posnom_args_str))
+
+    @property
     def keyword(self):
         if not self.signature:
             return self.org_step
         s = f"{self.step_kw} {self.signature}" if self.step_kw else self.signature
-        return self.emb_args.fill_in_args(s)
+        return self.args.fill_in_args(s)
+
+    @property
+    def posnom_args_str(self):
+        """A tuple with all arguments in Robot accepted text format ('posA' , 'posB', 'named1=namedA')"""
+        if self.detached or not self.args.modified:
+            return self.org_pn_args
+        result = []
+        for arg in self.args:
+            if arg.kind == arg.POSITIONAL:
+                result.append(arg.value)
+            elif arg.kind == arg.VAR_POS:
+                for vararg in arg.value:
+                    result.append(vararg)
+            elif arg.kind == arg.NAMED:
+                result.append(f"{arg.name}={arg.value}")
+            elif arg.kind == arg.FREE_NAMED:
+                for name, value in arg.value.items():
+                    result.append(f"{name}={value}")
+            else:
+                continue
+        return tuple(result)
 
     @property
     def gherkin_kw(self):
@@ -177,12 +209,42 @@ class Step:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
-                self.emb_args = StepArguments([StepArgument(*match) for match in
-                                 zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
+                self.args = StepArguments([StepArgument(*match, kind=StepArgument.EMBEDDED) for match in
+                                           zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
+            self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)
         except Exception as ex:
             self.model_info['error']=str(ex)
+
+    def __handle_non_embedded_arguments(self, robot_argspec):
+        result = []
+        p_args, n_args = robot_argspec.map([a for a in self.org_pn_args if '=' not in a or r'\=' in a],
+                                           [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a])
+        if p_args == [None]:
+            # for some reason .map() returns [None] instead of the empty list when there are no arguments
+            p_args= []
+        ArgumentValidator(robot_argspec).validate(p_args, n_args)
+        robot_args = [a for a in robot_argspec]
+        argument_names = list(robot_argspec.argument_names)
+        for arg in robot_argspec:
+            if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
+                break
+            result += [StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL)]
+            robot_args.pop(0)
+            if not p_args:
+                break
+        if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
+            result += [StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS)]
+        free = {}
+        for name, value in n_args:
+            if name in argument_names:
+                result += [StepArgument(name, value, kind=StepArgument.NAMED)]
+            else:
+                free[name] = value
+        if free:
+            result += [StepArgument(argument_names[-1], free, kind=StepArgument.FREE_NAMED)]
+        return result
 
     def __parse_model_info(self, docu):
         model_info = dict()

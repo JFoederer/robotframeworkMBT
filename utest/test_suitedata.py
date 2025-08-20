@@ -31,6 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
+from unittest.mock import patch
+
 from types import SimpleNamespace
 
 from robotmbt.suitedata import Suite, Scenario, Step
@@ -291,6 +293,7 @@ class TestScenarios(unittest.TestCase):
         self.assertEqual(dup.data_choices, 'dummy')
 
 
+@patch('robotmbt.suitedata.ArgumentValidator')
 class TestSteps(unittest.TestCase):
     def setUp(self):
         self.steps = self.create_steps()
@@ -312,7 +315,7 @@ class TestSteps(unittest.TestCase):
         Tt1.gherkin_kw= Ta1.gherkin_kw= Tb1.gherkin_kw= 'then'
         return [Kw1, Gg1, Ga1, Gb1, Ww1, Wa1, Wb1, Tt1, Ta1, Tb1]
 
-    def test_full_names(self):
+    def test_full_names(self, mock):
         expected = ['action keyword',
                     'Given step Gg1',
                     'and step Ga1',
@@ -327,12 +330,12 @@ class TestSteps(unittest.TestCase):
             self.assertEqual(s.keyword, e)
             self.assertEqual(str(s), e)
 
-    def test_gherkin_keywords(self):
+    def test_gherkin_keywords(self, mock):
         expected = [None] + 3*['given'] + 3*['when'] + 3*['then']
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.gherkin_kw, e)
 
-    def test_gherkin_keywords_are_lower_case(self):
+    def test_gherkin_keywords_are_lower_case(self, mock):
         source = [None, 'given', 'Given', 'GIVEN',
                         'wHEN' , 'wHEn',  'WHEn',
                         'TheN' , 'theN',  'thEN']
@@ -342,43 +345,68 @@ class TestSteps(unittest.TestCase):
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.gherkin_kw, e)
 
-    def test_step_keywords_are_kept_as_is(self):
+    def test_step_keywords_are_kept_as_is(self, mock):
         expected = [None, 'Given', 'and', 'but',
                           'When' , 'and', 'BUT',
                           'Then' , 'And', 'but']
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.step_kw, e)
 
-    def test_keywords_are_available_without_their_gherkin_keyword(self):
+    def test_keywords_are_available_without_their_gherkin_keyword(self, mock):
         expected = ['action keyword', 'step Gg1', 'step Ga1', 'step Gb1',
                                       'step Ww1', 'step Wa1', 'step Wb1',
                                       'step Tt1', 'step Ta1', 'step Tb1']
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.kw_wo_gherkin, e)
 
-    def test_arguments_are_part_of_the_step_str(self):
+    def test_embedded_arguments_are_part_of_the_step_str(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
         self.assertNotIn('error', step.model_info)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
 
-    def test_modified_arguments_are_part_of_the_step_str(self):
+    def test_modified_embedded_arguments_are_part_of_the_step_str(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         self.assertEqual(str(step), RobotKwStub.STEPTEXT)
         step.add_robot_dependent_data(RobotKwStub())
         self.assertNotIn('error', step.model_info)
-        step.emb_args['${bar}'].value = 'new bar'
+        step.args['${bar}'].value = 'new bar'
         self.assertEqual(str(step), RobotKwStub.STEPTEXT.replace('bar_value', 'new bar'))
 
-    def test_keyword_errors_become_model_errors(self):
+    def test_all_arguments_are_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=namedA', parent=None)
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
+
+    def test_return_value_assignment_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output}',), parent=None)
+        self.assertEqual(step.full_keyword, "${output}    " + RobotKwStub.STEPTEXT)
+
+    def test_return_value_assignment_with_eq_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output}=',), parent=None)
+        self.assertEqual(step.full_keyword, "${output}=    " + RobotKwStub.STEPTEXT)
+
+    def test_return_value_assignment_with_eq_after_space_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output} =',), parent=None)
+        self.assertEqual(step.full_keyword, "${output} =    " + RobotKwStub.STEPTEXT)
+
+    def test_return_value_multi_assignment_is_part_of_the_full_keyword_text(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output1}', '${output2}='), parent=None)
+        self.assertEqual(step.full_keyword, "${output1}    ${output2}=    " + RobotKwStub.STEPTEXT)
+
+    def test_positional_and_named_arguments_are_available_in_robot_tuple_format(self, mock):
+        argtuple = 'posA', 'pos2=posB', 'named1=namedA'
+        step = Step(RobotKwStub.STEPTEXT, *argtuple, parent=None)
+        self.assertTupleEqual(step.posnom_args_str, argtuple)
+
+    def test_keyword_errors_become_model_errors(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         kw = RobotKwStub()
         kw.error = 'keyword error'
         step.add_robot_dependent_data(kw)
         self.assertEqual(step.model_info['error'], 'keyword error')
 
-    def test_model_info_is_loaded(self):
+    def test_model_info_is_loaded(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         kw = RobotKwStub()
         kw._doc = """*model info*
@@ -389,7 +417,7 @@ class TestSteps(unittest.TestCase):
         self.assertEqual(step.model_info, dict( IN=['expr1', 'expr2'],
                                                OUT=['expr3', 'expr4']))
 
-    def test_model_info_errors_are_reported(self):
+    def test_model_info_errors_are_reported(self, mock):
         step = Step(RobotKwStub.STEPTEXT, parent=None)
         kw = RobotKwStub()
         kw._doc = """*model info*
@@ -404,10 +432,15 @@ class RobotKwStub:
     def __init__(self):
         self.name = "step with ${foo} and ${bar} as arguments"
         self._doc = "*model info*\n:IN: None\n:OUT: None"
+        self.args = self.argstub()
         self.error = False
         self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
                                         parse_args= lambda _: ['foo_value', 'bar_value'])
 
+    class argstub:
+        argument_names = []
+        map = lambda x,y,z: ([], [])
+        __iter__ = lambda _: iter([])
 
 if __name__ == '__main__':
     unittest.main()
