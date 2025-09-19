@@ -202,9 +202,7 @@ class Step:
         return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword
 
     def add_robot_dependent_data(self, robot_kw):
-        """
-        robot_kw must be Robot Framework's keyword object from Robot's runner context
-        """
+        """robot_kw must be Robot Framework's keyword object from Robot's runner context"""
         try:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
@@ -230,20 +228,24 @@ class Step:
         for arg in robot_argspec:
             if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
                 break
-            result += [StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL)]
+            result.append(StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL))
             robot_args.pop(0)
             if not p_args:
                 break
         if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
-            result += [StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS)]
+            result.append(StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS))
         free = {}
         for name, value in n_args:
             if name in argument_names:
-                result += [StepArgument(name, value, kind=StepArgument.NAMED)]
+                result.append(StepArgument(name, value, kind=StepArgument.NAMED))
+                argument_names.remove(name)
             else:
                 free[name] = value
         if free:
-            result += [StepArgument(argument_names[-1], free, kind=StepArgument.FREE_NAMED)]
+            result.append(StepArgument(argument_names.pop(-1), free, kind=StepArgument.FREE_NAMED))
+        for unmentioned_arg in argument_names:
+            default_value = next(arg.default for arg in robot_args if arg.name == unmentioned_arg)
+            result.append(StepArgument(unmentioned_arg, default_value, kind=StepArgument.NAMED, is_default=True))
         return result
 
     def __parse_model_info(self, docu):

@@ -12,24 +12,56 @@ No arguments
     Keyword without arguments
 
 Embedded argument
-    Keyword with Green as embedded argument
+    ${emb_arg}=    Keyword with Green as embedded argument
+    Should be equal    ${emb_arg}    Green
 
 Positional arguments
-    Keyword with positional argument    Green
-    Keyword with multiple positional arguments    Green    Red
+    ${pos1}=    Keyword with positional argument    Green
+    Should be equal    ${pos1}    Green
+    ${pos1}    ${pos2}=    Keyword with multiple positional arguments    Green    Red
+    Should be equal    ${pos1}    Green
+    Should be equal    ${pos2}    Red
+
+Optional argument
+    ${pos1_a}    ${pos2_a}    ${pos3_a}=    Keyword with positional arguments and optional argument    Green    Red
+    Should be equal    ${pos1_a}    Green
+    Should be equal    ${pos2_a}    Red
+    Should be equal    ${pos3_a}    Orange
+    ${pos1_b}    ${pos2_b}    ${pos3_b}=    Keyword with positional arguments and optional argument    Green    Red    Blue
+    Should be equal    ${pos1_b}    Green
+    Should be equal    ${pos2_b}    Red
+    Should be equal    ${pos3_b}    Blue
 
 Variable number of arguments
-    Keyword with variable number of arguments    Green    Red    Blue
+    @{varargs}=    Keyword with variable number of arguments    Green    Red    Blue
+    Should be equal    ${varargs}[0]    Green
+    Should be equal    ${varargs}[1]    Red
+    Should be equal    ${varargs}[2]    Blue
 
 Named arguments
-    Keyword with named argument    named1=Green
-    Keyword with multiple named arguments    named1=Green    named2=Red
+    ${named1_a}=    Keyword with named argument    named1=Green
+    Should be equal    ${named1_a}    Green
+    ${named1_b}    ${named2}=    Keyword with multiple named arguments    named1=Green    named2=Red
+    Should be equal    ${named1_b}    Green
+    Should be equal    ${named2}    Red
 
 Free named arguments
-    Keyword with free named arguments    free1=Green    free2=Red    free3=Blue
+    &{free}=    Keyword with free named arguments    free1=Green    free2=Red    free3=Blue
+    Should be equal    ${free}[free1]    Green
+    Should be equal    ${free}[free2]    Red
+    Should be equal    ${free}[free3]    Blue
 
 Mixed argument styles
-    Keyword with all 5 argument styles mixed    A    B    C    D    named1=E    named2=F    free1=G    free2=H
+    &{all_args}=    Keyword with all 5 argument styles mixed    A    B    C    D    named1=E    named2=F    free1=G    free2=H
+    Should be equal    ${all_args}[emb_arg]    5
+    Should be equal    ${all_args}[pos1]    A
+    Should be equal    ${all_args}[pos2]    B
+    Should be equal    ${all_args}[var_args][0]    C
+    Should be equal    ${all_args}[var_args][1]    D
+    Should be equal    ${all_args}[named1]    E
+    Should be equal    ${all_args}[named2]    F
+    Should be equal    ${all_args}[free1]    G
+    Should be equal    ${all_args}[free2]    H
 
 BDD style with arguments
     Given Keyword with all 5 argument styles mixed    A    B    C    D    named1=E    named2=F    free1=G    free2=H
@@ -46,21 +78,28 @@ Keyword with ${emb_arg} as embedded argument
     [Documentation]    *model info*
     ...    :IN: args.emb_arg = ${emb_arg}
     ...    :OUT: args.emb_arg == Green
-    No Operation
+    RETURN    ${emb_arg}
 
 Keyword with positional argument
     [Documentation]    *model info*
     ...    :IN: args.pos1 = ${pos1}
     ...    :OUT: args.pos1 == Green
     [Arguments]    ${pos1}
-    No Operation
+    RETURN    ${pos1}
 
 Keyword with multiple positional arguments
     [Documentation]    *model info*
     ...    :IN: args.pos1 = ${pos1} | args.pos2 = ${pos2}
     ...    :OUT: args.pos1 == Green | args.pos2 == Red
     [Arguments]    ${pos1}    ${pos2}
-    No Operation
+    RETURN    ${pos1}    ${pos2}
+
+Keyword with positional arguments and optional argument
+    [Documentation]    *model info*
+    ...    :IN: args.pos1 = ${pos1} | args.pos2 = ${pos2} | args.pos3 = ${pos3}
+    ...    :OUT: args.pos1 == Green | args.pos2 == Red | args.pos3 == ${pos3}
+    [Arguments]    ${pos1}    ${pos2}    ${pos3}=Orange
+    RETURN    ${pos1}    ${pos2}    ${pos3}
 
 Keyword with variable number of arguments
     [Documentation]    *model info*
@@ -68,21 +107,21 @@ Keyword with variable number of arguments
     ...    :OUT: len(args.varargs) == 3 | args.vararg1 == Green
     ...          args.varargs[0] == Green | args.varargs[1] == Red | args.varargs[2] == Blue
     [Arguments]    @{varargs}
-    No Operation
+    RETURN    ${varargs}
 
 Keyword with named argument
     [Documentation]    *model info*
     ...    :IN: args.named1 = ${named1}
     ...    :OUT: args.named1 == Green
     [Arguments]    ${named1}=
-    No Operation
+    RETURN    ${named1}
 
 Keyword with multiple named arguments
     [Documentation]    *model info*
     ...    :IN: args.named1 = ${named1} | args.named2 = ${named2}
     ...    :OUT: args.named1 == Green | args.named2 == Red
     [Arguments]    ${named1}=    ${named2}=
-    No Operation
+    RETURN    ${named1}    ${named2}
 
 Keyword with free named arguments
     [Documentation]    *model info*
@@ -90,7 +129,7 @@ Keyword with free named arguments
     ...    :OUT: len(args.free) == 3 | args.free1 == Green
     ...          args.free[free1] == Green | args.free[free2] == Red | args.free[free3] == Blue
     [Arguments]    &{free}
-    No Operation
+    RETURN    ${free}
 
 Keyword with all ${emb_arg} argument styles mixed
     [Documentation]    *model info*
@@ -108,4 +147,6 @@ Keyword with all ${emb_arg} argument styles mixed
     ...          combiargs.free[free1] == G | combiargs.free[free2] == H
     ...          del combiargs
     [Arguments]    ${pos1}    ${pos2}    @{varargs}    ${named1}=    ${named2}=    &{free}
-    No Operation
+    VAR    &{all_args}=    emb_arg=${emb_arg}    pos1=${pos1}    pos2=${pos2}
+    ...                    var_args=${varargs}    named1=${named1}    named2=${named2}    &{free}
+    RETURN    ${all_args}
