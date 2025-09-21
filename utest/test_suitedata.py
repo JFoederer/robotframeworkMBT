@@ -394,6 +394,42 @@ class TestSteps(unittest.TestCase):
         step = Step(RobotKwStub.STEPTEXT, assign=('${output1}', '${output2}='), parent=None)
         self.assertEqual(step.full_keyword, "${output1}    ${output2}=    " + RobotKwStub.STEPTEXT)
 
+    def test_default_arguments_are_not_part_of_the_full_keyword_text(self, mock):
+        class MockStepArguments(list):
+            modified = True # trigger modified status to get arguments processed, rather then just echoed
+        class MockArgument(SimpleNamespace):
+            EMBEDDED = 'EMBEDDED'
+            POSITIONAL = 'POSITIONAL'
+            VAR_POS = 'VAR_POS'
+            NAMED = 'NAMED'
+            FREE_NAMED = 'FREE_NAMED'
+
+        mock1 = MockArgument(name='pos1', value='posA', kind='POSITIONAL', is_default=False)
+        mock2 = MockArgument(name='pos2', value='posB', kind='NAMED', is_default=False)
+        argtuple_w_optional = 'posA', 'pos2=posB', 'named1=namedA'
+        argtuple_wo_optional = 'posA', 'pos2=posB'
+
+        # Default value is omitted when the argument is not mentioned in the scenario
+        step = Step(RobotKwStub.STEPTEXT, *argtuple_wo_optional, parent=None)
+        step.args = MockStepArguments([mock1, mock2,
+                                       MockArgument(name='named1', value='namedA', is_default=True, kind='NAMED')])
+        self.assertTupleEqual(step.posnom_args_str, argtuple_wo_optional)
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB")
+
+        # When the argument is mentioned, it is included as a regular named argument
+        step = Step(RobotKwStub.STEPTEXT, *argtuple_w_optional, parent=None)
+        step.args = MockStepArguments([mock1, mock2,
+                                       MockArgument(name='named1', value='namedA', is_default=False, kind='NAMED')])
+        self.assertTupleEqual(step.posnom_args_str, argtuple_w_optional)
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
+
+        # When the argument is mentioned it is included, also if the mentioned value happens to be the default value
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=theDefault', parent=None)
+        step.args = MockStepArguments([mock1, mock2,
+                                       MockArgument(name='named1', value='theDefault', is_default=False, kind='NAMED')])
+        self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB', 'named1=theDefault'))
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=theDefault")
+
     def test_positional_and_named_arguments_are_available_in_robot_tuple_format(self, mock):
         argtuple = 'posA', 'pos2=posB', 'named1=namedA'
         step = Step(RobotKwStub.STEPTEXT, *argtuple, parent=None)

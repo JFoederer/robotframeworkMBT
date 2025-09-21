@@ -169,6 +169,8 @@ class Step:
             return self.org_pn_args
         result = []
         for arg in self.args:
+            if arg.is_default:
+                continue
             if arg.kind == arg.POSITIONAL:
                 result.append(arg.value)
             elif arg.kind == arg.VAR_POS:
