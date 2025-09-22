@@ -219,21 +219,17 @@ class Step:
 
     def __handle_non_embedded_arguments(self, robot_argspec):
         result = []
-        p_args, n_args = robot_argspec.map([a for a in self.org_pn_args if '=' not in a or r'\=' in a],
-                                           [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a])
-        if p_args == [None]:
-            # for some reason .map() returns [None] instead of the empty list when there are no arguments
-            p_args= []
-        ArgumentValidator(robot_argspec).validate(p_args, n_args)
+        p_args = [a for a in self.org_pn_args if '=' not in a or r'\=' in a]
+        n_args = [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a]
+        self.__validate_arguments(robot_argspec, p_args, n_args)
+
         robot_args = [a for a in robot_argspec]
         argument_names = list(robot_argspec.argument_names)
         for arg in robot_argspec:
-            if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
+            if not p_args or (arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED):
                 break
             result.append(StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL))
             robot_args.pop(0)
-            if not p_args:
-                break
         if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
             result.append(StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS))
         free = {}
@@ -249,6 +245,17 @@ class Step:
             default_value = next(arg.default for arg in robot_args if arg.name == unmentioned_arg)
             result.append(StepArgument(unmentioned_arg, default_value, kind=StepArgument.NAMED, is_default=True))
         return result
+
+    @staticmethod
+    def __validate_arguments(spec, positionals, nameds):
+        p, n = spec.map(positionals, nameds) # Robot uses a slightly different mapping for positional and named arguments.
+                                             # We keep the notation from the scenario (with or without the argument's name).
+                                             # Robot's mapping favours positional when possible, even when the name is used
+                                             # in the keyword call. The validator is sensitive to these differences.
+        if p == [None]:
+            # for some reason .map() returns [None] instead of the empty list when there are no arguments
+            p = []
+        ArgumentValidator(spec).validate(p, n) # Use the Robot mechanism for validation to yield familiar error messages
 
     def __parse_model_info(self, docu):
         model_info = dict()

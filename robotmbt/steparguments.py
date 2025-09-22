@@ -101,6 +101,9 @@ class StepArgument:
         cp.org_value = self.org_value
         return cp
 
+    def __str__(self):
+        return f"{self.name}={self.value}"
+
     @staticmethod
     def make_codestring(text):
         codestr = str(text)
