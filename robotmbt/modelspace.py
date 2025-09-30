@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
+from typing import Self
 
 from .steparguments import StepArguments
 
@@ -41,23 +42,25 @@ class ModellingError(Exception):
 
 class ModelSpace:
     def __init__(self, reference_id=None):
-        self.ref_id = str(reference_id)
-        self.std_attrs = []
-        self.props = dict()
-        self.values = dict()  # For using literals without having to use quotes (abc='abc')
-        self.scenario_vars = []
+        self.ref_id: str = str(reference_id)
+        self.std_attrs: list[str] = []
+        self.props: dict[str, RecursiveScope | ModelSpace] = dict()
+        
+        # For using literals without having to use quotes (abc='abc')
+        self.values: dict[str, any] = dict()
+        self.scenario_vars: list[RecursiveScope] = []
         self.std_attrs = dir(self)
 
     def __repr__(self):
         return self.ref_id if self.ref_id else super().__repr__()
 
-    def copy(self):
+    def copy(self) -> Self:
         return copy.deepcopy(self)
 
     def __eq__(self, other):
         return self.get_status_text() == other.get_status_text()
 
-    def add_prop(self, name):
+    def add_prop(self, name: str):
         if name == 'scenario':
             raise ModellingError(f"scenario is a reserved attribute.")
         if name in self.props or name in self.values:
@@ -65,7 +68,7 @@ class ModelSpace:
         self.props[name] = ModelSpace(name)
         setattr(self, name, self.props[name])
 
-    def del_prop(self, name):
+    def del_prop(self, name: str):
         if name == 'scenario':
             raise ModellingError(f"scenario is a reserved attribute and cannot be removed.")
         if name not in self.props:
@@ -80,18 +83,20 @@ class ModelSpace:
             return self.__dict__.keys()
 
     def new_scenario_scope(self):
-        self.scenario_vars.append(RecursiveScope(self.scenario_vars[-1] if len(self.scenario_vars) else None))
+        self.scenario_vars.append(RecursiveScope(
+            self.scenario_vars[-1] if len(self.scenario_vars) else None))
         self.props['scenario'] = self.scenario_vars[-1]
 
     def end_scenario_scope(self):
-        assert len(self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
+        assert len(
+            self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
         self.scenario_vars.pop()
         if len(self.scenario_vars):
             self.props['scenario'] = self.scenario_vars[-1]
         else:
             self.props.pop('scenario')
 
-    def process_expression(self, expression, step_args=StepArguments()):
+    def process_expression(self, expression: str, step_args: StepArguments = StepArguments()) -> any:
         expr = step_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
@@ -105,7 +110,8 @@ class ModelSpace:
         for p in self.props:
             exec(f"{p} = self.props['{p}']", local_locals)
         for v in self.values:
-            value = f"'{self.values[v]}'" if isinstance(self.values[v], str) else self.values[v]
+            value = f"'{self.values[v]}'" if isinstance(
+                self.values[v], str) else self.values[v]
             exec(f"{v} = {value}", local_locals)
         try:
             result = eval(expr, local_locals)
@@ -139,31 +145,33 @@ class ModelSpace:
             raise ModellingError(f"{err.obj} used before definition")
         raise ModellingError(f"{err.name} used before assignment")
 
-    def __add_alias(self, missing_name, step_args):
+    def __add_alias(self, missing_name: str, step_args):
         if missing_name == 'scenario':
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
-        matching_args = [arg.value for arg in step_args if arg.codestring == missing_name]
+        matching_args = [
+            arg.value for arg in step_args if arg.codestring == missing_name]
         value = matching_args[0] if matching_args else missing_name
         if isinstance(value, str):
             for esc_char in "$@&=":  # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
                 value = value.replace(f'\\{esc_char}', f'\\\\{esc_char}')
-            value = value.replace("'", r"\'")  # Needed because we use single quotes in low level processing later on
+            # Needed because we use single quotes in low level processing later on
+            value = value.replace("'", r"\'")
         self.values[missing_name] = value
 
     @staticmethod
-    def _is_new_vocab_expression(expression):
+    def _is_new_vocab_expression(expression: str) -> bool:
         return expression.lower().startswith('new ') and len(expression.split()) == 2
 
     @staticmethod
-    def _is_del_vocab_expression(expression):
+    def _is_del_vocab_expression(expression: str) -> bool:
         return expression.lower().startswith('del ') and len(expression.split()) == 2
 
     @staticmethod
-    def _vocab_term(expression):
+    def _vocab_term(expression: str) -> str:
         return expression.split()[-1]
 
-    def get_status_text(self):
+    def get_status_text(self) -> str:
         status = str()
         scenario_attrs = []
         for p in self.props:
@@ -197,12 +205,12 @@ class RecursiveScope:
     def __init__(self, outer):
         super().__setattr__('_outer_scope', outer)
 
-    def __getattr__(self, attr):
+    def __getattr__(self, attr: str):
         if hasattr(super().__getattribute__('_outer_scope'), attr):
             return getattr(self._outer_scope, attr)
         return super().__getattribute__(attr)
 
-    def __setattr__(self, attr, value):
+    def __setattr__(self, attr: str, value):
         if hasattr(self._outer_scope, attr):
             setattr(self._outer_scope, attr, value)
         else:

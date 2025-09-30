@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+from .suitedata import Suite, Scenario, Step
+from .suiteprocessors import SuiteProcessors
+import robot.running.model as rmodel
+from robot.api import logger
+from robot.api.deco import keyword
+from typing import Self
 
 # BSD 3-Clause License
 #
@@ -30,31 +36,27 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from .suitedata import Suite, Scenario, Step
-from .suiteprocessors import SuiteProcessors
-import robot.running.model as rmodel
-from robot.api import logger
-from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
+
 Robot = BuiltIn()
 
 
 class SuiteReplacer:
-    ROBOT_LIBRARY_SCOPE = 'GLOBAL'
-    ROBOT_LISTENER_API_VERSION = 3
+    ROBOT_LIBRARY_SCOPE: str = 'GLOBAL'
+    ROBOT_LISTENER_API_VERSION: int = 3
 
-    def __init__(self, processor='process_test_suite', processor_lib=None):
-        self.ROBOT_LIBRARY_LISTENER = self
-        self.current_suite = None
-        self.robot_suite = None
-        self.processor_lib_name = processor_lib
-        self.processor_name = processor
-        self._processor_lib = None
+    def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
+        self.ROBOT_LIBRARY_LISTENER: Self = self
+        self.current_suite: Suite | None = None
+        self.robot_suite: Suite | None = None
+        self.processor_lib_name: str | None = processor_lib
+        self.processor_name: str = processor
+        self._processor_lib: SuiteProcessors | None = None
         self._processor_method = None
         self.processor_options = {}
 
     @property
-    def processor_lib(self):
+    def processor_lib(self) -> SuiteProcessors:
         if self._processor_lib is None:
             self._processor_lib = SuiteProcessors() if self.processor_lib_name is None \
                 else Robot.get_library_instance(self.processor_lib_name)
@@ -66,7 +68,10 @@ class SuiteReplacer:
             if not hasattr(self.processor_lib, self.processor_name):
                 Robot.fail(
                     f"Processor '{self.processor_name}' not available for model-based processor library {self.processor_lib_name}")
-            self._processor_method = getattr(self._processor_lib, self.processor_name)
+            
+            self._processor_method = getattr(
+                self._processor_lib, self.processor_name)
+        
         return self._processor_method
 
     @keyword(name="Treat this test suite Model-based")
@@ -79,18 +84,20 @@ class SuiteReplacer:
         model info that is included in the test steps, the test cases are modifed, mixed and
         matched to create unique traces and achieve more test coverage quicker.
 
-        Any arguments must be named arguments. They are passed on as options to the selected model-based
-        processor. If an option was already set on library level (See: `Set model-based options` and
-        `Update model-based options`, then these arguments take precedence over the library option and
-        affect only the current test suite.
+        Any arguments are handled as if using keyword `Update model-based options`
         """
         self.robot_suite = self.current_suite
 
-        logger.info(f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
-        local_settings = self.processor_options.copy()
-        local_settings.update(kwargs)
-        master_suite = self.__process_robot_suite(self.robot_suite, parent=None)
-        modelbased_suite = self.processor_method(master_suite, **local_settings)
+        logger.info(
+            f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
+        
+        self.update_model_based_options(**kwargs)
+        master_suite = self.__process_robot_suite(
+            self.robot_suite, parent=None)
+        
+        modelbased_suite = self.processor_method(
+            master_suite, **self.processor_options)
+        
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
 
@@ -110,53 +117,73 @@ class SuiteReplacer:
         """
         self.processor_options.update(kwargs)
 
-    def __process_robot_suite(self, in_suite, parent):
+    def __process_robot_suite(self, in_suite: Suite, parent: Suite | None) -> Suite:
         out_suite = Suite(in_suite.name, parent)
         out_suite.filename = in_suite.source
 
         if in_suite.setup and parent is not None:
-            step_info = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
-            step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+            step_info = Step(in_suite.setup.name, *
+                             in_suite.setup.args, parent=out_suite)
+            step_info.add_robot_dependent_data(
+                Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.setup = step_info
+        
         if in_suite.teardown and parent is not None:
-            step_info = Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
-            step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+            step_info = Step(in_suite.teardown.name, *
+                             in_suite.teardown.args, parent=out_suite)
+            step_info.add_robot_dependent_data(
+                Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.teardown = step_info
+        
         for st in in_suite.suites:
-            out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
+            out_suite.suites.append(
+                self.__process_robot_suite(st, parent=out_suite))
+        
         for tc in in_suite.tests:
             scenario = Scenario(tc.name, parent=out_suite)
             if tc.setup:
-                step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
-                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                step_info = Step(
+                    tc.setup.name, *tc.setup.args, parent=scenario)
+                step_info.add_robot_dependent_data(
+                    Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.setup = step_info
+            
             if tc.teardown:
-                step_info = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
-                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                step_info = Step(tc.teardown.name, *
+                                 tc.teardown.args, parent=scenario)
+                step_info.add_robot_dependent_data(
+                    Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.teardown = step_info
             last_gwt = None
+            
             for step_def in tc.body:
                 if isinstance(step_def, rmodel.Keyword):
                     step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
                                      prev_gherkin_kw=last_gwt)
-                    step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
+                    step_info.add_robot_dependent_data(
+                        Robot._namespace.get_runner(step_info.org_step).keyword)
                     scenario.steps.append(step_info)
+                    
                     if step_info.gherkin_kw:
                         last_gwt = step_info.gherkin_kw
+                
                 elif isinstance(step_def, rmodel.Var):
-                    scenario.steps.append(Step('VAR', step_def.name, *step_def.value, parent=scenario))
+                    scenario.steps.append(
+                        Step('VAR', step_def.name, *step_def.value, parent=scenario))
                 else:
                     unsupported_step = Step(str(step_def), parent=scenario)
                     unsupported_step.model_info['error'] = f"Robot construct not supported"
                     scenario.steps.append(unsupported_step)
+            
             out_suite.scenarios.append(scenario)
+        
         return out_suite
 
-    def __clearTestSuite(self, suite):
+    def __clearTestSuite(self, suite: Suite):
         suite.tests.clear()
         suite.suites.clear()
 
-    def __generateRobotSuite(self, suite_model, target_suite):
+    def __generateRobotSuite(self, suite_model: Suite, target_suite):
         for subsuite in suite_model.suites:
             new_suite = target_suite.suites.create(name=subsuite.name)
             new_suite.resource = target_suite.resource
@@ -181,13 +208,15 @@ class SuiteReplacer:
                                                  type='teardown')
             for step in tc.steps:
                 if step.keyword == 'VAR':
-                    new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
+                    new_tc.body.create_var(
+                        step.posnom_args_str[0], step.posnom_args_str[1:])
                 else:
-                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
+                    new_tc.body.create_keyword(
+                        name=step.keyword, assign=step.assign, args=step.posnom_args_str)
 
-    def _start_suite(self, suite, result):
+    def _start_suite(self, suite: Suite | None, result):
         self.current_suite = suite
 
-    def _end_suite(self, suite, result):
+    def _end_suite(self, suite: Suite | None, result):
         if suite == self.robot_suite:
             self.robot_suite = None
