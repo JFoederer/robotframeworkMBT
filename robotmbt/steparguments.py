@@ -32,13 +32,14 @@
 
 from keyword import iskeyword
 import builtins
+from typing import Self
 
 
 class StepArguments(list):
     def __init__(self, iterable=[]):
         super().__init__(item.copy() for item in iterable)
 
-    def fill_in_args(self, text, as_code=False):
+    def fill_in_args(self, text: str, as_code: bool = False) -> str:
         result = text
         for arg in self:
             sub = arg.codestring if as_code else str(arg.value)
@@ -52,8 +53,9 @@ class StepArguments(list):
         return super()[key]
 
     @property
-    def modified(self):
+    def modified(self) -> bool:
         return any([arg.modified for arg in self])
+
 
 class StepArgument:
     EMBEDDED = 'EMBEDDED'
@@ -62,42 +64,42 @@ class StepArgument:
     NAMED = 'NAMED'
     FREE_NAMED = 'FREE_NAMED'
 
-    def __init__(self, arg_name, value, kind=None):
-        self.name = arg_name
-        self.org_value = value
-        self.kind = kind
-        self._value = None
-        self._codestr = None
-        self.value = value
+    def __init__(self, arg_name: str, value: any, kind: str | None = None):
+        self.name: str = arg_name
+        self.org_value: any = value
+        self.kind: str | None = kind
+        self._value: any = None
+        self._codestr: str | None = None
+        self.value: any = value
 
     @property
-    def arg(self):
+    def arg(self) -> str:
         return "${%s}" % self.name
 
     @property
-    def value(self):
+    def value(self) -> any:
         return self._value
 
     @value.setter
-    def value(self, value):
+    def value(self, value: any):
         self._value = value
         self._codestr = self.make_codestring(value)
 
     @property
-    def modified(self):
+    def modified(self) -> bool:
         return self.org_value != self.value
 
     @property
-    def codestring(self):
+    def codestring(self) -> str | None:
         return self._codestr
 
-    def copy(self):
+    def copy(self) -> Self:
         cp = StepArgument(self.arg.strip('${}'), self.value, self.kind)
         cp.org_value = self.org_value
         return cp
 
     @staticmethod
-    def make_codestring(text):
+    def make_codestring(text: any) -> str:
         codestr = str(text)
         if codestr.title() in ['None', 'True', 'False']:
             return codestr.title()
@@ -108,7 +110,7 @@ class StepArgument:
         return codestr
 
     @staticmethod
-    def make_identifier(s):
+    def make_identifier(s: any) -> str:
         _s = str(s).replace(' ', '_')
         if _s.isidentifier():
             return f"{_s}_" if iskeyword(_s) or _s in dir(builtins) else _s
