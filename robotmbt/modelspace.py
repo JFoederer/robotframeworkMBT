@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-from typing import Any
+from typing import Self
 
 from .steparguments import StepArguments
 
@@ -45,14 +45,16 @@ class ModelSpace:
         self.ref_id: str = str(reference_id)
         self.std_attrs: list[str] = []
         self.props: dict[str, RecursiveScope | ModelSpace] = dict()
-        self.values: dict[str, Any] = dict()  # For using literals without having to use quotes (abc='abc')
+        
+        # For using literals without having to use quotes (abc='abc')
+        self.values: dict[str, any] = dict()
         self.scenario_vars: list[RecursiveScope] = []
         self.std_attrs = dir(self)
 
     def __repr__(self):
         return self.ref_id if self.ref_id else super().__repr__()
 
-    def copy(self):
+    def copy(self) -> Self:
         return copy.deepcopy(self)
 
     def __eq__(self, other):
@@ -81,18 +83,20 @@ class ModelSpace:
             return self.__dict__.keys()
 
     def new_scenario_scope(self):
-        self.scenario_vars.append(RecursiveScope(self.scenario_vars[-1] if len(self.scenario_vars) else None))
+        self.scenario_vars.append(RecursiveScope(
+            self.scenario_vars[-1] if len(self.scenario_vars) else None))
         self.props['scenario'] = self.scenario_vars[-1]
 
     def end_scenario_scope(self):
-        assert len(self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
+        assert len(
+            self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
         self.scenario_vars.pop()
         if len(self.scenario_vars):
             self.props['scenario'] = self.scenario_vars[-1]
         else:
             self.props.pop('scenario')
 
-    def process_expression(self, expression: str, step_args: StepArguments = StepArguments()) -> Any:
+    def process_expression(self, expression: str, step_args: StepArguments = StepArguments()) -> any:
         expr = step_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
@@ -106,7 +110,8 @@ class ModelSpace:
         for p in self.props:
             exec(f"{p} = self.props['{p}']", local_locals)
         for v in self.values:
-            value = f"'{self.values[v]}'" if isinstance(self.values[v], str) else self.values[v]
+            value = f"'{self.values[v]}'" if isinstance(
+                self.values[v], str) else self.values[v]
             exec(f"{v} = {value}", local_locals)
         try:
             result = eval(expr, local_locals)
@@ -132,7 +137,7 @@ class ModelSpace:
 
         return result
 
-    def __handle_attribute_error(self, err: AttributeError):
+    def __handle_attribute_error(self, err):
         if isinstance(err.obj, str) and err.obj in self.values:
             # This situation occurs when using e.g. 'foo.bar' in the model before calling 'new foo'.
             # The NameError on foo is handled by adding its alias, which results in an AttributeError
@@ -140,16 +145,18 @@ class ModelSpace:
             raise ModellingError(f"{err.obj} used before definition")
         raise ModellingError(f"{err.name} used before assignment")
 
-    def __add_alias(self, missing_name: str, step_args: StepArguments):
+    def __add_alias(self, missing_name: str, step_args):
         if missing_name == 'scenario':
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
-        matching_args = [arg.value for arg in step_args if arg.codestring == missing_name]
+        matching_args = [
+            arg.value for arg in step_args if arg.codestring == missing_name]
         value = matching_args[0] if matching_args else missing_name
         if isinstance(value, str):
             for esc_char in "$@&=":  # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
                 value = value.replace(f'\\{esc_char}', f'\\\\{esc_char}')
-            value = value.replace("'", r"\'")  # Needed because we use single quotes in low level processing later on
+            # Needed because we use single quotes in low level processing later on
+            value = value.replace("'", r"\'")
         self.values[missing_name] = value
 
     @staticmethod
