@@ -67,6 +67,24 @@ BDD style with arguments
     Given Keyword with all 5 argument styles mixed    A    B    C    D    named1=E    named2=F    free1=G    free2=H
     Then Keyword with all 5 argument styles mixed    A    B    C    D    named1=E    named2=F    free1=G    free2=H
 
+Empty varargs and free named args
+    &{all_args}=    Keyword with some argument styles mixed (no OUT-check)    A    B    named1=C
+    ${n_varargs}=    Get length    ${all_args}[var_args]
+    Should be equal    ${n_varargs}    ${0}
+    Should be equal    ${all_args}[named2]    the default
+    ${total_args}=    Get length    ${all_args}
+    Should be equal    ${total_args}    ${6}
+
+Shuffled argument ordering
+    &{all_args}=    Keyword with some argument styles mixed (no OUT-check)    A    B    named2=C    free1=D    named1=E
+    ${n_varargs}=    Get length    ${all_args}[var_args]
+    Should be equal    ${n_varargs}    ${0}
+    Should be equal    ${all_args}[named2]    C
+    Should be equal    ${all_args}[free1]    D
+    ${total_args}=    Get length    ${all_args}
+    Should be equal    ${total_args}    ${7}
+
+
 *** Keywords ***
 Keyword without arguments
     [Documentation]    *model info*
@@ -147,6 +165,18 @@ Keyword with all ${emb_arg} argument styles mixed
     ...          combiargs.free[free1] == G | combiargs.free[free2] == H
     ...          del combiargs
     [Arguments]    ${pos1}    ${pos2}    @{varargs}    ${named1}=    ${named2}=    &{free}
+    VAR    &{all_args}=    emb_arg=${emb_arg}    pos1=${pos1}    pos2=${pos2}
+    ...                    var_args=${varargs}    named1=${named1}    named2=${named2}    &{free}
+    RETURN    ${all_args}
+
+Keyword with ${emb_arg} argument styles mixed (no OUT-check)
+    [Documentation]    *model info*
+    ...    :IN: new combiargs | combiargs.emb_var = ${emb_arg}
+    ...         combiargs.pos1 = ${pos1} | combiargs.pos2 = ${pos2}
+    ...         combiargs.named1 = ${named1} | combiargs.named2 = ${named2}
+    ...         combiargs.varargs = ${varargs} | combiargs.free = ${free}
+    ...    :OUT: del combiargs
+    [Arguments]    ${pos1}    ${pos2}    @{varargs}    ${named1}=    ${named2}=the default    &{free}
     VAR    &{all_args}=    emb_arg=${emb_arg}    pos1=${pos1}    pos2=${pos2}
     ...                    var_args=${varargs}    named1=${named1}    named2=${named2}    &{free}
     RETURN    ${all_args}

@@ -32,6 +32,7 @@
 
 import copy
 from robot.running.arguments.argumentvalidator import ArgumentValidator
+import robot.utils.notset
 
 from .steparguments import StepArgument, StepArguments
 
@@ -242,7 +243,13 @@ class Step:
         if free:
             result.append(StepArgument(argument_names.pop(-1), free, kind=StepArgument.FREE_NAMED))
         for unmentioned_arg in argument_names:
-            default_value = next(arg.default for arg in robot_args if arg.name == unmentioned_arg)
+            arg = next(arg for arg in robot_args if arg.name == unmentioned_arg)
+            default_value = arg.default
+            if default_value is robot.utils.notset.NOT_SET:
+                if arg.kind == arg.VAR_POSITIONAL:
+                    default_value = []
+                if arg.kind == arg.VAR_NAMED:
+                    default_value = {}
             result.append(StepArgument(unmentioned_arg, default_value, kind=StepArgument.NAMED, is_default=True))
         return result
 
