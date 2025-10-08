@@ -73,7 +73,7 @@ class TraceState:
         """Number of scenarios since last new coverage"""
         return self._snapshots[-1].coverage_drought if self._snapshots else 0
 
-    def get_trace(self) -> list[str]:
+    def get_trace(self) -> list[str | Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
     def next_candidate(self, retry: bool = False) -> int | None:
