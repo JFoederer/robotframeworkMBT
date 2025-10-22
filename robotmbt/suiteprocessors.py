@@ -41,7 +41,8 @@ from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
 from .steparguments import StepArgument, StepArguments
-from .visualise.visualiser import Visualiser, TraceInfo, ScenarioInfo, ScenarioGraph
+from .visualise.visualiser import Visualiser
+from .visualise.models import TraceInfo, ScenarioInfo
 
 
 class SuiteProcessors:
