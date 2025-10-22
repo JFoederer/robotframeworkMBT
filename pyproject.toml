@@ -28,3 +28,6 @@ packages = ["robotmbt"]
 
 [project.urls]
 Homepage = "https://github.com/JFoederer/robotframeworkMBT"
+
+[project.optional-dependencies]
+visualization = ["scipy","numpy","networkx","matplotlib"]
