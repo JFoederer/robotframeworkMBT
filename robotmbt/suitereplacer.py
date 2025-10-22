@@ -90,16 +90,20 @@ class SuiteReplacer:
 
         logger.info(
             f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
-        
+
         self.update_model_based_options(**kwargs)
         master_suite = self.__process_robot_suite(
             self.robot_suite, parent=None)
-        
+
         modelbased_suite = self.processor_method(
             master_suite, **self.processor_options)
-        
+
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
+
+        # TODO: add flag using kwargs to disable this
+        if isinstance(self.processor_lib, SuiteProcessors):
+            logger.write(self.processor_lib.visualiser.generate_html(), html=True)
 
     @keyword("Set model-based options")
     def set_model_based_options(self, **kwargs):
