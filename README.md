@@ -202,3 +202,53 @@ Using `seed=new` will force generation of a new reusable seed and is identical t
 ## Disclaimer
 
 Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent, and no deprecation warnings are being issued yet.
+
+
+## Development
+### Python virtual environment
+Installing the proper virtual environment can be done with the default `python -m venv ./.venv` command built into python. However, if you have another version of python on your system, this might break dependencies.
+
+#### Pipenv+Pyenv (verified on Windows and Linux)
+For the optimal experience (at least on Linux), we suggest installing the following packages:
+- [`pyenv`](https://github.com/pyenv/pyenv) (Linux/Mac) or [`pyenv-win`](https://github.com/pyenv-win/pyenv-win) (Windows)
+- [`pipenv`](https://github.com/pypa/pipenv) 
+
+Then, you can install a python virtual environment with:
+
+```bash
+pipenv --python <python_version>
+```
+..where the python version can be found in the `pyproject.toml`. For example, for 3.10: `pipenv --python 3.10`.
+
+You might need to manually make the folder `.venv` by doing `mkdir .venv`.
+
+You can verify if the install went correctly with:
+```bash
+pipenv check
+```
+This should return `Passed!`
+
+Errors related to minor versions (for example `3.10.0rc2` != `3.10.0`) can be ignored.
+
+Now activate the virtual environment by running 
+```bash 
+pipenv shell
+```
+
+..and you should have a virtual env! If you run
+```bash
+python --version
+```
+..while in your virtual environment, it should show the `<python_version>` from before.
+
+
+### Installing dependencies
+***NOTE: making sure that you are in the virtual environment***. 
+
+It is recommended that you also include the optional depedencies for visualisation, e.g.:
+```bash
+pip install ".[visualization]"
+```
+
+
+
