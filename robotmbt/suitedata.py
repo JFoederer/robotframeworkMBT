@@ -31,7 +31,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-from typing import Self
 
 from robot.running.arguments.argumentvalidator import ArgumentValidator
 
@@ -97,13 +96,15 @@ class Scenario:
                 + [s for s in self.steps if s.has_error()]
                 + ([self.teardown] if self.teardown and self.teardown.has_error() else []))
 
-    def copy(self) -> Self:
+    def copy(self):
+        # -> Self
         duplicate = copy.copy(self)
         duplicate.steps = [step.copy() for step in self.steps]
         duplicate.data_choices = self.data_choices.copy()
         return duplicate
 
-    def split_at_step(self, stepindex: int) -> tuple[Self, Self]:
+    def split_at_step(self, stepindex: int):
+        # -> tuple[Self, Self]
         """Returns 2 partial scenarios.
 
         With stepindex 0 the first part has no steps and all steps are in the last part. With
@@ -168,7 +169,8 @@ class Step:
     def __repr__(self):
         return f"Step: '{self}' with model info: {self.model_info}"
 
-    def copy(self) -> Self:
+    def copy(self):
+        # -> Self
         cp = Step(self.org_step, *self.org_pn_args,
                   parent=self.parent, assign=self.assign)
         cp.gherkin_kw = self.gherkin_kw

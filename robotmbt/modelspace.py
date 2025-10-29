@@ -31,7 +31,6 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-from typing import Self
 
 from .steparguments import StepArguments
 
@@ -54,7 +53,8 @@ class ModelSpace:
     def __repr__(self):
         return self.ref_id if self.ref_id else super().__repr__()
 
-    def copy(self) -> Self:
+    def copy(self):
+        # -> Self
         return copy.deepcopy(self)
 
     def __eq__(self, other):
