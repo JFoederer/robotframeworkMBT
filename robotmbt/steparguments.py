@@ -32,7 +32,6 @@
 
 from keyword import iskeyword
 import builtins
-from typing import Self
 
 
 class StepArguments(list):
@@ -93,7 +92,8 @@ class StepArgument:
     def codestring(self) -> str | None:
         return self._codestr
 
-    def copy(self) -> Self:
+    def copy(self):
+        # -> Self
         cp = StepArgument(self.arg.strip('${}'), self.value, self.kind)
         cp.org_value = self.org_value
         return cp

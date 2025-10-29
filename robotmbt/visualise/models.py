@@ -3,6 +3,7 @@ from robotmbt.suitedata import Scenario
 from robotmbt.tracestate import TraceState
 import networkx as nx
 
+
 class ScenarioInfo:
     """
     This contains all information we need from scenarios, abstracting away from the actual Scenario class:
@@ -29,7 +30,6 @@ class TraceInfo:
     - state: the model space
     """
 
-    
     def __init__(self, trace: TraceState, state: ModelSpace):
         self.trace = [ScenarioInfo(s) for s in trace.get_trace()]
         # TODO: actually use state
@@ -41,6 +41,7 @@ class ScenarioGraph:
     The scenario graph is the most basic representation of trace exploration.
     It represents scenarios as nodes, and the trace as edges.
     """
+
     def __init__(self):
         # We use simplified IDs for nodes, and store the actual scenario info here
         self.ids: dict[str, ScenarioInfo] = {}
@@ -67,7 +68,8 @@ class ScenarioGraph:
             to_node = self.__get_or_create_id(info.trace[i + 1])
 
             if from_node not in self.networkx.nodes:
-                self.networkx.add_node(from_node, text=self.ids[from_node].name)
+                self.networkx.add_node(
+                    from_node, text=self.ids[from_node].name)
             if to_node not in self.networkx.nodes:
                 self.networkx.add_node(to_node, text=self.ids[to_node].name)
 
@@ -99,16 +101,14 @@ class ScenarioGraph:
         Update the end node.
         """
         node = self.__get_or_create_id(scenario)
-        self.pos[node] = (len(self.networkx.nodes), 0)
         self.fixed.append(node)
 
     def calculate_pos(self):
         """
         Calculate the position (x, y) for all nodes in self.networkx
         """
-        self.pos['start'] = (0, len(self.networkx.nodes))
-        self.fixed.append('start')
-        if not self.fixed:
-            self.pos = nx.spring_layout(self.networkx, seed=42)
-        else:
-            self.pos = nx.spring_layout(self.networkx, pos=self.pos, fixed=self.fixed, seed=42, method='energy', gravity=0.25)
+        try:
+            self.pos = nx.planar_layout(self.networkx)
+        except nx.NetworkXException:
+            # if planar layout cannot find a graph without crossing edges
+            self.pos = nx.arf_layout(self.networkx, seed=42)
