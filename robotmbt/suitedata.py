@@ -225,7 +225,7 @@ class Step:
         self.__validate_arguments(robot_argspec, p_args, n_args)
 
         robot_args = [a for a in robot_argspec]
-        argument_names = list(robot_argspec.argument_names)
+        argument_names = [a for a in robot_argspec.argument_names if a not in robot_argspec.embedded]
         for arg in robot_argspec:
             if not p_args or (arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED):
                 break
@@ -248,8 +248,13 @@ class Step:
             if default_value is robot.utils.notset.NOT_SET:
                 if arg.kind == arg.VAR_POSITIONAL:
                     default_value = []
-                if arg.kind == arg.VAR_NAMED:
+                elif arg.kind == arg.VAR_NAMED:
                     default_value = {}
+                else:
+                    # This can happen when using library keywords that specify embedded arguments in the @keyword decorator
+                    # but use different names in the method signature. Robot Framework implementation is incomplete for this
+                    # aspect and differs between library and user keywords.
+                    assert False, f"No default argument expected to be needed for '{unmentioned_arg}' here"
             result.append(StepArgument(unmentioned_arg, default_value, kind=StepArgument.NAMED, is_default=True))
         return result
 
