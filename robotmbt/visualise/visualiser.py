@@ -249,53 +249,117 @@ class NetworkVisualiser:
 
     def add_self_loop(self, x: float, y: float, label: str):
         """
-        Self-loop as a Bezier curve with arrow head
+        Circular arc that starts and ends at the top side of the rectangle
+        Start at 1/4 width, end at 3/4 width, with a circular arc above
         """
+        # Get node properties for sizing
+        node_props = None
+        for node_id, props in self.node_props.items():
+            if abs(props['x'] - x) < 0.001 and abs(props['y'] - y) < 0.001:
+                node_props = props
+                break
+        
+        if node_props is None:
+            # If we can't find node properties, use default sizing
+            width = 0.8
+            height = 0.4
+            
+            # Start: 1/4 width from left, top side
+            start_x = x - width/4
+            start_y = y + height/2
+            
+            # End: 3/4 width from left, top side  
+            end_x = x + width/4
+            end_y = y + height/2
+            
+            # Arc height above the rectangle
+            arc_height = width * 0.4
+            
+            # Control points for a circular arc above
+            control1_x = x - width/8
+            control1_y = y + height/2 + arc_height
+            
+            control2_x = x + width/8
+            control2_y = y + height/2 + arc_height
+            
+        elif node_props['type'] == 'circle':
+            # For circles, still use top-to-right arc for consistency
+            radius = node_props['radius']
+            arc_radius = radius * 1.5
+            
+            start_x = x
+            start_y = y + radius
+            end_x = x + radius
+            end_y = y
+            
+            control1_x = x
+            control1_y = y + radius + arc_radius * 0.8
+            control2_x = x + radius + arc_radius * 0.8
+            control2_y = y
+            
+        else:
+            # For rectangles - top-to-top arc
+            width = node_props['width']
+            height = node_props['height']
+            
+            # Start: 1/4 width from left, top side
+            start_x = x - width/4
+            start_y = y + height/2
+            
+            # End: 3/4 width from left, top side
+            end_x = x + width/4
+            end_y = y + height/2
+            
+            # Arc height above the rectangle
+            arc_height = width * 0.4
+            
+            # Control points for a circular arc above
+            control1_x = x - width/8
+            control1_y = y + height/2 + arc_height
+            
+            control2_x = x + width/8
+            control2_y = y + height/2 + arc_height
+        
+        # Create the Bezier curve (the main arc)
         loop = Bezier(
-            # starting point
-            x0=x + self.node_radius,
-            y0=y,
-
-            # end point
-            x1=x,
-            y1=y - self.node_radius,
-
-            # control points
-            cx0=x + 5*self.node_radius,
-            cy0=y,
-            cx1=x,
-            cy1=y - 5*self.node_radius,
-
-            # styling
+            x0=start_x, y0=start_y,
+            x1=end_x, y1=end_y,
+            cx0=control1_x, cy0=control1_y,
+            cx1=control2_x, cy1=control2_y,
             line_color=NetworkVisualiser.EDGE_COLOUR,
             line_width=NetworkVisualiser.EDGE_WIDTH,
             line_alpha=NetworkVisualiser.EDGE_ALPHA,
         )
         self.plot.add_glyph(loop)
 
-        # add arrow head
+        # Add arrow head at the end of the arc
         arrow = Arrow(
-            end=NormalHead(size=10,
+            end=NormalHead(size=6,
                            line_color=NetworkVisualiser.EDGE_COLOUR,
                            fill_color=NetworkVisualiser.EDGE_COLOUR),
-
-            # -0.01 to guarantee that arrow points upwards.
-            x_start=x, y_start=y-self.node_radius-0.01,
-            x_end=x, y_end=y-self.node_radius
+            x_start=end_x - 0.03,  # Start just before the end point
+            y_start=end_y + 0.03,  # Start slightly above to follow curvature
+            x_end=end_x,           # End exactly at the rectangle border
+            y_end=end_y            # End exactly at the rectangle border
         )
-
-        # add edge label
-        edge_text = Text(
-            x=x + self.node_radius, 
-            y=y - 4*self.node_radius, 
-            text=label,
-            text_align='center', 
-            text_baseline='middle',
-            text_font_size='7pt'
-        )
-        self.plot.add_glyph(edge_text)
-
         self.plot.add_layout(arrow)
+
+        # Add edge label - positioned above the arc
+        if node_props is None:
+            label_x = x
+            label_y = y + height/2 + arc_height * 0.6
+        elif node_props['type'] == 'circle':
+            label_x = x + arc_radius * 0.5
+            label_y = y + arc_radius * 0.5
+        else:
+            label_x = x
+            label_y = y + height/2 + arc_height * 0.6
+            
+        edge_text = Text(x=label_x, y=label_y, 
+                        text=label,
+                        text_align='center', text_baseline='middle',
+                        text_font_size='7pt')
+        self.plot.add_glyph(edge_text)
 
     def _add_edges(self):
         edge_labels = nx.get_edge_attributes(self.graph.networkx, "label")
