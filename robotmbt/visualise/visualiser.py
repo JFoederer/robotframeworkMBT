@@ -1,10 +1,10 @@
 from .models import ScenarioGraph, TraceInfo, ScenarioInfo
 from bokeh.palettes import Spectral4
 from bokeh.models import (
-    Plot, Range1d, Circle,
+    Plot, Range1d, Circle, Rect,
     Arrow, NormalHead, LabelSet,
     Bezier, ColumnDataSource, ResetTool,
-    SaveTool, WheelZoomTool, PanTool
+    SaveTool, WheelZoomTool, PanTool, Text
 )
 from bokeh.embed import file_html
 from bokeh.resources import CDN
@@ -59,21 +59,16 @@ class NetworkVisualiser:
 
         # graph customisation options
         self.node_radius = 1.0
+        self.char_width = 0.1
+        self.char_height = 0.1
 
     def generate_html(self) -> str:
         """
         Generate html file from networkx graph via Bokeh
         """
         self._initialise_plot()
+        self._add_nodes_with_labels()
         self._add_edges()
-        self._add_nodes()
-        label_source = ColumnDataSource(data=self.labels)
-        labels = LabelSet(x="x", y="y", text="label", source=label_source,
-                          text_color=NetworkVisualiser.EDGE_COLOUR,
-                          text_align="center")
-
-        self.plot.add_layout(labels)
-
         return file_html(self.plot, CDN, "graph")
 
     def _initialise_plot(self):
@@ -92,6 +87,8 @@ class NetworkVisualiser:
         # scale node radius based on range
         nodes_range = max(x_max-x_min, y_max-y_min)
         self.node_radius = nodes_range / 50
+        self.char_width = nodes_range / 100
+        self.char_height = nodes_range / 75
 
         # create plot
         x_range = Range1d(min(x_min, y_min), max(x_max, y_max))
@@ -106,24 +103,73 @@ class NetworkVisualiser:
         self.plot.add_tools(ResetTool(), SaveTool(),
                             WheelZoomTool(), PanTool())
 
-    def _add_nodes(self):
+    def _calculate_text_dimensions(self, text: str) -> tuple[float, float]:
+        """Calculate width and height needed for text based on actual text length"""
+        text_length = len(text)
+        width = (text_length * self.char_width) + (2 * self.char_width)
+        height = self.char_height + (2 * self.char_height)
+        return width, height
+
+    def _add_nodes_with_labels(self):
         """
-        Add labels to the nodes in bokeh plot
+        Add nodes with text labels inside them
         """
         node_labels = nx.get_node_attributes(self.graph.networkx, "label")
+        
+        # Create data sources for nodes and labels
+        circle_data = dict(x=[], y=[], radius=[], label=[])
+        rect_data = dict(x=[], y=[], width=[], height=[], label=[])
+        text_data = dict(x=[], y=[], text=[])
+        
         for node in self.graph.networkx.nodes:
-            # prepare adding labels
-            self.labels['x'].append(self.graph.pos[node][0])
-            self.labels['y'].append(self.graph.pos[node][1]+self.node_radius)
-            self.labels['label'].append(self._cap_name(node_labels[node]))
-
-            # add node
-            bokeh_node = Circle(radius=self.node_radius,
-                                fill_color=Spectral4[0],
-                                x=self.graph.pos[node][0],
-                                y=self.graph.pos[node][1])
-
-            self.plot.add_glyph(bokeh_node)
+            label = node_labels.get(node, str(node))
+            if isinstance(label, list):
+                label = label[0] if label else str(node)
+            
+            label = self._cap_name(label)
+            x, y = self.graph.pos[node]
+            
+            if node == 'start':
+                # Start node remains as circle
+                circle_data['x'].append(x)
+                circle_data['y'].append(y)
+                circle_data['radius'].append(self.node_radius)
+                circle_data['label'].append(label)
+            else:
+                # Scenario nodes as rectangles
+                text_width, text_height = self._calculate_text_dimensions(label)
+                
+                rect_data['x'].append(x)
+                rect_data['y'].append(y)
+                rect_data['width'].append(text_width)
+                rect_data['height'].append(text_height)
+                rect_data['label'].append(label)
+            
+            # Add text for all nodes
+            text_data['x'].append(x)
+            text_data['y'].append(y)
+            text_data['text'].append(label)
+        
+        # Add circles for start node
+        if circle_data['x']:
+            circle_source = ColumnDataSource(circle_data)
+            circles = Circle(x='x', y='y', radius='radius', 
+                           fill_color=Spectral4[0])
+            self.plot.add_glyph(circle_source, circles)
+        
+        # Add rectangles for scenario nodes
+        if rect_data['x']:
+            rect_source = ColumnDataSource(rect_data)
+            rectangles = Rect(x='x', y='y', width='width', height='height',
+                            fill_color=Spectral4[0])
+            self.plot.add_glyph(rect_source, rectangles)
+        
+        # Add text labels for all nodes
+        text_source = ColumnDataSource(text_data)
+        text_labels = Text(x='x', y='y', text='text',
+                          text_align='center', text_baseline='middle',
+                          text_color='white', text_font_size='9pt')
+        self.plot.add_glyph(text_source, text_labels)
 
     def add_self_loop(self, x: float, y: float, label: str):
         """
