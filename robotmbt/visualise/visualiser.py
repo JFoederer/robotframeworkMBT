@@ -251,6 +251,7 @@ class NetworkVisualiser:
         """
         Circular arc that starts and ends at the top side of the rectangle
         Start at 1/4 width, end at 3/4 width, with a circular arc above
+        The arc itself ends with the arrowhead pointing into the rectangle
         """
         # Get node properties for sizing
         node_props = None
@@ -283,19 +284,21 @@ class NetworkVisualiser:
             control2_y = y + height/2 + arc_height
             
         elif node_props['type'] == 'circle':
-            # For circles, still use top-to-right arc for consistency
+            # For circles, create a circular loop above
             radius = node_props['radius']
             arc_radius = radius * 1.5
             
-            start_x = x
+            # Start and end at top of circle, with slight offset
+            start_x = x - radius * 0.3
             start_y = y + radius
-            end_x = x + radius
-            end_y = y
+            end_x = x + radius * 0.3
+            end_y = y + radius
             
-            control1_x = x
-            control1_y = y + radius + arc_radius * 0.8
-            control2_x = x + radius + arc_radius * 0.8
-            control2_y = y
+            # Control points for circular arc
+            control1_x = x - arc_radius * 0.5
+            control1_y = y + radius + arc_radius
+            control2_x = x + arc_radius * 0.5
+            control2_y = y + radius + arc_radius
             
         else:
             # For rectangles - top-to-top arc
@@ -320,7 +323,7 @@ class NetworkVisualiser:
             control2_x = x + width/8
             control2_y = y + height/2 + arc_height
         
-        # Create the Bezier curve (the main arc)
+        # Create the Bezier curve (the main arc) with the same thickness as straight lines
         loop = Bezier(
             x0=start_x, y0=start_y,
             x1=end_x, y1=end_y,
@@ -332,33 +335,57 @@ class NetworkVisualiser:
         )
         self.plot.add_glyph(loop)
 
-        # Add arrow head at the end of the arc
+        # Calculate the tangent direction at the end of the Bezier curve
+        # For a cubic Bezier, the tangent at the end point is from the last control point to the end point
+        tangent_x = end_x - control2_x
+        tangent_y = end_y - control2_y
+        
+        # Normalize the tangent vector
+        tangent_length = sqrt(tangent_x**2 + tangent_y**2)
+        if tangent_length > 0:
+            tangent_x /= tangent_length
+            tangent_y /= tangent_length
+        
+        # Add just the arrowhead (NormalHead) at the end point, oriented along the tangent
+        # Use the same size as regular arrows (size=6)
+        arrowhead = NormalHead(
+            size=6,
+            line_color=NetworkVisualiser.EDGE_COLOUR,
+            fill_color=NetworkVisualiser.EDGE_COLOUR,
+            line_width=NetworkVisualiser.EDGE_WIDTH
+        )
+        
+        # Create a standalone arrowhead at the end point
+        # We need to use a scatter-like approach since NormalHead alone isn't a glyph
+        # Instead, we'll use a very short Arrow that's essentially just the head
         arrow = Arrow(
-            end=NormalHead(size=6,
-                           line_color=NetworkVisualiser.EDGE_COLOUR,
-                           fill_color=NetworkVisualiser.EDGE_COLOUR),
-            x_start=end_x - 0.03,  # Start just before the end point
-            y_start=end_y + 0.03,  # Start slightly above to follow curvature
-            x_end=end_x,           # End exactly at the rectangle border
-            y_end=end_y            # End exactly at the rectangle border
+            end=arrowhead,
+            x_start=end_x - tangent_x * 0.001,  # Almost zero length line
+            y_start=end_y - tangent_y * 0.001,
+            x_end=end_x,
+            y_end=end_y,
+            line_color=NetworkVisualiser.EDGE_COLOUR,
+            line_width=NetworkVisualiser.EDGE_WIDTH,
+            line_alpha=NetworkVisualiser.EDGE_ALPHA
         )
         self.plot.add_layout(arrow)
 
         # Add edge label - positioned above the arc
-        if node_props is None:
+        if node_props is None or node_props['type'] == 'rect':
             label_x = x
             label_y = y + height/2 + arc_height * 0.6
-        elif node_props['type'] == 'circle':
-            label_x = x + arc_radius * 0.5
-            label_y = y + arc_radius * 0.5
-        else:
+        else:  # circle
             label_x = x
-            label_y = y + height/2 + arc_height * 0.6
+            label_y = y + radius + arc_radius * 0.6
             
-        edge_text = Text(x=label_x, y=label_y, 
-                        text=label,
-                        text_align='center', text_baseline='middle',
-                        text_font_size='7pt')
+        edge_text = Text(
+            x=label_x, 
+            y=label_y, 
+            text=label,
+            text_align='center', 
+            text_baseline='middle',
+            text_font_size='7pt'
+        )
         self.plot.add_glyph(edge_text)
 
     def _add_edges(self):
