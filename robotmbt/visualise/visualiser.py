@@ -55,12 +55,13 @@ class NetworkVisualiser:
     def __init__(self, graph: ScenarioGraph):
         self.plot = None
         self.graph = graph
-        self.labels = dict(x=[], y=[], label=[])
+        self.node_props = {}  # Store node properties for arrow calculations
 
         # graph customisation options
         self.node_radius = 1.0
         self.char_width = 0.1
         self.char_height = 0.1
+        self.padding = 0.1
 
     def generate_html(self) -> str:
         """
@@ -86,9 +87,9 @@ class NetworkVisualiser:
 
         # scale node radius based on range
         nodes_range = max(x_max-x_min, y_max-y_min)
-        self.node_radius = nodes_range / 50
-        self.char_width = nodes_range / 100
-        self.char_height = nodes_range / 75
+        self.node_radius = nodes_range / 150
+        self.char_width = nodes_range / 150   
+        self.char_height = nodes_range / 150
 
         # create plot
         x_range = Range1d(min(x_min, y_min), max(x_max, y_max))
@@ -105,9 +106,13 @@ class NetworkVisualiser:
 
     def _calculate_text_dimensions(self, text: str) -> tuple[float, float]:
         """Calculate width and height needed for text based on actual text length"""
+        # Calculate width based on character count
         text_length = len(text)
-        width = (text_length * self.char_width) + (2 * self.char_width)
-        height = self.char_height + (2 * self.char_height)
+        width = (text_length * self.char_width) + (2 * self.padding)
+        
+        # Reduced height for more compact rectangles
+        height = self.char_height + (self.padding)
+        
         return width, height
 
     def _add_nodes_with_labels(self):
@@ -122,7 +127,8 @@ class NetworkVisualiser:
         text_data = dict(x=[], y=[], text=[])
         
         for node in self.graph.networkx.nodes:
-            label = node_labels.get(node, str(node))
+            # Ensure label is a string, not a list
+            label = node_labels.get(node, str(node))  # Use node as fallback if no label
             if isinstance(label, list):
                 label = label[0] if label else str(node)
             
@@ -130,13 +136,21 @@ class NetworkVisualiser:
             x, y = self.graph.pos[node]
             
             if node == 'start':
-                # Start node remains as circle
+                # For start node (circle), calculate diameter based on text width
+                text_width, text_height = self._calculate_text_dimensions(label)
+                # Use text width + padding as diameter, then divide by 2 for radius
+                radius = (text_width / 2.5)
+                
                 circle_data['x'].append(x)
                 circle_data['y'].append(y)
-                circle_data['radius'].append(self.node_radius)
+                circle_data['radius'].append(radius)
                 circle_data['label'].append(label)
+                
+                # Store node properties for arrow calculations
+                self.node_props[node] = {'type': 'circle', 'x': x, 'y': y, 'radius': radius, 'label': label}
+                
             else:
-                # Scenario nodes as rectangles
+                # For scenario nodes (rectangles), calculate dimensions based on text
                 text_width, text_height = self._calculate_text_dimensions(label)
                 
                 rect_data['x'].append(x)
@@ -144,6 +158,9 @@ class NetworkVisualiser:
                 rect_data['width'].append(text_width)
                 rect_data['height'].append(text_height)
                 rect_data['label'].append(label)
+                
+                # Store node properties for arrow calculations
+                self.node_props[node] = {'type': 'rect', 'x': x, 'y': y, 'width': text_width, 'height': text_height, 'label': label}
             
             # Add text for all nodes
             text_data['x'].append(x)
@@ -170,6 +187,65 @@ class NetworkVisualiser:
                           text_align='center', text_baseline='middle',
                           text_color='white', text_font_size='9pt')
         self.plot.add_glyph(text_source, text_labels)
+
+    def _get_edge_points(self, start_node, end_node):
+        """Calculate edge start and end points at node borders"""
+        start_props = self.node_props.get(start_node)
+        end_props = self.node_props.get(end_node)
+        
+        if not start_props or not end_props:
+            return start_node, start_node, end_node, end_node  # Fallback
+        
+        # Calculate direction vector
+        dx = end_props['x'] - start_props['x']
+        dy = end_props['y'] - start_props['y']
+        distance = sqrt(dx*dx + dy*dy)
+        
+        if distance == 0:  # Same node (self-loop handled separately)
+            return start_props['x'], start_props['y'], end_props['x'], end_props['y']
+        
+        # Normalize direction vector
+        dx /= distance
+        dy /= distance
+        
+        # Calculate start point at border
+        if start_props['type'] == 'circle':
+            start_x = start_props['x'] + dx * start_props['radius']
+            start_y = start_props['y'] + dy * start_props['radius']
+        else:  # rectangle
+            # For rectangles, we need to find where the line intersects the rectangle border
+            rect_width = start_props['width']
+            rect_height = start_props['height']
+            
+            # Calculate scaling factors for x and y directions
+            scale_x = rect_width / (2 * abs(dx)) if dx != 0 else float('inf')
+            scale_y = rect_height / (2 * abs(dy)) if dy != 0 else float('inf')
+            
+            # Use the smaller scale to ensure we hit the border
+            scale = min(scale_x, scale_y)
+            
+            start_x = start_props['x'] + dx * scale
+            start_y = start_props['y'] + dy * scale
+        
+        # Calculate end point at border (reverse direction)
+        if end_props['type'] == 'circle':
+            end_x = end_props['x'] - dx * end_props['radius']
+            end_y = end_props['y'] - dy * end_props['radius']
+        else:  # rectangle
+            rect_width = end_props['width']
+            rect_height = end_props['height']
+            
+            # Calculate scaling factors for x and y directions (reverse)
+            scale_x = rect_width / (2 * abs(dx)) if dx != 0 else float('inf')
+            scale_y = rect_height / (2 * abs(dy)) if dy != 0 else float('inf')
+            
+            # Use the smaller scale to ensure we hit the border
+            scale = min(scale_x, scale_y)
+            
+            end_x = end_props['x'] - dx * scale
+            end_y = end_props['y'] - dy * scale
+        
+        return start_x, start_y, end_x, end_y
 
     def add_self_loop(self, x: float, y: float, label: str):
         """
@@ -209,46 +285,61 @@ class NetworkVisualiser:
         )
 
         # add edge label
-        self.labels['x'].append(x + self.node_radius)
-        self.labels['y'].append(y - 4*self.node_radius)
-        self.labels['label'].append(label)
+        edge_text = Text(
+            x=x + self.node_radius, 
+            y=y - 4*self.node_radius, 
+            text=label,
+            text_align='center', 
+            text_baseline='middle',
+            text_font_size='7pt'
+        )
+        self.plot.add_glyph(edge_text)
 
         self.plot.add_layout(arrow)
 
     def _add_edges(self):
         edge_labels = nx.get_edge_attributes(self.graph.networkx, "label")
+        
+        # Create data sources for edges and edge labels
+        edge_text_data = dict(x=[], y=[], text=[])
+        
         for edge in self.graph.networkx.edges():
-            x0, y0 = self.graph.pos[edge[0]]
-            x1, y1 = self.graph.pos[edge[1]]
+            edge_label = edge_labels.get(edge, "")
+            if isinstance(edge_label, list):
+                edge_label = edge_label[0] if edge_label else ""
+            edge_label = self._cap_name(edge_label)
+            
             if edge[0] == edge[1]:
-                self.add_self_loop(
-                    x=x0, y=y0, label=self._cap_name(edge_labels[edge]))
-
+                # Self-loop handled separately
+                x, y = self.graph.pos[edge[0]]
+                self.add_self_loop(x=x, y=y, label=edge_label)
             else:
-                # edge between 2 different nodes
-                dx = x1 - x0
-                dy = y1 - y0
-
-                length = sqrt(dx**2 + dy**2)
-
+                # Calculate edge points at node borders
+                start_x, start_y, end_x, end_y = self._get_edge_points(edge[0], edge[1])
+                
+                # Add arrow between the calculated points
                 arrow = Arrow(
                     end=NormalHead(
-                        size=10,
+                        size=6,
                         line_color=NetworkVisualiser.EDGE_COLOUR,
                         fill_color=NetworkVisualiser.EDGE_COLOUR),
-
-                    x_start=x0 + dx / length * self.node_radius,
-                    y_start=y0 + dy / length * self.node_radius,
-                    x_end=x1 - dx / length * self.node_radius,
-                    y_end=y1 - dy / length * self.node_radius
+                    x_start=start_x, y_start=start_y,
+                    x_end=end_x, y_end=end_y
                 )
-
                 self.plot.add_layout(arrow)
 
-                # add edge label
-                self.labels['x'].append((x0+x1)/2)
-                self.labels['y'].append((y0+y1)/2)
-                self.labels['label'].append(self._cap_name(edge_labels[edge]))
+                # Collect edge label data (position at midpoint)
+                edge_text_data['x'].append((start_x + end_x) / 2)
+                edge_text_data['y'].append((start_y + end_y) / 2)
+                edge_text_data['text'].append(edge_label)
+        
+        # Add all edge labels at once
+        if edge_text_data['x']:
+            edge_text_source = ColumnDataSource(edge_text_data)
+            edge_labels_glyph = Text(x='x', y='y', text='text',
+                                   text_align='center', text_baseline='middle',
+                                   text_font_size='7pt')
+            self.plot.add_glyph(edge_text_source, edge_labels_glyph)
 
     @staticmethod
     def _cap_name(name: str) -> str:
