@@ -13,11 +13,13 @@ class ScenarioInfo:
 
     def __init__(self, scenario: Scenario | str):
         if isinstance(scenario, Scenario):
+            # default case
             self.name = scenario.name
             self.src_id = scenario.src_id
         else:
+            # unit tests
             self.name = scenario
-            self.src_id = None
+            self.src_id = scenario
 
     def __str__(self):
         return f"Scen{self.src_id}: {self.name}"
@@ -52,11 +54,11 @@ class ScenarioGraph:
         # Stores the position (x, y) of the nodes
         self.pos = {}
 
-        # List of nodes which positions cannot be changed
-        self.fixed = []
-
         # add the start node
         self.networkx.add_node('start', label='start')
+
+        # indicates last scenario of trace
+        self.end_node = 'start'
 
     def update_visualisation(self, info: TraceInfo):
         """
@@ -64,8 +66,8 @@ class ScenarioGraph:
         This will add nodes for all new scenarios in the provided trace, as well as edges for all pairs in the provided trace.
         """
         for i in range(0, len(info.trace) - 1):
-            from_node = self.__get_or_create_id(info.trace[i])
-            to_node = self.__get_or_create_id(info.trace[i + 1])
+            from_node = self._get_or_create_id(info.trace[i])
+            to_node = self._get_or_create_id(info.trace[i + 1])
 
             self.add_node(from_node)
             self.add_node(to_node)
@@ -74,7 +76,7 @@ class ScenarioGraph:
                 self.networkx.add_edge(
                     from_node, to_node, label='')
 
-    def __get_or_create_id(self, scenario: ScenarioInfo) -> str:
+    def _get_or_create_id(self, scenario: ScenarioInfo) -> str:
         """
         Get the ID for a scenario that has been added before, or create and store a new one.
         """
@@ -98,7 +100,7 @@ class ScenarioGraph:
         """
         Update the starting node.
         """
-        node = self.__get_or_create_id(scenario)
+        node = self._get_or_create_id(scenario)
         self.add_node(node)
         self.networkx.add_edge('start', node, label='')
 
@@ -106,8 +108,7 @@ class ScenarioGraph:
         """
         Update the end node.
         """
-        node = self.__get_or_create_id(scenario)
-        self.fixed.append(node)
+        self.end_node = self._get_or_create_id(scenario)
 
     def calculate_pos(self):
         """
