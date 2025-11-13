@@ -1,4 +1,4 @@
-from .models import ScenarioGraph, TraceInfo, ScenarioInfo
+from robotmbt.visualise.models import ScenarioGraph, TraceInfo, ScenarioInfo
 from bokeh.palettes import Spectral4
 from bokeh.models import (
     Plot, Range1d, Circle,
@@ -22,6 +22,11 @@ class Visualiser:
     GRAPH_SIZE_PX: int = 600  # in px, needs to be equal for height and width otherwise calculations are wrong
     GRAPH_PADDING_PERC: int = 15  # %
     MAX_VERTEX_NAME_LEN: int = 20  # no. of characters
+
+    # glue method to let us construct Visualiser objects in Robot tests.
+    @classmethod
+    def construct(cls):
+        return cls() # just calls __init__, but without having underscores etc.
 
     def __init__(self):
         self.graph = ScenarioGraph()

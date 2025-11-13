@@ -35,14 +35,14 @@ class TestVisualiseModels(unittest.TestCase):
         for scenario in range(3):
             candidates.append(ts.next_candidate())
             ts.confirm_full_scenario(candidates[-1], scenario, {})
-        ti = TraceInfo(trace=ts, state=None)
+        ti = TraceInfo.from_trace_state(trace=ts, state=ModelSpace())
 
         self.assertEqual(ti.trace[0].name, 0)
         self.assertEqual(ti.trace[1].name, 1)
         self.assertEqual(ti.trace[2].name, 2)
 
-        # TODO change when state is implemented
-        self.assertIsNone(ti.state)
+        self.assertIsNotNone(ti.state)
+        # TODO: add state tests to this.
 
     """
     Class: ScenarioGraph
@@ -94,7 +94,7 @@ class TestVisualiseModels(unittest.TestCase):
         for scenario in range(3):
             candidates.append(ts.next_candidate())
             ts.confirm_full_scenario(candidates[-1], scenario, {})
-        ti = TraceInfo(trace=ts, state=None)
+        ti = TraceInfo.from_trace_state(ts, ModelSpace())
         sg = ScenarioGraph()
         sg.update_visualisation(ti)
 
@@ -111,7 +111,7 @@ class TestVisualiseModels(unittest.TestCase):
         for scenario in range(3):
             candidates.append(ts.next_candidate())
             ts.confirm_full_scenario(candidates[-1], scenario, {})
-        ti = TraceInfo(trace=ts, state=None)
+        ti = TraceInfo.from_trace_state(ts, ModelSpace())
         sg = ScenarioGraph()
         sg.update_visualisation(ti)
 
@@ -126,7 +126,7 @@ class TestVisualiseModels(unittest.TestCase):
         ts = TraceState(1)
         ts.confirm_full_scenario(0, 'one', {})
         self.assertEqual(ts.get_trace(), ['one'])
-        ti = TraceInfo(trace=ts, state=None)
+        ti = TraceInfo.from_trace_state(ts, ModelSpace())
         sg = ScenarioGraph()
         sg.update_visualisation(ti)
 
