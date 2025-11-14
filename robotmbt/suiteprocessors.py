@@ -329,28 +329,41 @@ class SuiteProcessors:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
                         modded_arg, constraint = self._parse_modifier_expression(expr, step.args)
-                        if step.args[modded_arg].kind != StepArgument.EMBEDDED:
-                            raise ValueError("Modifers are currently only supported for embedded arguments.")
-                        org_example = step.args[modded_arg].org_value
-                        if step.gherkin_kw == 'then':
-                            constraint = None # No new constraints are processed for then-steps
-                            if org_example not in subs.substitutions:
-                                # if a then-step signals the first use of an example value, it is considered a new definition
-                                subs.substitute(org_example, [org_example])
-                                continue
-                        if not constraint and org_example not in subs.substitutions:
-                            raise ValueError(f"No options to choose from at first assignment to {org_example}")
-                        if constraint and constraint != '.*':
-                            options =  m.process_expression(constraint, step.args)
-                            if options == 'exec':
-                                raise ValueError(f"Invalid constraint for argument substitution: {expr}")
-                            if not options:
-                                raise ValueError(f"Constraint on modifer did not yield any options: {expr}")
-                            if not is_list_like(options):
-                                raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
+                        if step.args[modded_arg].is_default:
+                            continue
+                        if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
+                            org_example = step.args[modded_arg].org_value
+                            if step.gherkin_kw == 'then':
+                                constraint = None # No new constraints are processed for then-steps
+                                if org_example not in subs.substitutions:
+                                    # if a then-step signals the first use of an example value, it is considered a new definition
+                                    subs.substitute(org_example, [org_example])
+                                    continue
+                            if not constraint and org_example not in subs.substitutions:
+                                raise ValueError(f"No options to choose from at first assignment to {org_example}")
+                            if constraint and constraint != '.*':
+                                options =  m.process_expression(constraint, step.args)
+                                if options == 'exec':
+                                    raise ValueError(f"Invalid constraint for argument substitution: {expr}")
+                                if not options:
+                                    raise ValueError(f"Constraint on modifer did not yield any options: {expr}")
+                                if not is_list_like(options):
+                                    raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
+                            else:
+                                options = None
+                            subs.substitute(org_example, options)
+                        elif step.args[modded_arg].kind == StepArgument.VAR_POS:
+                            arglist = []
+                            for options in m.process_expression(constraint, step.args):
+                                arglist.append(random.choice(options))
+                            step.args[modded_arg].value = arglist
+                        elif step.args[modded_arg].kind == StepArgument.FREE_NAMED:
+                            argdict = {}
+                            for k, options in m.process_expression(constraint, step.args).items():
+                                argdict[k] = random.choice(options)
+                            step.args[modded_arg].value = argdict
                         else:
-                            options = None
-                        subs.substitute(org_example, options)
+                            raise AssertionError(f"Unknown argument kind for {modded_arg}")
         except Exception as err:
             logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                          f"    In step {step}: {err}")
@@ -370,8 +383,11 @@ class SuiteProcessors:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
                     modded_arg, _ = self._parse_modifier_expression(expr, step.args)
+                    if step.args[modded_arg].is_default:
+                        continue
                     org_example = step.args[modded_arg].org_value
-                    step.args[modded_arg].value = subs.solution[org_example]
+                    if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
+                        step.args[modded_arg].value = subs.solution[org_example]
         return scenario
 
     @staticmethod
