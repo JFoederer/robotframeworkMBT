@@ -353,15 +353,11 @@ class SuiteProcessors:
                                 options = None
                             subs.substitute(org_example, options)
                         elif step.args[modded_arg].kind == StepArgument.VAR_POS:
-                            arglist = []
-                            for options in m.process_expression(constraint, step.args):
-                                arglist.append(random.choice(options))
-                            step.args[modded_arg].value = arglist
+                            if step.args[modded_arg].value:
+                                step.args[modded_arg].value = list(m.process_expression(constraint, step.args))
                         elif step.args[modded_arg].kind == StepArgument.FREE_NAMED:
-                            argdict = {}
-                            for k, options in m.process_expression(constraint, step.args).items():
-                                argdict[k] = random.choice(options)
-                            step.args[modded_arg].value = argdict
+                            if step.args[modded_arg].value:
+                                step.args[modded_arg].value = dict(m.process_expression(constraint, step.args))
                         else:
                             raise AssertionError(f"Unknown argument kind for {modded_arg}")
         except Exception as err:
