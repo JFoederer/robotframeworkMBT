@@ -354,10 +354,16 @@ class SuiteProcessors:
                             subs.substitute(org_example, options)
                         elif step.args[modded_arg].kind == StepArgument.VAR_POS:
                             if step.args[modded_arg].value:
-                                step.args[modded_arg].value = list(m.process_expression(constraint, step.args))
+                                modded_varargs = m.process_expression(constraint, step.args)
+                                if not is_list_like(modded_varargs):
+                                    raise ValueError(f"Modifying varargs must yield a list of arguments")
+                                step.args[modded_arg].value = modded_varargs
                         elif step.args[modded_arg].kind == StepArgument.FREE_NAMED:
                             if step.args[modded_arg].value:
-                                step.args[modded_arg].value = dict(m.process_expression(constraint, step.args))
+                                modded_free_args = m.process_expression(constraint, step.args)
+                                if not isinstance(modded_free_args, dict):
+                                    raise ValueError("Modifying free named arguments must yield a dict")
+                                step.args[modded_arg].value = modded_free_args
                         else:
                             raise AssertionError(f"Unknown argument kind for {modded_arg}")
         except Exception as err:
