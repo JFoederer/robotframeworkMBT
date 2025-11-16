@@ -103,6 +103,34 @@ Unused varargs skip their modifiers
     @{all_args}=    Keyword that expands its varargs
     Should Be Empty    ${all_args}
 
+Free named arguments can be modified
+    &{all_args}=    Keyword that expands free named arguments    colour1=Red    colour2=Yellow
+    Should be equal    ${all_args}[colour1]      Red
+    Should be equal    ${all_args}[colour2]      Blue
+    Should be equal    ${all_args}[newcolour]    Pink
+    Should be equal    ${all_args}[dupcolour]    Red
+
+Unused free named arguments skip their modifiers
+    &{all_args}=    Keyword that expands free named arguments
+    Should Be Empty    ${all_args}
+
+Free named arguments are not matched with other arguments
+    &{all_args}=    Keyword with all Red argument styles mixed    Red    Yellow    Red    Blue
+    ...             named2=Red    colour1=Red    colour2=Yellow
+    Should be equal    ${all_args}[emb]           Green
+    Should be equal    ${all_args}[pos1]          Green
+    Should be equal    ${all_args}[pos2]          Blue
+    Should be equal    ${all_args}[varargs][0]    Red
+    Should be equal    ${all_args}[varargs][1]    Blue
+    Should be equal    ${all_args}[varargs][2]    Pink
+    Should be equal    ${all_args}[varargs][3]    Red
+    Should be equal    ${all_args}[named1]        Orange
+    Should be equal    ${all_args}[named2]        Green
+    Should be equal    ${all_args}[colour1]       Red    # Red from original argument, unaffected by other Red to Green modifiers
+    Should be equal    ${all_args}[colour2]       Blue   # Modified from Yellow to Blue by modifer
+    Should be equal    ${all_args}[newcolour]     Pink   # Newly added named argument by modifier
+    Should be equal    ${all_args}[dupcolour]     Red    # colour1 copied to dupcolour by modifier
+
 *** Keywords ***
 Keyword with positional argument
     [Documentation]    *model info*
@@ -136,11 +164,11 @@ Keyword that expands its varargs
     [Arguments]    @{varargs}
     RETURN    @{varargs}
 
-Keyword with free named arguments
+Keyword that expands free named arguments
     [Documentation]    *model info*
-    ...    :MOD: ${free}= dict(color1=['Green'],color2=['Green'])
-    ...    :IN: new args | args.free = ${free}
-    ...    :OUT: del args
+    ...    :MOD: ${free}= {**${free}, **dict(colour2=Blue, newcolour=Pink, dupcolour=${free}[colour1])}
+    ...    :IN: scenario.free = ${free}
+    ...    :OUT: if scenario.free: scenario.free[colour1] == scenario.free[dupcolour] and scenario.free[newcolour] == Pink
     [Arguments]    &{free}
     RETURN    &{free}
 
@@ -149,14 +177,16 @@ Keyword with all ${emb_arg} argument styles mixed
     ...    :MOD: ${emb_arg}= [Green] | ${pos1}= [Green, Blue] | ${pos2}= [Green, Blue]
     ...          ${named1}= [Green, Blue] | ${named2}= [Green, Blue]
     ...          ${varargs}= ${varargs} + [Pink, ${varargs}[0]]
+    ...          ${free}= {**${free}, **dict(colour2=Blue, newcolour=Pink, dupcolour=${free}[colour1])}
     ...    :IN: scenario.emb = ${emb_arg}
     ...         scenario.pos1 = ${pos1} | scenario.pos2 = ${pos2}
     ...         scenario.named1 = ${named1} | scenario.named2 = ${named2}
-    ...         scenario.varargs = ${varargs}
+    ...         scenario.varargs = ${varargs} | scenario.free = ${free}
     ...    :OUT: scenario.emb == Green
     ...          scenario.pos1 == Green | scenario.pos2 == Blue
     ...          scenario.named1 == Orange | scenario.named2 == Green
     ...          if scenario.varargs: scenario.varargs[-1] == scenario.varargs[0] and scenario.varargs[-2] == Pink
+    ...          if scenario.free: scenario.free[colour1] == scenario.free[dupcolour] and scenario.free[newcolour] == Pink
     [Arguments]    ${pos1}    ${pos2}    @{varargs}    ${named1}=Orange    ${named2}    &{free}
     VAR    &{all_args}=    emb=${emb_arg}    pos1=${pos1}    pos2=${pos2}    named1=${named1}    named2=${named2}
     ...                    varargs=${varargs}    &{free}
