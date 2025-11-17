@@ -193,7 +193,7 @@ Modifiers are currently only supported for embedded arguments.
 
 ### Random seed
 
-By default, trace generation is random. The random seed used for the trace is logged (debug level) by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
+By default, trace generation is random. The random seed used for the trace is logged by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
 
 ```
 Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
