@@ -49,8 +49,8 @@ class NetworkVisualiser:
 
     EDGE_WIDTH: float = 2.0
     EDGE_ALPHA: float = 0.7
-    EDGE_COLOUR: str | tuple[int, int, int] = (
-        12, 12, 12)  # 'visual studio black'
+    EDGE_COLOUR: str | tuple[int, int, int] = (12, 12, 12)  # 'visual studio black'
+    ARROWHEAD_SIZE: int = 6  # Consistent arrowhead size
 
     def __init__(self, graph: ScenarioGraph):
         self.plot = None
@@ -127,18 +127,15 @@ class NetworkVisualiser:
         text_data = dict(x=[], y=[], text=[])
         
         for node in self.graph.networkx.nodes:
-            # Ensure label is a string, not a list
-            label = node_labels.get(node, str(node))  # Use node as fallback if no label
-            if isinstance(label, list):
-                label = label[0] if label else str(node)
-            
+            # Labels are always defined and cannot be lists
+            label = node_labels[node]
             label = self._cap_name(label)
             x, y = self.graph.pos[node]
             
             if node == 'start':
-                # For start node (circle), calculate diameter based on text width
+                # For start node (circle), calculate radius based on text width
                 text_width, text_height = self._calculate_text_dimensions(label)
-                # Use text width + padding as diameter, then divide by 2 for radius
+                # Calculate radius from text dimensions
                 radius = (text_width / 2.5)
                 
                 circle_data['x'].append(x)
@@ -193,16 +190,18 @@ class NetworkVisualiser:
         start_props = self.node_props.get(start_node)
         end_props = self.node_props.get(end_node)
         
+        # Node properties should always exist
         if not start_props or not end_props:
-            return start_node, start_node, end_node, end_node  # Fallback
+            raise ValueError(f"Node properties not found for nodes: {start_node}, {end_node}")
         
         # Calculate direction vector
         dx = end_props['x'] - start_props['x']
         dy = end_props['y'] - start_props['y']
         distance = sqrt(dx*dx + dy*dy)
         
-        if distance == 0:  # Same node (self-loop handled separately)
-            return start_props['x'], start_props['y'], end_props['x'], end_props['y']
+        # Self-loops are handled separately, so distance should never be 0
+        if distance == 0:
+            raise ValueError("Distance between different nodes should not be zero")
         
         # Normalize direction vector
         dx /= distance
@@ -260,68 +259,35 @@ class NetworkVisualiser:
                 node_props = props
                 break
         
+        # Node properties should always exist
         if node_props is None:
-            # If we can't find node properties, use default sizing
-            width = 0.8
-            height = 0.4
-            
-            # Start: 1/4 width from left, top side
-            start_x = x - width/4
-            start_y = y + height/2
-            
-            # End: 3/4 width from left, top side  
-            end_x = x + width/4
-            end_y = y + height/2
-            
-            # Arc height above the rectangle
-            arc_height = width * 0.4
-            
-            # Control points for a circular arc above
-            control1_x = x - width/8
-            control1_y = y + height/2 + arc_height
-            
-            control2_x = x + width/8
-            control2_y = y + height/2 + arc_height
-            
-        elif node_props['type'] == 'circle':
-            # For circles, create a circular loop above
-            radius = node_props['radius']
-            arc_radius = radius * 1.5
-            
-            # Start and end at top of circle, with slight offset
-            start_x = x - radius * 0.3
-            start_y = y + radius
-            end_x = x + radius * 0.3
-            end_y = y + radius
-            
-            # Control points for circular arc
-            control1_x = x - arc_radius * 0.5
-            control1_y = y + radius + arc_radius
-            control2_x = x + arc_radius * 0.5
-            control2_y = y + radius + arc_radius
-            
-        else:
-            # For rectangles - top-to-top arc
-            width = node_props['width']
-            height = node_props['height']
-            
-            # Start: 1/4 width from left, top side
-            start_x = x - width/4
-            start_y = y + height/2
-            
-            # End: 3/4 width from left, top side
-            end_x = x + width/4
-            end_y = y + height/2
-            
-            # Arc height above the rectangle
-            arc_height = width * 0.4
-            
-            # Control points for a circular arc above
-            control1_x = x - width/8
-            control1_y = y + height/2 + arc_height
-            
-            control2_x = x + width/8
-            control2_y = y + height/2 + arc_height
+            raise ValueError(f"Node properties not found for position: ({x}, {y})")
+        
+        # Self-loops should only be for rectangle nodes (scenarios)
+        if node_props['type'] != 'rect':
+            raise ValueError(f"Self-loops should only be for rectangle nodes, got: {node_props['type']}")
+        
+        # For rectangles - top-to-top arc
+        width = node_props['width']
+        height = node_props['height']
+        
+        # Start: 1/4 width from left, top side
+        start_x = x - width/4
+        start_y = y + height/2
+        
+        # End: 3/4 width from left, top side
+        end_x = x + width/4
+        end_y = y + height/2
+        
+        # Arc height above the rectangle
+        arc_height = width * 0.4
+        
+        # Control points for a circular arc above
+        control1_x = x - width/8
+        control1_y = y + height/2 + arc_height
+        
+        control2_x = x + width/8
+        control2_y = y + height/2 + arc_height
         
         # Create the Bezier curve (the main arc) with the same thickness as straight lines
         loop = Bezier(
@@ -347,17 +313,15 @@ class NetworkVisualiser:
             tangent_y /= tangent_length
         
         # Add just the arrowhead (NormalHead) at the end point, oriented along the tangent
-        # Use the same size as regular arrows (size=6)
         arrowhead = NormalHead(
-            size=6,
+            size=NetworkVisualiser.ARROWHEAD_SIZE,
             line_color=NetworkVisualiser.EDGE_COLOUR,
             fill_color=NetworkVisualiser.EDGE_COLOUR,
             line_width=NetworkVisualiser.EDGE_WIDTH
         )
         
         # Create a standalone arrowhead at the end point
-        # We need to use a scatter-like approach since NormalHead alone isn't a glyph
-        # Instead, we'll use a very short Arrow that's essentially just the head
+        # We need to use a very short Arrow that's essentially just the head
         arrow = Arrow(
             end=arrowhead,
             x_start=end_x - tangent_x * 0.001,  # Almost zero length line
@@ -371,12 +335,8 @@ class NetworkVisualiser:
         self.plot.add_layout(arrow)
 
         # Add edge label - positioned above the arc
-        if node_props is None or node_props['type'] == 'rect':
-            label_x = x
-            label_y = y + height/2 + arc_height * 0.6
-        else:  # circle
-            label_x = x
-            label_y = y + radius + arc_radius * 0.6
+        label_x = x
+        label_y = y + height/2 + arc_height * 0.6
             
         edge_text = Text(
             x=label_x, 
@@ -395,9 +355,8 @@ class NetworkVisualiser:
         edge_text_data = dict(x=[], y=[], text=[])
         
         for edge in self.graph.networkx.edges():
-            edge_label = edge_labels.get(edge, "")
-            if isinstance(edge_label, list):
-                edge_label = edge_label[0] if edge_label else ""
+            # Edge labels are always defined and cannot be lists
+            edge_label = edge_labels[edge]
             edge_label = self._cap_name(edge_label)
             
             if edge[0] == edge[1]:
@@ -411,7 +370,7 @@ class NetworkVisualiser:
                 # Add arrow between the calculated points
                 arrow = Arrow(
                     end=NormalHead(
-                        size=6,
+                        size=NetworkVisualiser.ARROWHEAD_SIZE,
                         line_color=NetworkVisualiser.EDGE_COLOUR,
                         fill_color=NetworkVisualiser.EDGE_COLOUR),
                     x_start=start_x, y_start=start_y,
