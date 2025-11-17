@@ -89,81 +89,80 @@ Shuffled argument ordering
 Keyword without arguments
     [Documentation]    *model info*
     ...    :IN: None
-    ...    :OUT: new args
+    ...    :OUT: None
     No Operation
 
 Keyword with ${emb_arg} as embedded argument
     [Documentation]    *model info*
-    ...    :IN: args.emb_arg = ${emb_arg}
-    ...    :OUT: args.emb_arg == Green
+    ...    :IN: scenario.emb_arg = ${emb_arg}
+    ...    :OUT: scenario.emb_arg == Green
     RETURN    ${emb_arg}
 
 Keyword with positional argument
     [Documentation]    *model info*
-    ...    :IN: args.pos1 = ${pos1}
-    ...    :OUT: args.pos1 == Green
+    ...    :IN: scenario.pos1 = ${pos1}
+    ...    :OUT: scenario.pos1 == Green
     [Arguments]    ${pos1}
     RETURN    ${pos1}
 
 Keyword with multiple positional arguments
     [Documentation]    *model info*
-    ...    :IN: args.pos1 = ${pos1} | args.pos2 = ${pos2}
-    ...    :OUT: args.pos1 == Green | args.pos2 == Red
+    ...    :IN: scenario.pos1 = ${pos1} | scenario.pos2 = ${pos2}
+    ...    :OUT: scenario.pos1 == Green | scenario.pos2 == Red
     [Arguments]    ${pos1}    ${pos2}
     RETURN    ${pos1}    ${pos2}
 
 Keyword with positional arguments and optional argument
     [Documentation]    *model info*
-    ...    :IN: args.pos1 = ${pos1} | args.pos2 = ${pos2} | args.pos3 = ${pos3}
-    ...    :OUT: args.pos1 == Green | args.pos2 == Red | args.pos3 == ${pos3}
+    ...    :IN: scenario.pos1 = ${pos1} | scenario.pos2 = ${pos2} | scenario.pos3 = ${pos3}
+    ...    :OUT: scenario.pos1 == Green | scenario.pos2 == Red | scenario.pos3 == ${pos3}
     [Arguments]    ${pos1}    ${pos2}    ${pos3}=Orange
     RETURN    ${pos1}    ${pos2}    ${pos3}
 
 Keyword with variable number of arguments
     [Documentation]    *model info*
-    ...    :IN: args.varargs = ${varargs} | args.vararg1 = ${varargs}[0]
-    ...    :OUT: len(args.varargs) == 3 | args.vararg1 == Green
-    ...          args.varargs[0] == Green | args.varargs[1] == Red | args.varargs[2] == Blue
+    ...    :IN: scenario.varargs = ${varargs} | scenario.vararg1 = ${varargs}[0]
+    ...    :OUT: len(scenario.varargs) == 3 | scenario.vararg1 == Green
+    ...          scenario.varargs[0] == Green | scenario.varargs[1] == Red | scenario.varargs[2] == Blue
     [Arguments]    @{varargs}
     RETURN    ${varargs}
 
 Keyword with named argument
     [Documentation]    *model info*
-    ...    :IN: args.named1 = ${named1}
-    ...    :OUT: args.named1 == Green
+    ...    :IN: scenario.named1 = ${named1}
+    ...    :OUT: scenario.named1 == Green
     [Arguments]    ${named1}=
     RETURN    ${named1}
 
 Keyword with multiple named arguments
     [Documentation]    *model info*
-    ...    :IN: args.named1 = ${named1} | args.named2 = ${named2}
-    ...    :OUT: args.named1 == Green | args.named2 == Red
+    ...    :IN: scenario.named1 = ${named1} | scenario.named2 = ${named2}
+    ...    :OUT: scenario.named1 == Green | scenario.named2 == Red
     [Arguments]    ${named1}=    ${named2}=
     RETURN    ${named1}    ${named2}
 
 Keyword with free named arguments
     [Documentation]    *model info*
-    ...    :IN: args.free = ${free} | args.free1 = ${free}[free1]
-    ...    :OUT: len(args.free) == 3 | args.free1 == Green
-    ...          args.free[free1] == Green | args.free[free2] == Red | args.free[free3] == Blue
+    ...    :IN: scenario.free = ${free} | scenario.free1 = ${free}[free1]
+    ...    :OUT: len(scenario.free) == 3 | scenario.free1 == Green
+    ...          scenario.free[free1] == Green | scenario.free[free2] == Red | scenario.free[free3] == Blue
     [Arguments]    &{free}
     RETURN    ${free}
 
 Keyword with all ${emb_arg} argument styles mixed
     [Documentation]    *model info*
-    ...    :IN: new combiargs | combiargs.emb_var = ${emb_arg}
-    ...         combiargs.pos1 = ${pos1} | combiargs.pos2 = ${pos2}
-    ...         combiargs.varargs = ${varargs} | combiargs.vararg1 = ${varargs}[0]
-    ...         combiargs.named1 = ${named1} | combiargs.named2 = ${named2}
-    ...         combiargs.free = ${free} | combiargs.free1 = ${free}[free1]
-    ...    :OUT: combiargs.emb_var == 5
-    ...          combiargs.pos1 == A | combiargs.pos2 == B
-    ...          len(combiargs.varargs) == 2 | combiargs.vararg1 == C
-    ...          combiargs.varargs[0] == C | combiargs.varargs[1] == D
-    ...          combiargs.named1 == E | combiargs.named2 == F
-    ...          len(combiargs.free) == 2 | combiargs.free1 == G
-    ...          combiargs.free[free1] == G | combiargs.free[free2] == H
-    ...          del combiargs
+    ...    :IN: scenario.emb_var = ${emb_arg}
+    ...         scenario.pos1 = ${pos1} | scenario.pos2 = ${pos2}
+    ...         scenario.varargs = ${varargs} | scenario.vararg1 = ${varargs}[0]
+    ...         scenario.named1 = ${named1} | scenario.named2 = ${named2}
+    ...         scenario.free = ${free} | scenario.free1 = ${free}[free1]
+    ...    :OUT: scenario.emb_var == 5
+    ...          scenario.pos1 == A | scenario.pos2 == B
+    ...          len(scenario.varargs) == 2 | scenario.vararg1 == C
+    ...          scenario.varargs[0] == C | scenario.varargs[1] == D
+    ...          scenario.named1 == E | scenario.named2 == F
+    ...          len(scenario.free) == 2 | scenario.free1 == G
+    ...          scenario.free[free1] == G | scenario.free[free2] == H
     [Arguments]    ${pos1}    ${pos2}    @{varargs}    ${named1}=    ${named2}=    &{free}
     VAR    &{all_args}=    emb_arg=${emb_arg}    pos1=${pos1}    pos2=${pos2}
     ...                    var_args=${varargs}    named1=${named1}    named2=${named2}    &{free}
@@ -171,11 +170,11 @@ Keyword with all ${emb_arg} argument styles mixed
 
 Keyword with ${emb_arg} argument styles mixed (no OUT-check)
     [Documentation]    *model info*
-    ...    :IN: new combiargs | combiargs.emb_var = ${emb_arg}
-    ...         combiargs.pos1 = ${pos1} | combiargs.pos2 = ${pos2}
-    ...         combiargs.named1 = ${named1} | combiargs.named2 = ${named2}
-    ...         combiargs.varargs = ${varargs} | combiargs.free = ${free}
-    ...    :OUT: del combiargs
+    ...    :IN: scenario.emb_var = ${emb_arg}
+    ...         scenario.pos1 = ${pos1} | scenario.pos2 = ${pos2}
+    ...         scenario.named1 = ${named1} | scenario.named2 = ${named2}
+    ...         scenario.varargs = ${varargs} | scenario.free = ${free}
+    ...    :OUT: None
     [Arguments]    ${pos1}    ${pos2}    @{varargs}    ${named1}=    ${named2}=the default    &{free}
     VAR    &{all_args}=    emb_arg=${emb_arg}    pos1=${pos1}    pos2=${pos2}
     ...                    var_args=${varargs}    named1=${named1}    named2=${named2}    &{free}
