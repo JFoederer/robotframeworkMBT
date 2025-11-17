@@ -163,6 +163,8 @@ If an example value is used multiple times in a scenario, like `Johan` in the ab
 
 The opposite is also true. Any example values that differ in the original scenario text, are guaranteed to get distinct values in the generated scenario. That means that in the above example, where `Johan` sends a card to `Tannaz`, you can be sure that the generated scenario will not include a variant where `Tannaz` sends a birthday card to herself, even if `Tannaz` were a valid option for both arguments. If, however, this is a relevant scenario for you, you can include it as a new key example in your test suite.
 
+Modifiers can be used on any type of argument: embedded, positional or named. If an argument is optional and it is ommitted in the scenario, then the argument's default value is used and the modifier is not triggered. Passing a variable number of arguments using modifiers is supported for both varargs and free named arguments. The modifier must yield a list vor varargs or a dict for free named arguments. They are used directly as-is without matching against other arguments. Just like optional arguments, when no arguments are provided, the modifier is not triggered.
+
 #### Technicalities
 
 Please note that all modifiers in the scenario are processed before processing the regular `:IN:` and `:OUT:` expressions. This implies that when model data is used in a modifier, that it will use the model data as it is at the start of the scenario. Any updates to the model data during the scenario steps do not affect the possible choices for the example values.
@@ -183,15 +185,13 @@ In a then-step, modifiers behave slightly different. In then-steps no new option
 
 #### Limitations
 
-This first implementation for variable data considers strict equivalence classes only. This means that all variants are considered equal for all purposes. If, for a certain scenario, a single valid example variant has been generated and executed, then this scenario is considered covered. There are no options yet to indicate deeper coverage targets based on data variations. It also implies that whenever any variant is valid, all scenario variants must be valid. And that regardless of which variant is chosen, the exact same scenarios can be chosen as the next one. This does however not mean that once a variant is chosen, that this variant will be used throughout the whole trace. If a scenario is selected multiple times in the same trace, then each occurrence will get new randomly selected data.
-
-Modifiers are currently only supported for embedded arguments.
+For now, variable data considers strict equivalence classes only. This means that all variants are considered equal for all purposes. If, for a certain scenario, a single valid example variant has been generated and executed, then this scenario is considered covered. There are no options yet to indicate deeper coverage targets based on data variations. It also implies that whenever any variant is valid, all scenario variants must be valid. And that regardless of which variant is chosen, the exact same scenarios can be chosen as the next one. This does however not mean that once a variant is chosen, that this variant will be used throughout the whole trace. If a scenario is selected multiple times in the same trace, then each occurrence will get new randomly selected data.
 
 ## Configuration options
 
 ### Random seed
 
-By default, trace generation is random. The random seed used for the trace is logged (debug level) by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
+By default, trace generation is random. The random seed used for the trace is logged by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
 
 ```
 Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi

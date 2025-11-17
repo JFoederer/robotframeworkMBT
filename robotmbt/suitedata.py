@@ -32,6 +32,7 @@
 
 import copy
 from robot.running.arguments.argumentvalidator import ArgumentValidator
+import robot.utils.notset
 
 from .steparguments import StepArgument, StepArguments
 
@@ -169,6 +170,8 @@ class Step:
             return self.org_pn_args
         result = []
         for arg in self.args:
+            if arg.is_default:
+                continue
             if arg.kind == arg.POSITIONAL:
                 result.append(arg.value)
             elif arg.kind == arg.VAR_POS:
@@ -202,9 +205,7 @@ class Step:
         return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword
 
     def add_robot_dependent_data(self, robot_kw):
-        """
-        robot_kw must be Robot Framework's keyword object from Robot's runner context
-        """
+        """robot_kw must be Robot Framework's keyword object from Robot's runner context"""
         try:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
@@ -219,32 +220,54 @@ class Step:
 
     def __handle_non_embedded_arguments(self, robot_argspec):
         result = []
-        p_args, n_args = robot_argspec.map([a for a in self.org_pn_args if '=' not in a or r'\=' in a],
-                                           [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a])
-        if p_args == [None]:
-            # for some reason .map() returns [None] instead of the empty list when there are no arguments
-            p_args= []
-        ArgumentValidator(robot_argspec).validate(p_args, n_args)
+        p_args = [a for a in self.org_pn_args if '=' not in a or r'\=' in a]
+        n_args = [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a]
+        self.__validate_arguments(robot_argspec, p_args, n_args)
+
         robot_args = [a for a in robot_argspec]
-        argument_names = list(robot_argspec.argument_names)
+        argument_names = [a for a in robot_argspec.argument_names if a not in robot_argspec.embedded]
         for arg in robot_argspec:
-            if arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED:
+            if not p_args or (arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED):
                 break
-            result += [StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL)]
+            result.append(StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL))
             robot_args.pop(0)
-            if not p_args:
-                break
         if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
-            result += [StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS)]
+            result.append(StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS))
         free = {}
         for name, value in n_args:
             if name in argument_names:
-                result += [StepArgument(name, value, kind=StepArgument.NAMED)]
+                result.append(StepArgument(name, value, kind=StepArgument.NAMED))
+                argument_names.remove(name)
             else:
                 free[name] = value
         if free:
-            result += [StepArgument(argument_names[-1], free, kind=StepArgument.FREE_NAMED)]
+            result.append(StepArgument(argument_names.pop(-1), free, kind=StepArgument.FREE_NAMED))
+        for unmentioned_arg in argument_names:
+            arg = next(arg for arg in robot_args if arg.name == unmentioned_arg)
+            default_value = arg.default
+            if default_value is robot.utils.notset.NOT_SET:
+                if arg.kind == arg.VAR_POSITIONAL:
+                    default_value = []
+                elif arg.kind == arg.VAR_NAMED:
+                    default_value = {}
+                else:
+                    # This can happen when using library keywords that specify embedded arguments in the @keyword decorator
+                    # but use different names in the method signature. Robot Framework implementation is incomplete for this
+                    # aspect and differs between library and user keywords.
+                    assert False, f"No default argument expected to be needed for '{unmentioned_arg}' here"
+            result.append(StepArgument(unmentioned_arg, default_value, kind=StepArgument.NAMED, is_default=True))
         return result
+
+    @staticmethod
+    def __validate_arguments(spec, positionals, nameds):
+        p, n = spec.map(positionals, nameds) # Robot uses a slightly different mapping for positional and named arguments.
+                                             # We keep the notation from the scenario (with or without the argument's name).
+                                             # Robot's mapping favours positional when possible, even when the name is used
+                                             # in the keyword call. The validator is sensitive to these differences.
+        if p == [None]:
+            # for some reason .map() returns [None] instead of the empty list when there are no arguments
+            p = []
+        ArgumentValidator(spec).validate(p, n) # Use the Robot mechanism for validation to yield familiar error messages
 
     def __parse_model_info(self, docu):
         model_info = dict()

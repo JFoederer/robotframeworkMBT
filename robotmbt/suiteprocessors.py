@@ -329,28 +329,47 @@ class SuiteProcessors:
                 if 'MOD' in step.model_info:
                     for expr in step.model_info['MOD']:
                         modded_arg, constraint = self._parse_modifier_expression(expr, step.args)
-                        if step.args[modded_arg].kind != StepArgument.EMBEDDED:
-                            raise ValueError("Modifers are currently only supported for embedded arguments.")
-                        org_example = step.args[modded_arg].org_value
-                        if step.gherkin_kw == 'then':
-                            constraint = None # No new constraints are processed for then-steps
-                            if org_example not in subs.substitutions:
-                                # if a then-step signals the first use of an example value, it is considered a new definition
-                                subs.substitute(org_example, [org_example])
-                                continue
-                        if not constraint and org_example not in subs.substitutions:
-                            raise ValueError(f"No options to choose from at first assignment to {org_example}")
-                        if constraint and constraint != '.*':
-                            options =  m.process_expression(constraint, step.args)
-                            if options == 'exec':
-                                raise ValueError(f"Invalid constraint for argument substitution: {expr}")
-                            if not options:
-                                raise ValueError(f"Constraint on modifer did not yield any options: {expr}")
-                            if not is_list_like(options):
-                                raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
+                        if step.args[modded_arg].is_default:
+                            continue
+                        if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
+                            org_example = step.args[modded_arg].org_value
+                            if step.gherkin_kw == 'then':
+                                constraint = None # No new constraints are processed for then-steps
+                                if org_example not in subs.substitutions:
+                                    # if a then-step signals the first use of an example value, it is considered a new definition
+                                    subs.substitute(org_example, [org_example])
+                                    continue
+                            if not constraint and org_example not in subs.substitutions:
+                                raise ValueError(f"No options to choose from at first assignment to {org_example}")
+                            if constraint and constraint != '.*':
+                                options =  m.process_expression(constraint, step.args)
+                                if options == 'exec':
+                                    raise ValueError(f"Invalid constraint for argument substitution: {expr}")
+                                if not options:
+                                    raise ValueError(f"Constraint on modifer did not yield any options: {expr}")
+                                if not is_list_like(options):
+                                    raise ValueError(f"Constraint on modifer did not yield a set of options: {expr}")
+                            else:
+                                options = None
+                            subs.substitute(org_example, options)
+                        elif step.args[modded_arg].kind == StepArgument.VAR_POS:
+                            if step.args[modded_arg].value:
+                                modded_varargs = m.process_expression(constraint, step.args)
+                                if not is_list_like(modded_varargs):
+                                    raise ValueError(f"Modifying varargs must yield a list of arguments")
+                                # Varargs are not added to the substitution map, but are used directly as-is. A modifier can
+                                # change the number of arguments in the list, making it impossible to decide which values to
+                                # match and which to drop and/or duplicate.
+                                step.args[modded_arg].value = modded_varargs
+                        elif step.args[modded_arg].kind == StepArgument.FREE_NAMED:
+                            if step.args[modded_arg].value:
+                                modded_free_args = m.process_expression(constraint, step.args)
+                                if not isinstance(modded_free_args, dict):
+                                    raise ValueError("Modifying free named arguments must yield a dict")
+                                # Similar to varargs, modified free named arguments are used directly as-is.
+                                step.args[modded_arg].value = modded_free_args
                         else:
-                            options = None
-                        subs.substitute(org_example, options)
+                            raise AssertionError(f"Unknown argument kind for {modded_arg}")
         except Exception as err:
             logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                          f"    In step {step}: {err}")
@@ -370,8 +389,11 @@ class SuiteProcessors:
             if 'MOD' in step.model_info:
                 for expr in step.model_info['MOD']:
                     modded_arg, _ = self._parse_modifier_expression(expr, step.args)
+                    if step.args[modded_arg].is_default:
+                        continue
                     org_example = step.args[modded_arg].org_value
-                    step.args[modded_arg].value = subs.solution[org_example]
+                    if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
+                        step.args[modded_arg].value = subs.solution[org_example]
         return scenario
 
     @staticmethod
@@ -406,13 +428,13 @@ class SuiteProcessors:
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':
-            logger.debug(f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
+            logger.info(f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             new_seed = SuiteProcessors._generate_seed()
-            logger.debug(f"seed={new_seed} (use seed to rerun this trace)")
+            logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
         else:
-            logger.debug(f"seed={seed} (as provided)")
+            logger.info(f"seed={seed} (as provided)")
             random.seed(seed)
 
     @staticmethod

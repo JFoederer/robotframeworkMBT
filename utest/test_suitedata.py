@@ -394,6 +394,38 @@ class TestSteps(unittest.TestCase):
         step = Step(RobotKwStub.STEPTEXT, assign=('${output1}', '${output2}='), parent=None)
         self.assertEqual(step.full_keyword, "${output1}    ${output2}=    " + RobotKwStub.STEPTEXT)
 
+    def test_argument_with_default_is_omitted_from_keyword_when_not_mentioned_named(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', parent=None)
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='NAMED'),
+                                       StubArgument(name='named1', value='namedA', is_default=True,  kind='NAMED')])
+        self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB'))
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB")
+
+    def test_argument_with_default_is_omitted_from_keyword_when_not_mentioned_positional(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'posB', parent=None)
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='named1', value='namedA', is_default=True,  kind='POSITIONAL')])
+        self.assertTupleEqual(step.posnom_args_str, ('posA', 'posB'))
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    posB")
+
+    def test_argument_with_default_is_included_in_keyword_when_mentioned_named(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=namedA', parent=None)
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='NAMED'),
+                                       StubArgument(name='named1', value='namedA', is_default=False, kind='NAMED')])
+        self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB', 'named1=namedA'))
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
+
+    def test_argument_with_default_is_included_in_keyword_when_mentioned_positional(self, mock):
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'posB', 'namedA', parent=None)
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='named1', value='namedA', is_default=False, kind='POSITIONAL')])
+        self.assertTupleEqual(step.posnom_args_str, ('posA', 'posB', 'namedA'))
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    posB    namedA")
+
     def test_positional_and_named_arguments_are_available_in_robot_tuple_format(self, mock):
         argtuple = 'posA', 'pos2=posB', 'named1=namedA'
         step = Step(RobotKwStub.STEPTEXT, *argtuple, parent=None)
@@ -441,6 +473,19 @@ class RobotKwStub:
         argument_names = []
         map = lambda x,y,z: ([], [])
         __iter__ = lambda _: iter([])
+
+
+class StubStepArguments(list):
+    modified = True # trigger modified status to get arguments processed, rather then just echoed
+
+
+class StubArgument(SimpleNamespace):
+    EMBEDDED = 'EMBEDDED'
+    POSITIONAL = 'POSITIONAL'
+    VAR_POS = 'VAR_POS'
+    NAMED = 'NAMED'
+    FREE_NAMED = 'FREE_NAMED'
+
 
 if __name__ == '__main__':
     unittest.main()
