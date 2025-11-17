@@ -357,12 +357,16 @@ class SuiteProcessors:
                                 modded_varargs = m.process_expression(constraint, step.args)
                                 if not is_list_like(modded_varargs):
                                     raise ValueError(f"Modifying varargs must yield a list of arguments")
+                                # Varargs are not added to the substitution map, but are used directly as-is. A modifier can
+                                # change the number of arguments in the list, making it impossible to decide which values to
+                                # match and which to drop and/or duplicate.
                                 step.args[modded_arg].value = modded_varargs
                         elif step.args[modded_arg].kind == StepArgument.FREE_NAMED:
                             if step.args[modded_arg].value:
                                 modded_free_args = m.process_expression(constraint, step.args)
                                 if not isinstance(modded_free_args, dict):
                                     raise ValueError("Modifying free named arguments must yield a dict")
+                                # Similar to varargs, modified free named arguments are used directly as-is.
                                 step.args[modded_arg].value = modded_free_args
                         else:
                             raise AssertionError(f"Unknown argument kind for {modded_arg}")

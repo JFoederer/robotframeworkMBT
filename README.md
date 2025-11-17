@@ -163,6 +163,8 @@ If an example value is used multiple times in a scenario, like `Johan` in the ab
 
 The opposite is also true. Any example values that differ in the original scenario text, are guaranteed to get distinct values in the generated scenario. That means that in the above example, where `Johan` sends a card to `Tannaz`, you can be sure that the generated scenario will not include a variant where `Tannaz` sends a birthday card to herself, even if `Tannaz` were a valid option for both arguments. If, however, this is a relevant scenario for you, you can include it as a new key example in your test suite.
 
+Modifiers can be used on any type of argument: embedded, positional or named. If an argument is optional and it is ommitted in the scenario, then the argument's default value is used and the modifier is not triggered. Passing a variable number of arguments using modifiers is supported for both varargs and free named arguments. The modifier must yield a list vor varargs or a dict for free named arguments. They are used directly as-is without matching against other arguments. Just like optional arguments, when no arguments are provided, the modifier is not triggered.
+
 #### Technicalities
 
 Please note that all modifiers in the scenario are processed before processing the regular `:IN:` and `:OUT:` expressions. This implies that when model data is used in a modifier, that it will use the model data as it is at the start of the scenario. Any updates to the model data during the scenario steps do not affect the possible choices for the example values.
