@@ -12,7 +12,6 @@ from math import sqrt
 import html
 import networkx as nx
 
-
 class Visualiser:
     """
     The Visualiser class bridges the different concerns to provide
@@ -40,7 +39,6 @@ class Visualiser:
         networkvisualiser = NetworkVisualiser(self.graph)
         html_bokeh = networkvisualiser.generate_html()
         return f"<iframe srcdoc=\"{html.escape(html_bokeh)}\", width=\"{Visualiser.GRAPH_SIZE_PX}px\", height=\"{Visualiser.GRAPH_SIZE_PX}px\"></iframe>"
-
 
 class NetworkVisualiser:
     """
@@ -199,7 +197,7 @@ class NetworkVisualiser:
         dy = end_props['y'] - start_props['y']
         distance = sqrt(dx*dx + dy*dy)
         
-        # Self-loops are handled separately, so distance should never be 0
+        # Self-loops are handled separately, distance should never be 0
         if distance == 0:
             raise ValueError("Distance between different nodes should not be zero")
         
@@ -211,8 +209,8 @@ class NetworkVisualiser:
         if start_props['type'] == 'circle':
             start_x = start_props['x'] + dx * start_props['radius']
             start_y = start_props['y'] + dy * start_props['radius']
-        else:  # rectangle
-            # For rectangles, we need to find where the line intersects the rectangle border
+        else:
+            # Find where the line intersects the rectangle border
             rect_width = start_props['width']
             rect_height = start_props['height']
             
@@ -227,10 +225,10 @@ class NetworkVisualiser:
             start_y = start_props['y'] + dy * scale
         
         # Calculate end point at border (reverse direction)
+        # End nodes should never be circles for regular edges
         if end_props['type'] == 'circle':
-            end_x = end_props['x'] - dx * end_props['radius']
-            end_y = end_props['y'] - dy * end_props['radius']
-        else:  # rectangle
+            raise ValueError(f"End node should not be a circle for regular edges: {end_node}")
+        else:
             rect_width = end_props['width']
             rect_height = end_props['height']
             
@@ -246,28 +244,24 @@ class NetworkVisualiser:
         
         return start_x, start_y, end_x, end_y
 
-    def add_self_loop(self, x: float, y: float, label: str):
+    def add_self_loop(self, node_id: str, label: str):
         """
         Circular arc that starts and ends at the top side of the rectangle
         Start at 1/4 width, end at 3/4 width, with a circular arc above
         The arc itself ends with the arrowhead pointing into the rectangle
         """
-        # Get node properties for sizing
-        node_props = None
-        for node_id, props in self.node_props.items():
-            if abs(props['x'] - x) < 0.001 and abs(props['y'] - y) < 0.001:
-                node_props = props
-                break
+        # Get node properties directly by node ID
+        node_props = self.node_props.get(node_id)
         
         # Node properties should always exist
         if node_props is None:
-            raise ValueError(f"Node properties not found for position: ({x}, {y})")
+            raise ValueError(f"Node properties not found for node: {node_id}")
         
         # Self-loops should only be for rectangle nodes (scenarios)
         if node_props['type'] != 'rect':
             raise ValueError(f"Self-loops should only be for rectangle nodes, got: {node_props['type']}")
         
-        # For rectangles - top-to-top arc
+        x, y = node_props['x'], node_props['y']
         width = node_props['width']
         height = node_props['height']
         
@@ -321,7 +315,7 @@ class NetworkVisualiser:
         )
         
         # Create a standalone arrowhead at the end point
-        # We need to use a very short Arrow that's essentially just the head
+        # Strategy: use a very short Arrow that's essentially just the head
         arrow = Arrow(
             end=arrowhead,
             x_start=end_x - tangent_x * 0.001,  # Almost zero length line
@@ -338,7 +332,15 @@ class NetworkVisualiser:
         label_x = x
         label_y = y + height/2 + arc_height * 0.6
             
-        return label_x, label_y
+        edge_text = Text(
+            x=label_x, 
+            y=label_y, 
+            text=label,
+            text_align='center', 
+            text_baseline='middle',
+            text_font_size='7pt'
+        )
+        self.plot.add_glyph(edge_text)
 
     def _add_edges(self):
         edge_labels = nx.get_edge_attributes(self.graph.networkx, "label")
@@ -350,15 +352,21 @@ class NetworkVisualiser:
             # Edge labels are always defined and cannot be lists
             edge_label = edge_labels[edge]
             edge_label = self._cap_name(edge_label)
-            edge_text_data['text'].append(edge_label)
             
             if edge[0] == edge[1]:
-                # Self-loop handled separately
-                x, y = self.graph.pos[edge[0]]
-                label_x, label_y = self.add_self_loop(x=x, y=y, label=edge_label)
-                edge_text_data['x'].append(label_x)
-                edge_text_data['y'].append(label_y)
+                # Self-loop handled separately - pass node ID directly
+                self.add_self_loop(node_id=edge[0], label=edge_label)
                 
+                # For self-loops, position label above the node
+                x, y = self.graph.pos[edge[0]]
+                node_props = self.node_props[edge[0]]
+                width = node_props['width']
+                height = node_props['height']
+                arc_height = width * 0.4
+                
+                edge_text_data['x'].append(x)
+                edge_text_data['y'].append(y + height/2 + arc_height * 0.6)
+                edge_text_data['text'].append(edge_label)
             else:
                 # Calculate edge points at node borders
                 start_x, start_y, end_x, end_y = self._get_edge_points(edge[0], edge[1])
@@ -377,6 +385,7 @@ class NetworkVisualiser:
                 # Collect edge label data (position at midpoint)
                 edge_text_data['x'].append((start_x + end_x) / 2)
                 edge_text_data['y'].append((start_y + end_y) / 2)
+                edge_text_data['text'].append(edge_label)
         
         # Add all edge labels at once
         if edge_text_data['x']:
