@@ -23,8 +23,8 @@ dependencies = [
 ]
 requires-python = ">=3.10"
 
-[tool.setuptools]
-packages = ["robotmbt"]
+[tool.setuptools.packages.find]
+include = ["robotmbt*"]
 
 [project.urls]
 Homepage = "https://github.com/JFoederer/robotframeworkMBT"
