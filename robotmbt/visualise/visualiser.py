@@ -338,15 +338,7 @@ class NetworkVisualiser:
         label_x = x
         label_y = y + height/2 + arc_height * 0.6
             
-        edge_text = Text(
-            x=label_x, 
-            y=label_y, 
-            text=label,
-            text_align='center', 
-            text_baseline='middle',
-            text_font_size='7pt'
-        )
-        self.plot.add_glyph(edge_text)
+        return label_x, label_y
 
     def _add_edges(self):
         edge_labels = nx.get_edge_attributes(self.graph.networkx, "label")
@@ -358,11 +350,15 @@ class NetworkVisualiser:
             # Edge labels are always defined and cannot be lists
             edge_label = edge_labels[edge]
             edge_label = self._cap_name(edge_label)
+            edge_text_data['text'].append(edge_label)
             
             if edge[0] == edge[1]:
                 # Self-loop handled separately
                 x, y = self.graph.pos[edge[0]]
-                self.add_self_loop(x=x, y=y, label=edge_label)
+                label_x, label_y = self.add_self_loop(x=x, y=y, label=edge_label)
+                edge_text_data['x'].append(label_x)
+                edge_text_data['y'].append(label_y)
+                
             else:
                 # Calculate edge points at node borders
                 start_x, start_y, end_x, end_y = self._get_edge_points(edge[0], edge[1])
@@ -381,7 +377,6 @@ class NetworkVisualiser:
                 # Collect edge label data (position at midpoint)
                 edge_text_data['x'].append((start_x + end_x) / 2)
                 edge_text_data['y'].append((start_y + end_y) / 2)
-                edge_text_data['text'].append(edge_label)
         
         # Add all edge labels at once
         if edge_text_data['x']:
