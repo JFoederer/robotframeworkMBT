@@ -244,7 +244,7 @@ class NetworkVisualiser:
         
         return start_x, start_y, end_x, end_y
 
-    def add_self_loop(self, node_id: str, label: str):
+    def add_self_loop(self, node_id: str):
         """
         Circular arc that starts and ends at the top side of the rectangle
         Start at 1/4 width, end at 3/4 width, with a circular arc above
@@ -331,16 +331,8 @@ class NetworkVisualiser:
         # Add edge label - positioned above the arc
         label_x = x
         label_y = y + height/2 + arc_height * 0.6
-            
-        edge_text = Text(
-            x=label_x, 
-            y=label_y, 
-            text=label,
-            text_align='center', 
-            text_baseline='middle',
-            text_font_size='7pt'
-        )
-        self.plot.add_glyph(edge_text)
+
+        return label_x, label_y
 
     def _add_edges(self):
         edge_labels = nx.get_edge_attributes(self.graph.networkx, "label")
@@ -355,7 +347,7 @@ class NetworkVisualiser:
             
             if edge[0] == edge[1]:
                 # Self-loop handled separately - pass node ID directly
-                self.add_self_loop(node_id=edge[0], label=edge_label)
+                self.add_self_loop(node_id=edge[0])
                 
                 # For self-loops, position label above the node
                 x, y = self.graph.pos[edge[0]]
