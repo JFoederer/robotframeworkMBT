@@ -344,21 +344,14 @@ class NetworkVisualiser:
             # Edge labels are always defined and cannot be lists
             edge_label = edge_labels[edge]
             edge_label = self._cap_name(edge_label)
+            edge_text_data['text'].append(edge_label)
             
             if edge[0] == edge[1]:
-                # Self-loop handled separately - pass node ID directly
-                self.add_self_loop(node_id=edge[0])
+                # Self-loop handled separately
+                label_x, label_y = self.add_self_loop(edge[0])
+                edge_text_data['x'].append(label_x)
+                edge_text_data['y'].append(label_y)
                 
-                # For self-loops, position label above the node
-                x, y = self.graph.pos[edge[0]]
-                node_props = self.node_props[edge[0]]
-                width = node_props['width']
-                height = node_props['height']
-                arc_height = width * 0.4
-                
-                edge_text_data['x'].append(x)
-                edge_text_data['y'].append(y + height/2 + arc_height * 0.6)
-                edge_text_data['text'].append(edge_label)
             else:
                 # Calculate edge points at node borders
                 start_x, start_y, end_x, end_y = self._get_edge_points(edge[0], edge[1])
@@ -377,7 +370,6 @@ class NetworkVisualiser:
                 # Collect edge label data (position at midpoint)
                 edge_text_data['x'].append((start_x + end_x) / 2)
                 edge_text_data['y'].append((start_y + end_y) / 2)
-                edge_text_data['text'].append(edge_label)
         
         # Add all edge labels at once
         if edge_text_data['x']:
