@@ -41,15 +41,21 @@ from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
 from .steparguments import StepArgument, StepArguments
-from .visualise.visualiser import Visualiser
-from .visualise.models import TraceInfo, ScenarioInfo
+
+try:
+    from .visualise.visualiser import Visualiser
+    from .visualise.models import TraceInfo
+
+    VISUALISE = True
+except ImportError:
+    Visualiser = None
+    TraceInfo = None
+    VISUALISE = False
 
 
 class SuiteProcessors:
-    def __init__(self):
-        self.visualiser = Visualiser()
-
-    def echo(self, in_suite):
+    @staticmethod
+    def echo(in_suite):
         return in_suite
 
     def flatten(self, in_suite: Suite) -> Suite:
@@ -82,7 +88,7 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: any = 'new') -> Suite:
+    def process_test_suite(self, in_suite: Suite, *, seed: any = 'new', graph: str = '') -> Suite:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -98,7 +104,12 @@ class SuiteProcessors:
         self._init_randomiser(seed)
         random.shuffle(self.scenarios)
 
-        self.visualiser = Visualiser()
+        self.visualiser = None
+        if graph != '' and VISUALISE:
+            self.visualiser = Visualiser(graph)
+        elif graph != '' and not VISUALISE:
+            logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed.'
+                        'Install them with `pip install .[visualization]`.')
 
         # a short trace without the need for repeating scenarios is preferred
         self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
@@ -108,15 +119,16 @@ class SuiteProcessors:
                 "Direct trace not available. Allowing repetition of scenarios")
             self._try_to_reach_full_coverage(allow_duplicate_scenarios=True)
             if not self.tracestate.coverage_reached():
-                logger.write(
-                    self.visualiser.generate_visualisation(), html=True)
+                if self.visualiser is not None:
+                    logger.write(self.visualiser.generate_visualisation(), html=True)
                 raise Exception("Unable to compose a consistent suite")
 
         self.out_suite.scenarios = self.tracestate.get_trace()
         self._report_tracestate_wrapup()
 
-        self.visualiser.set_start(ScenarioInfo(self.tracestate.get_trace()[0]))
-        self.visualiser.set_end(ScenarioInfo(self.tracestate.get_trace()[-1]))
+        if self.visualiser is not None:
+            self.visualiser.set_final_trace(TraceInfo.from_trace_state(self.tracestate, self.active_model))
+            logger.write(self.visualiser.generate_visualisation(), html=True)
 
         return self.out_suite
 
@@ -153,8 +165,8 @@ class SuiteProcessors:
                         self._report_tracestate_to_user()
                         logger.debug(
                             f"last state:\n{self.active_model.get_status_text()}")
-            self.visualiser.update_visualisation(
-                TraceInfo.from_trace_state(self.tracestate, self.active_model))
+            if self.visualiser is not None:
+                self.visualiser.update_visualisation(TraceInfo.from_trace_state(self.tracestate, self.active_model))
 
     def __last_candidate_changed_nothing(self) -> bool:
         if len(self.tracestate) < 2:

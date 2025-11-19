@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation     Resource file for testing the visualisation of RobotMBT
 Library           atest.resources.helpers.modelgenerator.ModelGenerator
-Library           robotmbt.visualise.visualiser.Visualiser
+Library           robotmbt.visualise.visualiser.Visualiser  scenario
 Library           Collections
 
 
@@ -24,7 +24,7 @@ Test Suite ${suite} has ${count} scenarios
 # WARNING: this only works for Scenario graphs, this needs to be adjusted to continually update the model when adding new state.
 Test Suite ${suite} contains scenario ${scenario_name}
     [Documentation]    Ensures test suite Suite has scenario with name=Scenario name
-    ...    :IN: suite = ${suite}, scenario_name = ${scenario_namef}
+    ...    :IN: suite = ${suite}, scenario_name = ${scenario_name}
     ...    :OUT: None
     Variable Should Exist    ${trace_info}
 
@@ -39,12 +39,12 @@ In Test Suite ${suite}, scenario ${s2} can be reached from ${s1}
     ${trace_info} =    Ensure Scenario Follows    ${trace_info}    ${s1}    ${s2}
     Set Suite Variable    ${trace_info}
 
-Graph ${graph} is generated based on Test Suite ${suite}
+Graph ${graph} of type ${graph_type} is generated based on Test Suite ${suite}
      [Documentation]    Generates the graph 
-    ...    :IN: graph = ${graph}, suite = ${suite}
+    ...    :IN: graph = ${graph}, graph_type = ${graph_type}, suite = ${suite}
     ...    :OUT: None
     Variable Should Exist    ${trace_info}
-    ${visualiser} =    robotmbt.visualise.visualiser.Visualiser.Construct
+    ${visualiser} =    robotmbt.visualise.visualiser.Visualiser.Construct  graph_type=${graph_type}
     Call Method    ${visualiser}    update_visualisation    ${trace_info}
     ${html} =     Call Method    ${visualiser}    generate_visualisation
 

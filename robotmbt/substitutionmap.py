@@ -151,7 +151,7 @@ class Constraint:
     def add_constraint(self, constraint):
         if constraint is None:
             return
-        
+
         self.optionset = [opt for opt in self.optionset if opt in constraint]
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')

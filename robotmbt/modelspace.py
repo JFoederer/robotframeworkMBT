@@ -44,7 +44,7 @@ class ModelSpace:
         self.ref_id: str = str(reference_id)
         self.std_attrs: list[str] = []
         self.props: dict[str, RecursiveScope | ModelSpace] = dict()
-        
+
         # For using literals without having to use quotes (abc='abc')
         self.values: dict[str, any] = dict()
         self.scenario_vars: list[RecursiveScope] = []
