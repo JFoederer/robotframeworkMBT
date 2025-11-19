@@ -248,7 +248,7 @@ class Step:
                 self.args = StepArguments([StepArgument(*match, kind=StepArgument.EMBEDDED) for match in
                                            zip(robot_kw.embedded.args,
                                                robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
-            
+
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)
@@ -257,14 +257,14 @@ class Step:
 
     def __handle_non_embedded_arguments(self, robot_argspec) -> list[StepArgument]:
         result = []
-        
+
         p_args, n_args = robot_argspec.map([a for a in self.org_pn_args if '=' not in a or r'\=' in a],
                                            [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a])
-        
+
         # for some reason .map() returns [None] instead of the empty list when there are no arguments
         if p_args == [None]:
             p_args = []
-        
+
         ArgumentValidator(robot_argspec).validate(p_args, n_args)
         robot_args = [a for a in robot_argspec]
         argument_names = list(robot_argspec.argument_names)
@@ -312,7 +312,7 @@ class Step:
             expressions = [e.strip() for e in elms[-1].split("|") if e]
             while lines and not lines[0].startswith(":"):
                 expressions.extend([e.strip()
-                                   for e in lines.pop(0).split("|") if e])
+                                    for e in lines.pop(0).split("|") if e])
             model_info[key] = expressions
         if not model_info:
             raise ValueError("When present, *model info* cannot be empty")
