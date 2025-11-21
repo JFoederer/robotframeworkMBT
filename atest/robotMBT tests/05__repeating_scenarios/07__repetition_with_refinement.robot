@@ -2,7 +2,7 @@
 Documentation     This suite is similar to the Single repetition scenario, but
 ...               with the difference that this time the repeated scenario has
 ...               a step that requires refinement.
-Suite Setup       Treat this test suite Model-based
+Suite Setup       Treat this test suite Model-based  graph=scenario
 Resource          ../../resources/birthday_cards_composed.resource
 Library           robotmbt
 

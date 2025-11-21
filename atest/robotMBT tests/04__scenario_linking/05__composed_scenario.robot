@@ -3,7 +3,7 @@ Documentation     This is a composed scenario where there is a sequence of three
 ...               scenarios on the highest level. The middle of these three scenarios
 ...               has multiple steps that require refinement. One of those refinement
 ...               steps needs refinement of it own, yielding double-layerd refinement.
-Suite Setup       Treat this test suite Model-based
+Suite Setup       Treat this test suite Model-based  graph=scenario
 Resource          ../../resources/birthday_cards_composed.resource
 Library           robotmbt
 

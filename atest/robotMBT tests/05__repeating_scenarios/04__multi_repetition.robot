@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation     This suite requires a larger amount of repetitions to reach the final
 ...               scenario.
-Suite Setup       Treat this test suite Model-based
+Suite Setup       Treat this test suite Model-based  graph=scenario
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 
