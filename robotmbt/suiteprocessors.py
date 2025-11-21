@@ -120,14 +120,16 @@ class SuiteProcessors:
             self._try_to_reach_full_coverage(allow_duplicate_scenarios=True)
             if not self.tracestate.coverage_reached():
                 if self.visualiser is not None:
-                    logger.write(self.visualiser.generate_visualisation(), html=True)
+                    logger.write(
+                        self.visualiser.generate_visualisation(), html=True)
                 raise Exception("Unable to compose a consistent suite")
 
         self.out_suite.scenarios = self.tracestate.get_trace()
         self._report_tracestate_wrapup()
 
         if self.visualiser is not None:
-            self.visualiser.set_final_trace(TraceInfo.from_trace_state(self.tracestate, self.active_model))
+            self.visualiser.set_final_trace(
+                TraceInfo.from_trace_state(self.tracestate, self.active_model))
             logger.write(self.visualiser.generate_visualisation(), html=True)
 
         return self.out_suite
@@ -166,7 +168,8 @@ class SuiteProcessors:
                         logger.debug(
                             f"last state:\n{self.active_model.get_status_text()}")
             if self.visualiser is not None:
-                self.visualiser.update_visualisation(TraceInfo.from_trace_state(self.tracestate, self.active_model))
+                self.visualiser.update_visualisation(
+                    TraceInfo.from_trace_state(self.tracestate, self.active_model))
 
     def __last_candidate_changed_nothing(self) -> bool:
         if len(self.tracestate) < 2:
