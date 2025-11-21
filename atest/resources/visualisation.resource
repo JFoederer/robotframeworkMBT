@@ -40,7 +40,7 @@ In Test Suite ${suite}, scenario ${s2} can be reached from ${s1}
     Set Suite Variable    ${trace_info}
 
 Graph ${graph} of type ${graph_type} is generated based on Test Suite ${suite}
-     [Documentation]    Generates the graph 
+    [Documentation]    Generates the graph 
     ...    :IN: graph = ${graph}, graph_type = ${graph_type}, suite = ${suite}
     ...    :OUT: None
     Variable Should Exist    ${trace_info}
