@@ -30,6 +30,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import random
+
 class TraceState:
     def __init__(self, n_scenarios):
         self._c_pool = [False] * n_scenarios # coverage pool: True means scenario is in trace
@@ -60,15 +62,15 @@ class TraceState:
         return [snap.scenario for snap in self._snapshots]
 
     def next_candidate(self, retry=False):
-        for i in range(len(self._c_pool)):
-            if i not in self._tried[-1] and not self._is_refinement_active(i) and self.count(i) == 0:
-                return i
         if not retry:
             return None
-        for i in range(len(self._c_pool)):
-            if i not in self._tried[-1] and not self._is_refinement_active(i):
-                return i
-        return None
+        untried_candidates = [i for i in range(len(self._c_pool)) if i not in self._tried[-1]]
+        uncovered_candidates = [i for i in untried_candidates if not self._c_pool[i]]
+        if uncovered_candidates:
+            return random.choice(uncovered_candidates)
+        if not retry or not untried_candidates:
+            return None
+        return random.choice(untried_candidates)
 
     def count(self, index):
         """Count the number of times the index is present in the trace.
