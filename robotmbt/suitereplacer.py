@@ -83,19 +83,21 @@ class SuiteReplacer:
         model info that is included in the test steps, the test cases are modifed, mixed and
         matched to create unique traces and achieve more test coverage quicker.
 
-        Any arguments are handled as if using keyword `Update model-based options`
+        Any arguments are handled only locally. To apply arguments to subsequent suites as well,
+        use `Set model-based options` or `Update model-based options`.
         """
         self.robot_suite = self.current_suite
 
         logger.info(
             f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
 
-        self.update_model_based_options(**kwargs)
+        temp = self.processor_options.copy()
+        temp.update(kwargs)
         master_suite = self.__process_robot_suite(
             self.robot_suite, parent=None)
 
         modelbased_suite = self.processor_method(
-            master_suite, **self.processor_options)
+            master_suite, **temp)
 
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
