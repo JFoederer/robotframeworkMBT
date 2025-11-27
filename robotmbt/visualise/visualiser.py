@@ -2,6 +2,7 @@ from robotmbt.visualise.networkvisualiser import NetworkVisualiser
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.graphs.scenariograph import ScenarioGraph
 from robotmbt.visualise.graphs.stategraph import StateGraph
+from robotmbt.visualise.graphs.scenariostategraph import ScenarioStateGraph
 from robotmbt.visualise.models import TraceInfo
 import html
 
@@ -24,6 +25,8 @@ class Visualiser:
             self.graph: AbstractGraph = ScenarioGraph()
         elif graph_type == 'state':
             self.graph: AbstractGraph = StateGraph()
+        elif graph_type == 'scenario-state':
+            self.graph: AbstractGraph = ScenarioStateGraph()
         else:
             raise ValueError(f"Unknown graph type: {graph_type}!")
 
