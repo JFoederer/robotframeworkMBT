@@ -41,10 +41,11 @@ class ScenarioGraph(AbstractGraph):
         """
         Get the ID for a scenario that has been added before, or create and store a new one.
         """
-        for i in self.ids.keys():
-            # TODO: decide how to deal with repeating scenarios, this merges repeated scenarios into a single scenario
-            if self.ids[i].src_id == scenario.src_id and scenario.src_id is not None:
-                return i
+        if scenario.src_id is not None:
+            for i in self.ids.keys():
+                # TODO: decide how to deal with repeating scenarios, this merges repeated scenarios into a single scenario
+                if self.ids[i].src_id == scenario.src_id:
+                    return i
 
         new_id = f"node{len(self.ids)}"
         self.ids[new_id] = scenario
