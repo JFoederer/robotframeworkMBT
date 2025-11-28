@@ -18,9 +18,7 @@ class ScenarioGraph(AbstractGraph):
 
         # add the start node
         self.networkx.add_node('start', label='start')
-
-        # indicates last scenario of trace
-        self.end_node = 'start'
+        self.final_trace: list[str] = ['start']
 
     def update_visualisation(self, info: TraceInfo):
         """
@@ -36,6 +34,15 @@ class ScenarioGraph(AbstractGraph):
             if (from_node, to_node) not in self.networkx.edges:
                 self.networkx.add_edge(
                     from_node, to_node, label='')
+
+            if i == 0 and ('start', from_node) not in self.networkx.edges:
+                self.networkx.add_edge('start', from_node, label='')
+
+    def set_final_trace(self, info: TraceInfo):
+        self.final_trace.extend(map(lambda s: self._get_or_create_id(s), info.trace))
+
+    def get_final_trace(self) -> list[str]:
+        return self.final_trace
 
     def _get_or_create_id(self, scenario: ScenarioInfo) -> str:
         """
@@ -57,27 +64,6 @@ class ScenarioGraph(AbstractGraph):
         """
         if node not in self.networkx.nodes:
             self.networkx.add_node(node, label=self.ids[node].name)
-
-    def _set_starting_node(self, scenario: ScenarioInfo):
-        """
-        Update the starting node.
-        """
-        node = self._get_or_create_id(scenario)
-        self._add_node(node)
-        self.networkx.add_edge('start', node, label='')
-
-    def _set_ending_node(self, scenario: ScenarioInfo):
-        """
-        Update the end node.
-        """
-        self.end_node = self._get_or_create_id(scenario)
-
-    def set_final_trace(self, info: TraceInfo):
-        """
-        Update the graph with information on the final trace.
-        """
-        self._set_starting_node(info.trace[0])
-        self._set_ending_node(info.trace[-1])
 
     @property
     def networkx(self) -> nx.DiGraph:
