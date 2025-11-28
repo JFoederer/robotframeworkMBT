@@ -33,14 +33,23 @@ class StateInfo:
 
     def __init__(self, state: ModelSpace):
         self.domain = state.ref_id
-        self.properties = {}
+
+        # Extract all attributes/properties stored in the model space and store them in the temp dict
+        # Similar in workings to ModelSpace's get_status_text
+        temp = {}
         for p in state.props:
-            self.properties[p] = {}
+            temp[p] = {}
             if p == 'scenario':
-                self.properties['scenario'] = dict(state.props['scenario'])
+                temp['scenario'] = dict(state.props['scenario'])
             else:
                 for attr in dir(state.props[p]):
-                    self.properties[p][attr] = getattr(state.props[p], attr)
+                    temp[p][attr] = getattr(state.props[p], attr)
+
+        # Filter empty entries
+        self.properties = {}
+        for p in temp.keys():
+            if len(temp[p]) > 0:
+                self.properties[p] = temp[p].copy()
 
     def __eq__(self, other):
         return self.domain == other.domain and self.properties == other.properties
