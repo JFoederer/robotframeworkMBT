@@ -18,6 +18,14 @@ class AbstractGraph(ABC):
         """
         pass
 
+    @abstractmethod
+    def get_final_trace(self) -> list[str]:
+        """
+        Get the final trace as ordered node ids.
+        Edges are subsequent entries in the list.
+        """
+        pass
+
     @property
     @abstractmethod
     def networkx(self) -> nx.DiGraph:
