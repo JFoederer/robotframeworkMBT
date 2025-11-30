@@ -82,9 +82,10 @@ class SuiteReplacer:
         self.robot_suite = self.current_suite
 
         logger.info(f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
-        self.update_model_based_options(**kwargs)
+        local_settings = self.processor_options.copy()
+        local_settings.update(kwargs)
         master_suite = self.__process_robot_suite(self.robot_suite, parent=None)
-        modelbased_suite = self.processor_method(master_suite, **self.processor_options)
+        modelbased_suite = self.processor_method(master_suite, **local_settings)
         self.__clearTestSuite(self.robot_suite)
         self.__generateRobotSuite(modelbased_suite, self.robot_suite)
 
