@@ -199,6 +199,12 @@ Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 
 Using `seed=new` will force generation of a new reusable seed and is identical to omitting the seed argument. To completely bypass seed generation and use the system's random source, use `seed=None`. This has even more variation but does not produce a reusable seed.
 
+### Option management
+
+If you want to set configuration options for use in multiple test suites without having to repeat them, the keywords __Set model-based options__ and __Update model-based options__ can be used to configure RobotMBT library options. _Set_ takes the provided options and discards any previously set options. _Update_ allows you to modify existing options or add new ones. Reset all options by calling _Set_ without arguments. Direct options provided to __Treat this test suite model-based__ take precedence over library options and affect only the current test suite.
+
+Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#dictionary-variable) (`&{ }`) can be used to group related options and pass them as one set.
+
 ## Disclaimer
 
 Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent, and no deprecation warnings are being issued yet.
