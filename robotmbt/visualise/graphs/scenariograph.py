@@ -32,11 +32,15 @@ class ScenarioGraph(AbstractGraph):
             self._add_node(to_node)
 
             if (from_node, to_node) not in self.networkx.edges:
-                self.networkx.add_edge(
-                    from_node, to_node, label='')
+                self.networkx.add_edge(from_node, to_node, label='')
 
-            if i == 0 and ('start', from_node) not in self.networkx.edges:
-                self.networkx.add_edge('start', from_node, label='')
+        if len(info.trace) > 0:
+            first_id = self._get_or_create_id(info.trace[0])
+
+            self._add_node(first_id)
+
+            if ('start', first_id) not in self.networkx.edges:
+                self.networkx.add_edge('start', first_id, label='')
 
     def set_final_trace(self, info: TraceInfo):
         self.final_trace.extend(map(lambda s: self._get_or_create_id(s), info.trace))
