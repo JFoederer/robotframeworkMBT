@@ -1,6 +1,6 @@
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
-from robotmbt.visualise.graphs.scenariostategraph import ScenarioStateGraph
 from robotmbt.visualise.graphs.stategraph import StateGraph
+from robotmbt.visualise.graphs.scenariostategraph import ScenarioStateGraph
 from bokeh.palettes import Spectral4
 from bokeh.models import (
     Plot, Range1d, Circle, Rect,
@@ -32,7 +32,7 @@ class NetworkVisualiser:
     # Colors and styles for executed vs unexecuted elements
     EXECUTED_NODE_COLOR = Spectral4[0]  # Bright blue
     UNEXECUTED_NODE_COLOR = '#D3D3D3'  # Light gray
-    EXECUTED_TEXT_COLOR = 'white'
+    EXECUTED_TEXT_COLOR = '#C8C8C8'
     UNEXECUTED_TEXT_COLOR = '#A9A9A9'  # Dark gray
     EXECUTED_EDGE_COLOR = (12, 12, 12)  # Black
     UNEXECUTED_EDGE_COLOR = '#808080'  # Gray

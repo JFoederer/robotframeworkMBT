@@ -1,3 +1,5 @@
+from typing import Any
+
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 from robotmbt.tracestate import TraceState
@@ -31,6 +33,15 @@ class StateInfo:
     - properties
     """
 
+    @classmethod
+    def _create_state_with_prop(cls, name: str, attrs: list[tuple[str, Any]]):
+        space = ModelSpace()
+        prop = ModelSpace()
+        for (key, val) in attrs:
+            prop.__setattr__(key, val)
+        space.props[name] = prop
+        return cls(space)
+
     def __init__(self, state: ModelSpace):
         self.domain = state.ref_id
 
@@ -57,9 +68,11 @@ class StateInfo:
     def __str__(self):
         res = ""
         for p in self.properties:
-            res += f"{p}:\n"
+            if res != "":
+                res += "\n\n"
+            res += f"{p}:"
             for k, v in self.properties[p].items():
-                res += f"\t{k}={v}\n"
+                res += f"\n\t{k}={v}"
         return res
 
 
@@ -72,11 +85,11 @@ class TraceInfo:
 
     @classmethod
     def from_trace_state(cls, trace: TraceState, state: ModelSpace):
-        return cls([ScenarioInfo(t) for t in trace.get_trace()], state)
+        return cls([ScenarioInfo(t) for t in trace.get_trace()], StateInfo(state))
 
-    def __init__(self, trace: list[ScenarioInfo], state: ModelSpace):
+    def __init__(self, trace: list[ScenarioInfo], state: StateInfo):
         self.trace: list[ScenarioInfo] = trace
-        self.state = StateInfo(state)
+        self.state = state
 
     def __repr__(self) -> str:
         return f"TraceInfo(trace=[{[str(t) for t in self.trace]}], state={self.state})"
