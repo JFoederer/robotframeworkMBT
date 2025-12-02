@@ -3,18 +3,31 @@ import string
 
 from robot.api.deco import keyword  # type:ignore
 from robotmbt.modelspace import ModelSpace
-from robotmbt.visualise.models import TraceInfo, ScenarioInfo
+from robotmbt.visualise.models import TraceInfo, ScenarioInfo, StateInfo
 from robotmbt.visualise.graphs.scenariograph import ScenarioGraph
+from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
+from robotmbt.visualise.graphs.stategraph import StateGraph
 
 
 class ModelGenerator:
+    @keyword(name="Create Graph") # type: ignore
+    def create_graph(self, graph_type :str) -> AbstractGraph:
+        match graph_type:
+            case "scenario":
+                return ScenarioGraph()
+            case "state":
+                return StateGraph()
+            case _:
+                raise Exception(f"Trying to create unknown graph type {graph_type}")
+
+
     @keyword(name="Generate Trace Information")  # type: ignore
     def generate_trace_info(self, scenario_count: int) -> TraceInfo:
         """Generates a list of unique random scenarios."""
         scenarios: list[ScenarioInfo] = ModelGenerator.generate_scenario_names(
             scenario_count)
 
-        return TraceInfo(scenarios, ModelSpace())
+        return TraceInfo(scenarios, StateInfo(ModelSpace()))
 
     @keyword(name="Ensure Scenario Present")  # type: ignore
     def ensure_scenario_present(self, trace_info: TraceInfo, scenario_name: str) -> TraceInfo:

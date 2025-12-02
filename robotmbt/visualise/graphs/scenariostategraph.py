@@ -1,6 +1,6 @@
 import networkx as nx
+from robot.api import logger
 
-from robotmbt.modelspace import ModelSpace
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.models import TraceInfo, ScenarioInfo, StateInfo
 
@@ -22,7 +22,6 @@ class ScenarioStateGraph(AbstractGraph):
         # add the start node
         self.networkx.add_node('start', label='start')
 
-        self.prev_state = StateInfo(ModelSpace())
         self.prev_trace_len = 0
 
         # Stack to track the current execution path
@@ -33,26 +32,17 @@ class ScenarioStateGraph(AbstractGraph):
         This will add nodes the newly reached scenario/state pair, as well as an edge from the previous to
         the current scenario/state pair.
         """
-        if len(info.trace) == 0:
-            self.prev_trace_len = len(info.trace)
-            self.prev_state = info.state
-            return
-
-        if len(info.trace) == 1:
-            from_node = 'start'
-        else:
-            from_node = self._get_or_create_id(info.trace[-2], self.prev_state)
-        to_node = self._get_or_create_id(info.trace[-1], info.state)
-
         if self.prev_trace_len < len(info.trace):
             # New state added - add to stack
-            self.node_stack.append(to_node)
+            push_count = len(info.trace) - self.prev_trace_len
+            for i in range(push_count):
+                node = self._get_or_create_id(info.trace[-push_count + i], info.state)
+                self.node_stack.append(node)
+                self._add_node(self.node_stack[-2])
+                self._add_node(self.node_stack[-1])
 
-            self._add_node(from_node)
-            self._add_node(to_node)
-
-            if (from_node, to_node) not in self.networkx.edges:
-                self.networkx.add_edge(from_node, to_node, label='')
+                if (self.node_stack[-2], self.node_stack[-1]) not in self.networkx.edges:
+                    self.networkx.add_edge(self.node_stack[-2], self.node_stack[-1], label='')
 
         elif self.prev_trace_len > len(info.trace):
             # States removed - remove from stack
@@ -60,13 +50,16 @@ class ScenarioStateGraph(AbstractGraph):
             for _ in range(pop_count):
                 if len(self.node_stack) > 1:  # Always keep 'start'
                     self.node_stack.pop()
+                else:
+                    logger.warn("Tried to rollback more than was previously added to the stack!")
 
-        self.prev_state = info.state
         self.prev_trace_len = len(info.trace)
 
     def set_final_trace(self, info: TraceInfo):
         # We already have the final trace in state_stack, so we don't need to do anything
-        pass
+        # But do a sanity check
+        if self.prev_trace_len != len(info.trace):
+            logger.warn("Final trace was of a different length than our stack was based on!")
 
     def get_final_trace(self) -> list[str]:
         # The final trace is simply the state stack we've been keeping track of
@@ -90,7 +83,7 @@ class ScenarioStateGraph(AbstractGraph):
         """
         Creates the label for a node in a Scenario-State Graph from the scenario and state associated to it.
         """
-        return scenario.name + "\n\r" + str(state)
+        return scenario.name + "\n\n" + str(state)
 
     def _add_node(self, node: str):
         """

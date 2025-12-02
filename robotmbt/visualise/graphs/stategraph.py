@@ -1,6 +1,7 @@
+from robot.api import logger
+
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.models import TraceInfo, StateInfo
-from robotmbt.modelspace import ModelSpace
 import networkx as nx
 
 
@@ -20,7 +21,7 @@ class StateGraph(AbstractGraph):
         # add the start node
         self.networkx.add_node('start', label='start')
 
-        self.prev_state = StateInfo(ModelSpace())
+        # To check if we've backtracked
         self.prev_trace_len = 0
 
         # Stack to track the current execution path
@@ -31,28 +32,19 @@ class StateGraph(AbstractGraph):
         This will add nodes the newly reached state (if we did not roll back), as well as an edge from the previous to
         the current state labeled with the scenario that took it there.
         """
-        if len(info.trace) == 0:
-            self.prev_trace_len = len(info.trace)
-            self.prev_state = info.state
-            return
-
-        scenario = info.trace[-1]
-
-        from_node = self._get_or_create_id(self.prev_state)
-        if len(info.trace) == 1:
-            from_node = 'start'
-        to_node = self._get_or_create_id(info.state)
+        node = self._get_or_create_id(info.state)
 
         if self.prev_trace_len < len(info.trace):
             # New state added - add to stack
-            self.node_stack.append(to_node)
+            push_count = len(info.trace) - self.prev_trace_len
+            for i in range(push_count):
+                self.node_stack.append(node)
+                self._add_node(self.node_stack[-2])
+                self._add_node(self.node_stack[-1])
 
-            self._add_node(from_node)
-            self._add_node(to_node)
-
-            if (from_node, to_node) not in self.networkx.edges:
-                self.networkx.add_edge(
-                    from_node, to_node, label=scenario.name)
+                if (self.node_stack[-2], self.node_stack[-1]) not in self.networkx.edges:
+                    self.networkx.add_edge(
+                        self.node_stack[-2], self.node_stack[-1], label=info.trace[-push_count + i].name)
 
         elif self.prev_trace_len > len(info.trace):
             # States removed - remove from stack
@@ -60,13 +52,16 @@ class StateGraph(AbstractGraph):
             for _ in range(pop_count):
                 if len(self.node_stack) > 1:  # Always keep 'start'
                     self.node_stack.pop()
+                else:
+                    logger.warn("Tried to rollback more than was previously added to the stack!")
 
-        self.prev_state = info.state
         self.prev_trace_len = len(info.trace)
 
     def set_final_trace(self, info: TraceInfo):
         # We already have the final trace in state_stack, so we don't need to do anything
-        pass
+        # But do a sanity check
+        if self.prev_trace_len != len(info.trace):
+            logger.warn("Final trace was of a different length than our stack was based on!")
 
     def get_final_trace(self) -> list[str]:
         # The final trace is simply the state stack we've been keeping track of

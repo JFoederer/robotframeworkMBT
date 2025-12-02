@@ -1,6 +1,8 @@
 import unittest
+
 try:
     from robotmbt.visualise.models import *
+
     VISUALISE = True
 except ImportError:
     VISUALISE = False
@@ -12,8 +14,8 @@ if VISUALISE:
         """
 
         """
-    Class: ScenarioInfo
-    """
+        Class: ScenarioInfo
+        """
 
         def test_scenarioInfo_str(self):
             si = ScenarioInfo('test')
@@ -28,10 +30,45 @@ if VISUALISE:
             self.assertEqual(si.src_id, 0)
 
         """
-    Class: TraceInfo
-    """
+        Class: StateInfo
+        """
 
-        def test_create_TraceInfo(self):
+        def test_stateInfo_empty(self):
+            s = StateInfo(ModelSpace())
+            self.assertEqual(str(s), '')
+
+        def test_stateInfo_prop_empty(self):
+            space = ModelSpace()
+            space.props['prop1'] = ModelSpace()
+            s = StateInfo(space)
+            self.assertEqual(str(s), '')
+
+        def test_stateInfo_prop_val(self):
+            space = ModelSpace()
+            prop1 = ModelSpace()
+            prop1.value = 1
+            space.props['prop1'] = prop1
+            s = StateInfo(space)
+            self.assertTrue('prop1:' in str(s))
+            self.assertTrue('value=1' in str(s))
+
+        def test_stateInfo_prop_val_empty(self):
+            space = ModelSpace()
+            prop1 = ModelSpace()
+            prop1.value = 1
+            prop2 = ModelSpace()
+            space.props['prop1'] = prop1
+            space.props['prop2'] = prop2
+            s = StateInfo(space)
+            self.assertTrue('prop1:' in str(s))
+            self.assertTrue('value=1' in str(s))
+            self.assertFalse('prop2:' in str(s))
+
+        """
+        Class: TraceInfo
+        """
+
+        def test_traceInfo(self):
             ts = TraceState(3)
             candidates = []
             for scenario in range(3):
@@ -43,9 +80,7 @@ if VISUALISE:
             self.assertEqual(ti.trace[1].name, str(1))
             self.assertEqual(ti.trace[2].name, str(2))
 
-            self.assertIsNotNone(ti.state)
-            # TODO check state
-
+            self.assertEqual(str(ti.state), '')
 
 if __name__ == '__main__':
     unittest.main()

@@ -153,6 +153,9 @@ class SuiteProcessors:
                 self.active_model.new_scenario_scope()
                 inserted = self._try_to_fit_in_scenario(i_candidate, self._scenario_with_repeat_counter(i_candidate),
                                                         retry_flag=allow_duplicate_scenarios)
+
+                self.__update_visualisation()
+
                 if inserted:
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing():
@@ -167,9 +170,12 @@ class SuiteProcessors:
                         self._report_tracestate_to_user()
                         logger.debug(
                             f"last state:\n{self.active_model.get_status_text()}")
-            if self.visualiser is not None:
-                self.visualiser.update_visualisation(
-                    TraceInfo.from_trace_state(self.tracestate, self.active_model))
+            self.__update_visualisation()
+
+    def __update_visualisation(self):
+        if self.visualiser is not None:
+            self.visualiser.update_visualisation(
+                TraceInfo.from_trace_state(self.tracestate, self.active_model))
 
     def __last_candidate_changed_nothing(self) -> bool:
         if len(self.tracestate) < 2:
@@ -223,6 +229,7 @@ class SuiteProcessors:
                 f"Inserted scenario {confirmed_candidate.src_id}, {confirmed_candidate.name}")
             self._report_tracestate_to_user()
             logger.debug(f"last state:\n{self.active_model.get_status_text()}")
+            self.__update_visualisation()
             return True
 
         part1, part2 = self._split_candidate_if_refinement_needed(
@@ -243,12 +250,15 @@ class SuiteProcessors:
                     "Refinement needed, but there are no scenarios left")
                 self._rewind()
                 self._report_tracestate_to_user()
+                self.__update_visualisation()
                 return False
 
             while i_refine is not None:
+                self.__update_visualisation()
                 self.active_model.new_scenario_scope()
                 m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine),
                                                           retry_flag)
+                self.__update_visualisation()
                 if m_inserted:
                     insert_valid_here = True
                     try:
@@ -265,6 +275,7 @@ class SuiteProcessors:
                         m_finished = self._try_to_fit_in_scenario(
                             index, part2, retry_flag)
                         if m_finished:
+                            self.__update_visualisation()
                             return True
                     else:
                         logger.debug(
@@ -276,15 +287,20 @@ class SuiteProcessors:
                     self._rewind()
                     self._report_tracestate_to_user()
 
+                self.__update_visualisation()
                 i_refine = self.tracestate.next_candidate(retry=retry_flag)
+
+            self.__update_visualisation()
 
             self._rewind()
             self._report_tracestate_to_user()
+            self.__update_visualisation()
             return False
 
         self.active_model.end_scenario_scope()
         self.tracestate.reject_scenario(index)
         self._report_tracestate_to_user()
+        self.__update_visualisation()
         return False
 
     def _rewind(self, drought_recovery: bool = False) -> TraceSnapShot | None:
