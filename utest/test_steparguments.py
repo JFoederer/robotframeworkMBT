@@ -85,13 +85,30 @@ class TestStepArgument(unittest.TestCase):
         arg1.value = 7
         self.assertFalse(arg1.modified)
 
-    def test_copies_are_the_same(self):
+    def test_is_default_property(self):
         arg1 = StepArgument('foo', 7)
+        self.assertFalse(arg1.is_default)
+        arg2 = StepArgument('foo', 7, is_default=True)
+        self.assertTrue(arg2.is_default)
+        arg2.value = 7
+        self.assertFalse(arg2.is_default)
+
+    def test_copies_are_the_same(self):
+        arg1 = StepArgument('foo', 7, kind=StepArgument.NAMED, is_default=True)
         arg2 = arg1.copy()
         self.assertEqual(arg1.arg, arg2.arg)
         self.assertEqual(arg1.value, arg2.value)
         self.assertEqual(arg1.org_value, arg2.org_value)
         self.assertEqual(arg1.codestring, arg2.codestring)
+        self.assertEqual(arg1.kind, arg2.kind)
+        self.assertEqual(arg1.is_default, arg2.is_default)
+        arg1.value = 8
+        arg2 = arg1.copy()
+        self.assertEqual(arg2.arg, '${foo}')
+        self.assertEqual(arg2.value, 8)
+        self.assertEqual(arg2.org_value, 7)
+        self.assertEqual(arg2.kind, StepArgument.NAMED)
+        self.assertEqual(arg2.is_default, False)
 
     def test_original_value_is_kept_when_copying(self):
         arg1 = StepArgument('foo', 7)
