@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-from robotmbt.steparguments import StepArgument, StepArguments, ArgKind
+from robotmbt.steparguments import StepArgument, StepArguments
 
 
 class TestStepArgument(unittest.TestCase):
@@ -94,7 +94,7 @@ class TestStepArgument(unittest.TestCase):
         self.assertFalse(arg2.is_default)
 
     def test_copies_are_the_same(self):
-        arg1 = StepArgument('foo', 7, kind=ArgKind.NAMED, is_default=True)
+        arg1 = StepArgument('foo', 7, kind=StepArgument.NAMED, is_default=True)
         arg2 = arg1.copy()
         self.assertEqual(arg1.arg, arg2.arg)
         self.assertEqual(arg1.value, arg2.value)
@@ -107,7 +107,7 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg2.arg, '${foo}')
         self.assertEqual(arg2.value, 8)
         self.assertEqual(arg2.org_value, 7)
-        self.assertEqual(arg2.kind, ArgKind.NAMED)
+        self.assertEqual(arg2.kind, StepArgument.NAMED)
         self.assertEqual(arg2.is_default, False)
 
     def test_original_value_is_kept_when_copying(self):
@@ -118,11 +118,11 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg2.value, 8)
 
     def test_copies_are_independent(self):
-        arg1 = StepArgument('foo', 7, ArgKind.POSITIONAL)
+        arg1 = StepArgument('foo', 7, StepArgument.POSITIONAL)
         arg1.value = 8
         arg2 = arg1.copy()
         arg2.value = 13
-        arg2.kind = ArgKind.NAMED
+        arg2.kind = StepArgument.NAMED
         self.assertEqual(arg2.value, 13)
         self.assertEqual(arg1.value, 8)
         self.assertEqual(arg1.org_value, arg2.org_value)
@@ -160,11 +160,11 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg1.codestring, arg2.codestring)
 
     def test_other_values_become_unique_identifiers(self):
-        valuelist = ['bar', 'foo bar', 'foo2bar', '${bar}',   # strings
-                     ' ', '\t', '\n', '  ', ' \n', '\a',      # whitespace/non-printable
-                     '#', '+-', '-+', '"', "'", 'パイ',       # special characters
-                     max, 'elif', 'import', 'new', 'del',     # reserved words
-                     lambda x: x/2, self, unittest.TestCase]  # functions and objects
+        valuelist = ['bar', 'foo bar', 'foo2bar', '${bar}',  # strings
+                     ' ', '\t', '\n', '  ', ' \n', '\a',     # whitespace/non-printable
+                     '#', '+-', '-+', '"', "'", 'パイ',      # special characters
+                     max, 'elif', 'import', 'new', 'del',    # reserved words
+                     lambda x: x/2, self, unittest.TestCase] # functions and objects
         argsset = set()
         for v in valuelist:
             arg = StepArgument('foo', v)
@@ -235,10 +235,10 @@ class TestStepArguments(unittest.TestCase):
         argset = StepArguments([StepArgument('foo1', 'bar1'),
                                 StepArgument('foo2', 'bar2')])
         self.assertEqual(argset.fill_in_args("\t${foo1} and ${foo2}@#$%s  $$$$${foo2}${foo1}}"),
-                         "\tbar1 and bar2@#$%s  $$$$bar2bar1}")
+                                             "\tbar1 and bar2@#$%s  $$$$bar2bar1}")
 
     def test_can_use_robot_arguments_in_code_fragments(self):
-        args = StepArguments([StepArgument('foo1', '3bar'),  # 3bar needs to be converted to a valid identifier
+        args = StepArguments([StepArgument('foo1', '3bar'), # 3bar needs to be converted to a valid identifier
                               StepArgument('foo2', '3bar')])
         assignment = "${foo1} = 'magic'"
         lc = locals()
@@ -289,7 +289,6 @@ class TestStepArguments(unittest.TestCase):
         self.assertFalse(argset.modified)
         argset['${foo2}'].value = 'bar3'
         self.assertTrue(argset.modified)
-
 
 if __name__ == '__main__':
     unittest.main()

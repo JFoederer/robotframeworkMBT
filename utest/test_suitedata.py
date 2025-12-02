@@ -33,7 +33,6 @@
 import unittest
 from unittest.mock import patch
 
-from enum import Enum, auto
 from types import SimpleNamespace
 
 from robotmbt.suitedata import Suite, Scenario, Step
@@ -79,7 +78,7 @@ class TestSuites(unittest.TestCase):
     def test_error_in_scenario_is_detected(self):
         self.topsuite.scenarios[0].steps[1].model_info = dict(error='oops')
         self.assertIs(self.topsuite.has_error(), True)
-        errorsteps = self.topsuite.steps_with_errors()
+        errorsteps  = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
@@ -106,7 +105,7 @@ class TestSuites(unittest.TestCase):
     def test_error_in_subsuite_scenario_is_detected(self):
         self.topsuite.suites[0].scenarios[0].steps[1].model_info = dict(error='oops')
         self.assertIs(self.topsuite.has_error(), True)
-        errorsteps = self.topsuite.steps_with_errors()
+        errorsteps  = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
@@ -157,7 +156,7 @@ class TestSuites(unittest.TestCase):
         errorsteps = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 4)
         self.assertEqual(set([e.model_info['error'] for e in errorsteps]),
-                         {'setup oops', 'scenario oops', 'sub scenario oops', 'sub teardown oops'})
+            {'setup oops','scenario oops', 'sub scenario oops', 'sub teardown oops'})
 
 
 class TestScenarios(unittest.TestCase):
@@ -174,7 +173,7 @@ class TestScenarios(unittest.TestCase):
         self.assertEqual(self.scenario.longname, self.scenario.name)
 
     def test_longname_with_parent_includes_both_names(self):
-        def p(): return None  # Create an object to assign the name attribute to
+        p = lambda:None # Create an object to assign the name attribute to
         p.longname = 'long'
         scenario = Scenario('name', p)
         self.assertEqual(scenario.longname, 'long.name')
@@ -186,12 +185,12 @@ class TestScenarios(unittest.TestCase):
     def test_step_errors_are_reported(self):
         self.scenario.steps[0].model_info = dict(error='oops')
         self.assertIs(self.scenario.has_error(), True)
-        errorsteps = self.scenario.steps_with_errors()
+        errorsteps  = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
         self.scenario.steps[1].model_info = dict(error='oh ow')
         self.assertIs(self.scenario.has_error(), True)
-        errorsteps = self.scenario.steps_with_errors()
+        errorsteps  = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 2)
         self.assertEqual([s.model_info['error'] for s in errorsteps], ['oops', 'oh ow'])
 
@@ -223,7 +222,7 @@ class TestScenarios(unittest.TestCase):
         self.scenario.steps[0].model_info = dict(error='oops in scenario 1')
         self.scenario.steps[7].model_info = dict(error='oops in scenario 2')
         self.assertIs(self.scenario.has_error(), True)
-        errorsteps = self.scenario.steps_with_errors()
+        errorsteps  = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 4)
         self.assertEqual([e.model_info['error'] for e
                           in self.scenario.steps_with_errors()],
@@ -285,26 +284,16 @@ class TestScenarios(unittest.TestCase):
 
     def test_exteranally_determined_attributes_are_copied_along(self):
         self.scenario.src_id = 7
-
-        class SubstitutionMap:
+        class Dummy:
             def copy(self):
                 return 'dummy'
-        self.scenario.data_choices = SubstitutionMap()
+        self.scenario.data_choices = Dummy()
         dup = self.scenario.copy()
         self.assertEqual(dup.src_id, self.scenario.src_id)
         self.assertEqual(dup.data_choices, 'dummy')
 
 
-class ArgKind(Enum):
-    EMBEDDED = auto()
-    POSITIONAL = auto()
-    VAR_POS = auto()
-    NAMED = auto()
-    FREE_NAMED = auto()
-
-
 @patch('robotmbt.suitedata.ArgumentValidator')
-@patch('robotmbt.suitedata.ArgKind', new=ArgKind)
 class TestSteps(unittest.TestCase):
     def setUp(self):
         self.steps = self.create_steps()
@@ -315,15 +304,15 @@ class TestSteps(unittest.TestCase):
         Gg1 = Step('Given step Gg1', parent=parent)
         Ga1 = Step('and step Ga1', parent=parent)
         Gb1 = Step('but step Gb1', parent=parent)
-        Gg1.gherkin_kw = Ga1.gherkin_kw = Gb1.gherkin_kw = 'given'
+        Gg1.gherkin_kw= Ga1.gherkin_kw= Gb1.gherkin_kw= 'given'
         Ww1 = Step('When step Ww1', parent=parent)
         Wa1 = Step('and step Wa1', parent=parent)
         Wb1 = Step('BUT step Wb1', parent=parent)
-        Ww1.gherkin_kw = Wa1.gherkin_kw = Wb1.gherkin_kw = 'when'
+        Ww1.gherkin_kw= Wa1.gherkin_kw= Wb1.gherkin_kw= 'when'
         Tt1 = Step('Then step Tt1', parent=parent)
         Ta1 = Step('And step Ta1', parent=parent)
         Tb1 = Step('but step Tb1', parent=parent)
-        Tt1.gherkin_kw = Ta1.gherkin_kw = Tb1.gherkin_kw = 'then'
+        Tt1.gherkin_kw= Ta1.gherkin_kw= Tb1.gherkin_kw= 'then'
         return [Kw1, Gg1, Ga1, Gb1, Ww1, Wa1, Wb1, Tt1, Ta1, Tb1]
 
     def test_full_names(self, mock):
@@ -348,8 +337,8 @@ class TestSteps(unittest.TestCase):
 
     def test_gherkin_keywords_are_lower_case(self, mock):
         source = [None, 'given', 'Given', 'GIVEN',
-                        'wHEN', 'wHEn',  'WHEn',
-                        'TheN', 'theN',  'thEN']
+                        'wHEN' , 'wHEn',  'WHEn',
+                        'TheN' , 'theN',  'thEN']
         expected = [None] + 3*['given'] + 3*['when'] + 3*['then']
         for s, gkw in zip(self.steps, source):
             s.gherkin_kw = gkw
@@ -358,8 +347,8 @@ class TestSteps(unittest.TestCase):
 
     def test_step_keywords_are_kept_as_is(self, mock):
         expected = [None, 'Given', 'and', 'but',
-                          'When', 'and', 'BUT',
-                          'Then', 'And', 'but']
+                          'When' , 'and', 'BUT',
+                          'Then' , 'And', 'but']
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.step_kw, e)
 
@@ -407,37 +396,33 @@ class TestSteps(unittest.TestCase):
 
     def test_argument_with_default_is_omitted_from_keyword_when_not_mentioned_named(self, mock):
         step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', parent=None)
-        step.args = StubStepArguments(
-            [StubArgument(name='pos1',   value='posA',   is_default=False, kind=ArgKind.POSITIONAL),
-             StubArgument(name='pos2',   value='posB',   is_default=False, kind=ArgKind.NAMED),
-             StubArgument(name='named1', value='namedA', is_default=True,  kind=ArgKind.NAMED)])
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='NAMED'),
+                                       StubArgument(name='named1', value='namedA', is_default=True,  kind='NAMED')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB'))
         self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB")
 
     def test_argument_with_default_is_omitted_from_keyword_when_not_mentioned_positional(self, mock):
         step = Step(RobotKwStub.STEPTEXT, 'posA', 'posB', parent=None)
-        step.args = StubStepArguments(
-            [StubArgument(name='pos1',   value='posA',   is_default=False, kind=ArgKind.POSITIONAL),
-             StubArgument(name='pos2',   value='posB',   is_default=False, kind=ArgKind.POSITIONAL),
-             StubArgument(name='named1', value='namedA', is_default=True,  kind=ArgKind.POSITIONAL)])
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='named1', value='namedA', is_default=True,  kind='POSITIONAL')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'posB'))
         self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    posB")
 
     def test_argument_with_default_is_included_in_keyword_when_mentioned_named(self, mock):
         step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=namedA', parent=None)
-        step.args = StubStepArguments(
-            [StubArgument(name='pos1',   value='posA',   is_default=False, kind=ArgKind.POSITIONAL),
-             StubArgument(name='pos2',   value='posB',   is_default=False, kind=ArgKind.NAMED),
-             StubArgument(name='named1', value='namedA', is_default=False, kind=ArgKind.NAMED)])
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='NAMED'),
+                                       StubArgument(name='named1', value='namedA', is_default=False, kind='NAMED')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB', 'named1=namedA'))
         self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
 
     def test_argument_with_default_is_included_in_keyword_when_mentioned_positional(self, mock):
         step = Step(RobotKwStub.STEPTEXT, 'posA', 'posB', 'namedA', parent=None)
-        step.args = StubStepArguments(
-            [StubArgument(name='pos1',   value='posA',   is_default=False, kind=ArgKind.POSITIONAL),
-             StubArgument(name='pos2',   value='posB',   is_default=False, kind=ArgKind.POSITIONAL),
-             StubArgument(name='named1', value='namedA', is_default=False, kind=ArgKind.POSITIONAL)])
+        step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='named1', value='namedA', is_default=False, kind='POSITIONAL')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'posB', 'namedA'))
         self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    posB    namedA")
 
@@ -461,7 +446,7 @@ class TestSteps(unittest.TestCase):
                      :OUT: expr3 | expr4
                   """
         step.add_robot_dependent_data(kw)
-        self.assertEqual(step.model_info, dict(IN=['expr1', 'expr2'],
+        self.assertEqual(step.model_info, dict( IN=['expr1', 'expr2'],
                                                OUT=['expr3', 'expr4']))
 
     def test_model_info_errors_are_reported(self, mock):
@@ -476,27 +461,30 @@ class TestSteps(unittest.TestCase):
 
 class RobotKwStub:
     STEPTEXT = "Given step with foo_value and bar_value as arguments"
-
     def __init__(self):
         self.name = "step with ${foo} and ${bar} as arguments"
         self._doc = "*model info*\n:IN: None\n:OUT: None"
         self.args = self.argstub()
         self.error = False
         self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
-                                        parse_args=lambda _: ['foo_value', 'bar_value'])
+                                        parse_args= lambda _: ['foo_value', 'bar_value'])
 
     class argstub:
         argument_names = []
-        def map(x, y, z): return ([], [])
-        def __iter__(_): return iter([])
+        map = lambda x,y,z: ([], [])
+        __iter__ = lambda _: iter([])
 
 
 class StubStepArguments(list):
-    modified = True  # trigger modified status to get arguments processed, rather then just echoed
+    modified = True # trigger modified status to get arguments processed, rather then just echoed
 
 
 class StubArgument(SimpleNamespace):
-    pass
+    EMBEDDED = 'EMBEDDED'
+    POSITIONAL = 'POSITIONAL'
+    VAR_POS = 'VAR_POS'
+    NAMED = 'NAMED'
+    FREE_NAMED = 'FREE_NAMED'
 
 
 if __name__ == '__main__':
