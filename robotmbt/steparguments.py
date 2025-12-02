@@ -57,19 +57,23 @@ class StepArguments(list):
 
 
 class StepArgument:
+    # kind list
     EMBEDDED = 'EMBEDDED'
     POSITIONAL = 'POSITIONAL'
     VAR_POS = 'VAR_POS'
     NAMED = 'NAMED'
     FREE_NAMED = 'FREE_NAMED'
 
-    def __init__(self, arg_name: str, value: any, kind: str | None = None):
+    def __init__(self, arg_name: str, value: any, kind: str | None = None, is_default: bool = False):
         self.name: str = arg_name
         self.org_value: any = value
-        self.kind: str | None = kind
+        self.kind: str | None = kind  # one of the values from the kind list
         self._value: any = None
         self._codestr: str | None = None
         self.value: any = value
+        self.is_default: bool = is_default  # indicates that the argument was not
+        # filled in from the scenario. This argment's value is taken
+        # from the keyword's default as provided by Robot.
 
     @property
     def arg(self) -> str:
@@ -83,6 +87,7 @@ class StepArgument:
     def value(self, value: any):
         self._value = value
         self._codestr = self.make_codestring(value)
+        self.is_default = False
 
     @property
     def modified(self) -> bool:
@@ -94,9 +99,12 @@ class StepArgument:
 
     def copy(self):
         # -> Self
-        cp = StepArgument(self.arg.strip('${}'), self.value, self.kind)
+        cp = StepArgument(self.arg.strip('${}'), self.value, self.kind, self.is_default)
         cp.org_value = self.org_value
         return cp
+
+    def __str__(self):
+        return f"{self.name}={self.value}"
 
     @staticmethod
     def make_codestring(text: any) -> str:
