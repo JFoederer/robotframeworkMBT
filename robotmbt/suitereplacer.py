@@ -77,7 +77,10 @@ class SuiteReplacer:
         model info that is included in the test steps, the test cases are modifed, mixed and
         matched to create unique traces and achieve more test coverage quicker.
 
-        Any arguments are handled as if using keyword `Update model-based options`
+        Any arguments must be named arguments. They are passed on as options to the selected model-based
+        processor. If an option was already set on library level (See: `Set model-based options` and
+        `Update model-based options`, then these arguments take precedence over the library option and
+        affect only the current test suite.
         """
         self.robot_suite = self.current_suite
 
