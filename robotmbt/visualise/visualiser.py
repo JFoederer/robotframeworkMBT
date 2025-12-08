@@ -1,9 +1,11 @@
+from robotmbt.modelspace import ModelSpace
+from robotmbt.tracestate import TraceState
 from robotmbt.visualise.networkvisualiser import NetworkVisualiser
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.graphs.scenariograph import ScenarioGraph
 from robotmbt.visualise.graphs.stategraph import StateGraph
 from robotmbt.visualise.graphs.scenariostategraph import ScenarioStateGraph
-from robotmbt.visualise.models import TraceInfo
+from robotmbt.visualise.models import TraceInfo, StateInfo, ScenarioInfo
 import html
 
 
@@ -21,23 +23,25 @@ class Visualiser:
         return cls(graph_type)
 
     def __init__(self, graph_type: str):
-        if graph_type == 'scenario':
-            self.graph: AbstractGraph = ScenarioGraph()
-        elif graph_type == 'state':
-            self.graph: AbstractGraph = StateGraph()
-        elif graph_type == 'scenario-state':
-            self.graph: AbstractGraph = ScenarioStateGraph()
-        else:
+        if graph_type != 'scenario' and graph_type != 'state' and graph_type != 'scenario-state':
             raise ValueError(f"Unknown graph type: {graph_type}!")
+        self.graph_type: str = graph_type
+        self.trace_info: TraceInfo = TraceInfo()
 
-    def update_visualisation(self, info: TraceInfo):
-        self.graph.update_visualisation(info)
-
-    def set_final_trace(self, info: TraceInfo):
-        self.graph.set_final_trace(info)
+    def update_trace(self, trace: TraceState, state: ModelSpace):
+        if len(trace.get_trace()) > 0:
+            self.trace_info.update_trace(ScenarioInfo(trace.get_trace()[-1]), StateInfo(state), len(trace.get_trace()))
+        else:
+            self.trace_info.update_trace(None, StateInfo(state), 0)
 
     def generate_visualisation(self) -> str:
-        html_bokeh = NetworkVisualiser(self.graph).generate_html()
+        if self.graph_type == 'scenario':
+            graph: AbstractGraph = ScenarioGraph(self.trace_info)
+        elif self.graph_type == 'state':
+            graph: AbstractGraph = StateGraph(self.trace_info)
+        else:
+            graph: AbstractGraph = ScenarioStateGraph(self.trace_info)
+        html_bokeh = NetworkVisualiser(graph).generate_html()
         return f"<iframe srcdoc=\"{html.escape(html_bokeh)}\", \
             width=\"{NetworkVisualiser.GRAPH_SIZE_PX}px\", \
             height=\"{NetworkVisualiser.GRAPH_SIZE_PX}px\">\

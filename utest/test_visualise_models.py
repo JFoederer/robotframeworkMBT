@@ -68,19 +68,77 @@ if VISUALISE:
         Class: TraceInfo
         """
 
-        def test_traceInfo(self):
-            ts = TraceState(3)
-            candidates = []
-            for scenario in range(3):
-                candidates.append(ts.next_candidate())
-                ts.confirm_full_scenario(candidates[-1], str(scenario), {})
-            ti = TraceInfo.from_trace_state(trace=ts, state=ModelSpace())
+        def test_trace_info_update_normal(self):
+            info = TraceInfo()
 
-            self.assertEqual(ti.trace[0].name, str(0))
-            self.assertEqual(ti.trace[1].name, str(1))
-            self.assertEqual(ti.trace[2].name, str(2))
+            self.assertEqual(len(info.current_trace), 0)
+            self.assertEqual(len(info.all_traces), 0)
 
-            self.assertEqual(str(ti.state), '')
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 1)]), 1)
+
+            self.assertEqual(len(info.current_trace), 1)
+            self.assertEqual(len(info.all_traces), 0)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 2)]), 2)
+
+            self.assertEqual(len(info.current_trace), 2)
+            self.assertEqual(len(info.all_traces), 0)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 3)]), 3)
+
+            self.assertEqual(len(info.current_trace), 3)
+            self.assertEqual(len(info.all_traces), 0)
+
+        def test_trace_info_update_backtrack(self):
+            info = TraceInfo()
+
+            self.assertEqual(len(info.current_trace), 0)
+            self.assertEqual(len(info.all_traces), 0)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 1)]), 1)
+
+            self.assertEqual(len(info.current_trace), 1)
+            self.assertEqual(len(info.all_traces), 0)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 2)]), 2)
+
+            self.assertEqual(len(info.current_trace), 2)
+            self.assertEqual(len(info.all_traces), 0)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 3)]), 3)
+
+            self.assertEqual(len(info.current_trace), 3)
+            self.assertEqual(len(info.all_traces), 0)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 2)]), 2)
+
+            self.assertEqual(len(info.current_trace), 2)
+            self.assertEqual(len(info.all_traces), 1)
+            self.assertEqual(len(info.all_traces[0]), 3)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 1)]), 1)
+
+            self.assertEqual(len(info.current_trace), 1)
+            self.assertEqual(len(info.all_traces), 1)
+            self.assertEqual(len(info.all_traces[0]), 3)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 4)]), 2)
+
+            self.assertEqual(len(info.current_trace), 2)
+            self.assertEqual(len(info.all_traces), 1)
+            self.assertEqual(len(info.all_traces[0]), 3)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 5)]), 3)
+
+            self.assertEqual(len(info.current_trace), 3)
+            self.assertEqual(len(info.all_traces), 1)
+            self.assertEqual(len(info.all_traces[0]), 3)
+
+            info.update_trace(ScenarioInfo('test'), StateInfo._create_state_with_prop('prop', [('value', 6)]), 4)
+
+            self.assertEqual(len(info.current_trace), 4)
+            self.assertEqual(len(info.all_traces), 1)
+            self.assertEqual(len(info.all_traces[0]), 3)
 
 if __name__ == '__main__':
     unittest.main()

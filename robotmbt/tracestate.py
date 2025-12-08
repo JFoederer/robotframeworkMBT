@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 
 
@@ -33,10 +34,10 @@ from robotmbt.suitedata import Scenario
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class TraceSnapShot:
-    def __init__(self, id: str, inserted_scenario: str | Scenario, model_state: dict[str, int], drought: int = 0):
+    def __init__(self, id: str, inserted_scenario: str | Scenario, model_state: ModelSpace, drought: int = 0):
         self.id: str = id
         self.scenario: str | Scenario = inserted_scenario
-        self.model: dict[str, int] = model_state.copy()
+        self.model: ModelSpace = model_state.copy()
         self.coverage_drought: int = drought
 
 
@@ -56,9 +57,9 @@ class TraceState:
         self._open_refinements: list[int] = []
 
     @property
-    def model(self) -> dict[str, int] | None:
+    def model(self) -> ModelSpace | None:
         """returns the model as it is at the end of the current trace"""
-        return self._snapshots[-1].model if self._trace else None
+        return self._snapshots[-1].model.copy() if self._trace else None
 
     @property
     def tried(self) -> tuple[int, ...]:
@@ -122,7 +123,7 @@ class TraceState:
         """Trying a scenario excludes it from further cadidacy on this level"""
         self._tried[-1].append(i_scenario)
 
-    def confirm_full_scenario(self, index: int, scenario: str, model: dict[str, int]):
+    def confirm_full_scenario(self, index: int, scenario: str, model: ModelSpace):
         if not self._c_pool[index]:
             self._c_pool[index] = True
             c_drought = 0
@@ -140,7 +141,7 @@ class TraceState:
         self._trace.append(id)
         self._snapshots.append(TraceSnapShot(id, scenario, model, c_drought))
 
-    def push_partial_scenario(self, index: int, scenario: str, model: dict[str, int]):
+    def push_partial_scenario(self, index: int, scenario: str, model: ModelSpace):
         if self._is_refinement_active(index):
             id = f"{index}.{self.highest_part(index) + 1}"
 

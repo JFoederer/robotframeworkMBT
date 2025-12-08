@@ -11,7 +11,8 @@ except ImportError:
 if VISUALISE:
     class TestVisualiseStateGraph(unittest.TestCase):
         def test_state_graph_init(self):
-            sg = StateGraph()
+            info = TraceInfo()
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 1)
             self.assertEqual(len(sg.networkx.edges), 0)
@@ -20,7 +21,8 @@ if VISUALISE:
             self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
 
         def test_state_graph_ids_empty(self):
-            sg = StateGraph()
+            info = TraceInfo()
+            sg = StateGraph(info)
 
             si = StateInfo(ModelSpace())
 
@@ -29,7 +31,8 @@ if VISUALISE:
             self.assertEqual(node_id, 'node0')
 
         def test_state_graph_ids_duplicate_state(self):
-            sg = StateGraph()
+            info = TraceInfo()
+            sg = StateGraph(info)
 
             s0 = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
             s1 = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
@@ -40,7 +43,8 @@ if VISUALISE:
             self.assertEqual(id0, id1)
 
         def test_state_graph_ids_different_states(self):
-            sg = StateGraph()
+            info = TraceInfo()
+            sg = StateGraph(info)
 
             s00 = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
             s01 = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
@@ -66,7 +70,8 @@ if VISUALISE:
             self.assertNotEqual(id01, id11)
 
         def test_state_graph_add_new_node(self):
-            sg = StateGraph()
+            info = TraceInfo()
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 1)
 
@@ -86,7 +91,8 @@ if VISUALISE:
             self.assertIn('value=some_value', sg.networkx.nodes['test']['label'])
 
         def test_state_graph_add_existing_node(self):
-            sg = StateGraph()
+            info = TraceInfo()
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 1)
             self.assertIn('start', sg.networkx.nodes)
@@ -99,11 +105,13 @@ if VISUALISE:
             self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
 
         def test_state_graph_update_single(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario = ScenarioInfo('1')
             space = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
-            sg.update_visualisation(TraceInfo([scenario], space))
+            info.update_trace(scenario, space, 1)
+
+            sg = StateGraph(info)
 
             self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
 
@@ -114,7 +122,7 @@ if VISUALISE:
             self.assertEqual(sg.networkx.edges[('start', 'node0')]['label'], '1')
 
         def test_state_graph_update_multi(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
@@ -124,13 +132,11 @@ if VISUALISE:
             space2 = StateInfo._create_state_with_prop("prop", [("value", "other_value")])
             space3 = StateInfo._create_state_with_prop("prop", [("value", "another_value")])
 
-            ti1 = TraceInfo([scenario1], space1)
-            ti2 = TraceInfo([scenario1, scenario2], space2)
-            ti3 = TraceInfo([scenario1, scenario2, scenario3], space3)
+            info.update_trace(scenario1, space1, 1)
+            info.update_trace(scenario2, space2, 2)
+            info.update_trace(scenario3, space3, 3)
 
-            sg.update_visualisation(ti1)
-            sg.update_visualisation(ti2)
-            sg.update_visualisation(ti3)
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 4)
             self.assertEqual(len(sg.networkx.edges), 3)
@@ -152,7 +158,7 @@ if VISUALISE:
             self.assertEqual(sg.networkx.edges[('node1', 'node2')]['label'], '3')
 
         def test_state_graph_update_multi_loop(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
@@ -161,13 +167,11 @@ if VISUALISE:
             space0 = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
             space1 = StateInfo._create_state_with_prop("prop", [("value", "other_value")])
 
-            ti1 = TraceInfo([scenario0], space0)
-            ti2 = TraceInfo([scenario0, scenario1], space1)
-            ti3 = TraceInfo([scenario0, scenario1, scenario2], space0)
+            info.update_trace(scenario0, space0, 1)
+            info.update_trace(scenario1, space1, 2)
+            info.update_trace(scenario2, space0, 3)
 
-            sg.update_visualisation(ti1)
-            sg.update_visualisation(ti2)
-            sg.update_visualisation(ti3)
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 3)
             self.assertEqual(len(sg.networkx.edges), 3)
@@ -187,25 +191,17 @@ if VISUALISE:
             self.assertEqual(sg.networkx.edges[('node1', 'node0')]['label'], '2')
 
         def test_state_graph_update_self_loop(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
 
             space = StateInfo._create_state_with_prop("prop", [("value", "some_value")])
 
-            ti1 = TraceInfo([scenario1], space)
-            ti2 = TraceInfo([scenario1, scenario2], space)
+            info.update_trace(scenario1, space, 1)
+            info.update_trace(scenario2, space, 2)
 
-            self.assertEqual(len(sg.networkx.nodes), 1)
-            self.assertEqual(len(sg.networkx.edges), 0)
-
-            sg.update_visualisation(ti1)
-
-            self.assertEqual(len(sg.networkx.nodes), 2)
-            self.assertEqual(len(sg.networkx.edges), 1)
-
-            sg.update_visualisation(ti2)
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 2)
             self.assertEqual(len(sg.networkx.edges), 2)
@@ -221,7 +217,7 @@ if VISUALISE:
             self.assertEqual(sg.networkx.edges[('node0', 'node0')]['label'], '2')
 
         def test_state_graph_update_backtrack(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
@@ -233,46 +229,21 @@ if VISUALISE:
             space3 = StateInfo._create_state_with_prop("prop", [("value", "more_value")])
             space4 = StateInfo._create_state_with_prop("prop", [("value", "yet_another_value")])
 
-            self.assertEqual(len(sg.networkx.nodes), 1)
-            self.assertEqual(len(sg.networkx.edges), 0)
+            info.update_trace(scenario0, space0, 1)
+            info.update_trace(scenario1, space1, 2)
+            info.update_trace(scenario2, space2, 3)
+            info.update_trace(scenario1, space1, 2)
+            info.update_trace(scenario0, space0, 1)
+            info.update_trace(scenario2, space3, 2)
+            info.update_trace(scenario1, space4, 3)
 
-            sg.update_visualisation(TraceInfo([scenario0], space0))
-
-            self.assertEqual(len(sg.networkx.nodes), 2)
-            self.assertEqual(len(sg.networkx.edges), 1)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], space1))
-
-            self.assertEqual(len(sg.networkx.nodes), 3)
-            self.assertEqual(len(sg.networkx.edges), 2)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], space2))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], space1))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
-
-            sg.update_visualisation(TraceInfo([scenario0], space0))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario2], space3))
-
-            self.assertEqual(len(sg.networkx.nodes), 5)
-            self.assertEqual(len(sg.networkx.edges), 4)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario2, scenario1], space4))
+            sg = StateGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 6)
             self.assertEqual(len(sg.networkx.edges), 5)
 
         def test_state_graph_final_trace_normal(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
@@ -282,12 +253,11 @@ if VISUALISE:
             space1 = StateInfo._create_state_with_prop("prop", [("value", "other_value")])
             space2 = StateInfo._create_state_with_prop("prop", [("value", "another_value")])
 
-            sg.update_visualisation(TraceInfo([scenario0], space0))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], space1))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], space2))
+            info.update_trace(scenario0, space0, 1)
+            info.update_trace(scenario1, space1, 2)
+            info.update_trace(scenario2, space2, 3)
 
-            sg.set_final_trace(TraceInfo([scenario0, scenario1, scenario2], space2))
-
+            sg = StateGraph(info)
             trace = sg.get_final_trace()
 
             for node in trace:
@@ -295,11 +265,19 @@ if VISUALISE:
 
             for i in range(0, len(trace) - 1):
                 self.assertIn((trace[i], trace[i + 1]), sg.networkx.edges)
+                if i > 0:
+                    self.assertEqual(sg.networkx.edges[(trace[i], trace[i + 1])]['label'], str(i))
 
-            self.assertEqual(trace, ['start', 'node0', 'node1', 'node2'])
+            self.assertEqual(sg.networkx.nodes[trace[0]]['label'], 'start')
+            self.assertIn('prop:', sg.networkx.nodes[trace[1]]['label'])
+            self.assertIn('value=some_value', sg.networkx.nodes[trace[1]]['label'])
+            self.assertIn('prop:', sg.networkx.nodes[trace[2]]['label'])
+            self.assertIn('value=other_value', sg.networkx.nodes[trace[2]]['label'])
+            self.assertIn('prop:', sg.networkx.nodes[trace[3]]['label'])
+            self.assertIn('value=another_value', sg.networkx.nodes[trace[3]]['label'])
 
         def test_state_graph_final_trace_backtrack(self):
-            sg = StateGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
@@ -311,16 +289,15 @@ if VISUALISE:
             space3 = StateInfo._create_state_with_prop("prop", [("value", "more_value")])
             space4 = StateInfo._create_state_with_prop("prop", [("value", "yet_another_value")])
 
-            sg.update_visualisation(TraceInfo([scenario0], space0))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], space1))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], space2))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], space1))
-            sg.update_visualisation(TraceInfo([scenario0], space0))
-            sg.update_visualisation(TraceInfo([scenario0, scenario2], space3))
-            sg.update_visualisation(TraceInfo([scenario0, scenario2, scenario1], space4))
+            info.update_trace(scenario0, space0, 1)
+            info.update_trace(scenario1, space1, 2)
+            info.update_trace(scenario2, space2, 3)
+            info.update_trace(scenario1, space1, 2)
+            info.update_trace(scenario0, space0, 1)
+            info.update_trace(scenario2, space3, 2)
+            info.update_trace(scenario1, space4, 3)
 
-            sg.set_final_trace(TraceInfo([scenario0, scenario2, scenario1], space4))
-
+            sg = StateGraph(info)
             trace = sg.get_final_trace()
 
             for node in trace:
@@ -329,7 +306,13 @@ if VISUALISE:
             for i in range(0, len(trace) - 1):
                 self.assertIn((trace[i], trace[i + 1]), sg.networkx.edges)
 
-            self.assertEqual(trace, ['start', 'node0', 'node3', 'node4'])
+            self.assertEqual(sg.networkx.nodes[trace[0]]['label'], 'start')
+            self.assertIn('prop:', sg.networkx.nodes[trace[1]]['label'])
+            self.assertIn('value=some_value', sg.networkx.nodes[trace[1]]['label'])
+            self.assertIn('prop:', sg.networkx.nodes[trace[2]]['label'])
+            self.assertIn('value=more_value', sg.networkx.nodes[trace[2]]['label'])
+            self.assertIn('prop:', sg.networkx.nodes[trace[3]]['label'])
+            self.assertIn('value=yet_another_value', sg.networkx.nodes[trace[3]]['label'])
 
 if __name__ == '__main__':
     unittest.main()
