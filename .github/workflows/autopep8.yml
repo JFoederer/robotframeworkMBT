@@ -20,7 +20,7 @@ jobs:
         id: check
         run: |
           # Check if autopep8 would make changes
-          formatting_issues=$(autopep8 --diff --recursive .)
+          formatting_issues=$(autopep8 --diff --recursive --max-line-length 120 .)
           if [[ formatting_issues ]] then
             echo "Formatting issues found:"
             printf "%s\n" "$formatting_issues"
