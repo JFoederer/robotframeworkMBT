@@ -11,7 +11,8 @@ except ImportError:
 if VISUALISE:
     class TestVisualiseScenarioGraph(unittest.TestCase):
         def test_scenario_graph_init(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
+            sg = ScenarioGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 1)
             self.assertEqual(len(sg.networkx.edges), 0)
@@ -20,7 +21,8 @@ if VISUALISE:
             self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
 
         def test_scenario_graph_ids_empty(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
+            sg = ScenarioGraph(info)
 
             s = ScenarioInfo('test')
 
@@ -29,7 +31,8 @@ if VISUALISE:
             self.assertEqual(node_id, 'node0')
 
         def test_scenario_graph_ids_duplicate_scenario(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
+            sg = ScenarioGraph(info)
 
             s0 = ScenarioInfo('test')
             s1 = ScenarioInfo('test')
@@ -40,7 +43,8 @@ if VISUALISE:
             self.assertEqual(id0, id1)
 
         def test_scenario_graph_ids_different_scenarios(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
+            sg = ScenarioGraph(info)
 
             si00 = ScenarioInfo('test0')
             si01 = ScenarioInfo('test0')
@@ -66,7 +70,8 @@ if VISUALISE:
             self.assertNotEqual(id01, id11)
 
         def test_scenario_graph_add_new_node(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
+            sg = ScenarioGraph(info)
 
             sg.ids['test'] = ScenarioInfo('test')
             sg._add_node('test')
@@ -80,7 +85,8 @@ if VISUALISE:
             self.assertEqual(sg.networkx.nodes['test']['label'], 'test')
 
         def test_scenario_graph_add_existing_node(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
+            sg = ScenarioGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 1)
             self.assertIn('start', sg.networkx.nodes)
@@ -93,47 +99,19 @@ if VISUALISE:
             self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
 
         def test_scenario_graph_update_nodes(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
 
-            self.assertEqual(len(sg.networkx.nodes), 1)
-            self.assertEqual(len(sg.networkx.edges), 0)
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 3)
 
-            self.assertIn('start', sg.networkx.nodes)
-
-            self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
-
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 2)
-            self.assertEqual(len(sg.networkx.edges), 1)
-
-            self.assertIn('start', sg.networkx.nodes)
-            self.assertIn('node0', sg.networkx.nodes)
-
-            self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
-            self.assertEqual(sg.networkx.nodes['node0']['label'], '0')
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 3)
-            self.assertEqual(len(sg.networkx.edges), 2)
-
-            self.assertIn('start', sg.networkx.nodes)
-            self.assertIn('node0', sg.networkx.nodes)
-            self.assertIn('node1', sg.networkx.nodes)
-
-            self.assertEqual(sg.networkx.nodes['start']['label'], 'start')
-            self.assertEqual(sg.networkx.nodes['node0']['label'], '0')
-            self.assertEqual(sg.networkx.nodes['node1']['label'], '1')
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], StateInfo(ModelSpace())))
+            sg = ScenarioGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
 
             self.assertIn('start', sg.networkx.nodes)
             self.assertIn('node0', sg.networkx.nodes)
@@ -146,38 +124,18 @@ if VISUALISE:
             self.assertEqual(sg.networkx.nodes['node2']['label'], '2')
 
         def test_scenario_graph_update_edges(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
 
-            self.assertEqual(len(sg.networkx.nodes), 1)
-            self.assertEqual(len(sg.networkx.edges), 0)
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 3)
 
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
+            sg = ScenarioGraph(info)
 
-            self.assertEqual(len(sg.networkx.nodes), 2)
-            self.assertEqual(len(sg.networkx.edges), 1)
-
-            self.assertIn(('start', 'node0'), sg.networkx.edges)
-
-            self.assertEqual(sg.networkx.edges[('start', 'node0')]['label'], '')
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 3)
-            self.assertEqual(len(sg.networkx.edges), 2)
-
-            self.assertIn(('start', 'node0'), sg.networkx.edges)
-            self.assertIn(('node0', 'node1'), sg.networkx.edges)
-
-            self.assertEqual(sg.networkx.edges[('start', 'node0')]['label'], '')
-            self.assertEqual(sg.networkx.edges[('node0', 'node1')]['label'], '')
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
             self.assertEqual(len(sg.networkx.edges), 3)
 
             self.assertIn(('start', 'node0'), sg.networkx.edges)
@@ -189,14 +147,13 @@ if VISUALISE:
             self.assertEqual(sg.networkx.edges[('node1', 'node2')]['label'], '')
 
         def test_scenario_graph_update_single_node(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
 
-            scenario = ScenarioInfo('test')
+            scenario0 = ScenarioInfo('test')
 
-            self.assertEqual(len(sg.networkx.nodes), 1)
-            self.assertEqual(len(sg.networkx.edges), 0)
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
 
-            sg.update_visualisation(TraceInfo([scenario], StateInfo(ModelSpace())))
+            sg = ScenarioGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 2)
             self.assertEqual(len(sg.networkx.edges), 1)
@@ -212,68 +169,39 @@ if VISUALISE:
             self.assertEqual(sg.networkx.edges[('start', 'node0')]['label'], '')
 
         def test_scenario_graph_update_backtrack(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
             scenario3 = ScenarioInfo('3')
 
-            self.assertEqual(len(sg.networkx.nodes), 1)
-            self.assertEqual(len(sg.networkx.edges), 0)
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 3)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario3, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 3)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 4)
 
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 2)
-            self.assertEqual(len(sg.networkx.edges), 1)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario2], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 3)
-            self.assertEqual(len(sg.networkx.edges), 2)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario2, scenario1], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario2], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
-
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 4)
-            self.assertEqual(len(sg.networkx.edges), 3)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario3], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 5)
-            self.assertEqual(len(sg.networkx.edges), 4)
-
-            sg.update_visualisation(TraceInfo([scenario0, scenario3, scenario1], StateInfo(ModelSpace())))
+            sg = ScenarioGraph(info)
 
             self.assertEqual(len(sg.networkx.nodes), 5)
             self.assertEqual(len(sg.networkx.edges), 5)
 
-            sg.update_visualisation(TraceInfo([scenario0, scenario3, scenario1, scenario2], StateInfo(ModelSpace())))
-
-            self.assertEqual(len(sg.networkx.nodes), 5)
-            self.assertEqual(len(sg.networkx.edges), 6)
-
         def test_scenario_graph_final_trace_normal(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
 
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], StateInfo(ModelSpace())))
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 3)
 
-            sg.set_final_trace(TraceInfo([scenario0, scenario1, scenario2], StateInfo(ModelSpace())))
+            sg = ScenarioGraph(info)
 
             trace = sg.get_final_trace()
 
@@ -288,21 +216,21 @@ if VISUALISE:
             self.assertEqual(trace, ['start', 'node0', 'node1', 'node2'])
 
         def test_scenario_graph_final_trace_backtrack(self):
-            sg = ScenarioGraph()
+            info = TraceInfo()
 
             scenario0 = ScenarioInfo('0')
             scenario1 = ScenarioInfo('1')
             scenario2 = ScenarioInfo('2')
 
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario2], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario2, scenario1], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario2], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1], StateInfo(ModelSpace())))
-            sg.update_visualisation(TraceInfo([scenario0, scenario1, scenario2], StateInfo(ModelSpace())))
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 3)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario0, StateInfo(ModelSpace()), 1)
+            info.update_trace(scenario2, StateInfo(ModelSpace()), 2)
+            info.update_trace(scenario1, StateInfo(ModelSpace()), 3)
 
-            sg.set_final_trace(TraceInfo([scenario0, scenario1, scenario2], StateInfo(ModelSpace())))
+            sg = ScenarioGraph(info)
 
             trace = sg.get_final_trace()
 

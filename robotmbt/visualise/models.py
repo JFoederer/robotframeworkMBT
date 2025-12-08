@@ -1,8 +1,9 @@
 from typing import Any
 
+from robot.api import logger
+
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
-from robotmbt.tracestate import TraceState
 
 
 class ScenarioInfo:
@@ -24,6 +25,9 @@ class ScenarioInfo:
 
     def __str__(self):
         return f"Scenario {self.src_id}: {self.name}"
+
+    def __eq__(self, other):
+        return self.src_id == other.src_id
 
 
 class StateInfo:
@@ -78,43 +82,88 @@ class StateInfo:
 
 class TraceInfo:
     """
-    This contains all information we need at any given step in trace exploration:
-    - trace: the strung together scenarios up until this point
-    - state: the model space
+    This keeps track of all information we need from all steps in trace exploration:
+    - current_trace: the trace currently being built up, a list of scenario/state pairs in order of execution
+    - all_traces: all valid traces encountered in trace exploration, up until the point they could not go any further
+    - previous_length: used to identify backtracking
     """
 
-    @classmethod
-    def from_trace_state(cls, trace: TraceState, state: ModelSpace):
-        return cls([ScenarioInfo(t) for t in trace.get_trace()], StateInfo(state))
+    def __init__(self):
+        self.current_trace: list[tuple[ScenarioInfo, StateInfo]] = []
+        self.all_traces: list[list[tuple[ScenarioInfo, StateInfo]]] = []
+        self.previous_length: int = 0
+        self.pushed: bool = False
 
-    def __init__(self, trace: list[ScenarioInfo], state: StateInfo):
-        self.trace: list[ScenarioInfo] = trace
-        self.state = state
+    def update_trace(self, scenario: ScenarioInfo | None, state: StateInfo, length: int):
+        if length > self.previous_length:
+            # New state - push
+            self._push(scenario, state, length - self.previous_length)
+            self.previous_length = length
+        elif length < self.previous_length:
+            # Backtrack - pop
+            self._pop(self.previous_length - length)
+            self.previous_length = length
+
+            # Sanity check
+            if len(self.current_trace) > 0:
+                self._sanity_check(scenario, state, 'popping')
+        else:
+            # No change - sanity check
+            if len(self.current_trace) > 0:
+                self._sanity_check(scenario, state, 'nothing')
+
+    def _push(self, scenario: ScenarioInfo, state: StateInfo, n: int):
+        if n > 1:
+            logger.warn(f"Pushing multiple scenario/state pairs at once to trace info ({n})! Some info might be lost!")
+        for _ in range(n):
+            self.current_trace.append((scenario, state))
+        self.pushed = True
+
+    def _pop(self, n: int):
+        if self.pushed:
+            self.all_traces.append(self.current_trace.copy())
+        for _ in range(n):
+            self.current_trace.pop()
+        self.pushed = False
+
+    def encountered_scenarios(self) -> set[ScenarioInfo]:
+        res = set()
+
+        for trace in self.all_traces:
+            for (scenario, state) in trace:
+                res.add(scenario)
+
+        return res
+
+    def encountered_states(self) -> set[StateInfo]:
+        res = set()
+
+        for trace in self.all_traces:
+            for (scenario, state) in trace:
+                res.add(state)
+
+        return res
+
+    def encountered_scenario_state_pairs(self) -> set[tuple[ScenarioInfo, StateInfo]]:
+        res = set()
+
+        for trace in self.all_traces:
+            for (scenario, state) in trace:
+                res.add((scenario, state))
+
+        return res
 
     def __repr__(self) -> str:
-        return f"TraceInfo(trace=[{[str(t) for t in self.trace]}], state={self.state})"
+        return f"TraceInfo(traces=[{[f'[{[self.stringify_pair(pair) for pair in trace]}]' for trace in self.all_traces]}], current=[{[self.stringify_pair(pair) for pair in self.current_trace]}])"
 
-    def contains_scenario(self, scen_name: str) -> bool:
-        for scenario in self.trace:
-            if scenario.name == scen_name:
-                return True
-        return False
+    def _sanity_check(self, scen: ScenarioInfo, state: StateInfo, after: str):
+        (prev_scen, prev_state) = self.current_trace[-1]
+        if prev_scen != scen:
+            logger.warn(
+                f'TraceInfo got out of sync after {after}\nExpected scenario: {prev_scen}\nActual scenario: {scen}')
+        if prev_state != state:
+            logger.warn(f'TraceInfo got out of sync after {after}\nExpected state: {prev_state}\nActual state: {state}')
 
-    def add_scenario(self, scen: ScenarioInfo):
-        """
-        Used in acceptance testing
-        """
-        self.trace.append(scen)
-
-    def get_scenario(self, scen_name: str) -> ScenarioInfo | None:
-        for scenario in self.trace:
-            if scenario.name == scen_name:
-                return scenario
-        return None
-
-    def insert_trace_at(self, index: int, scen_info: ScenarioInfo):
-        if index < 0 or index >= len(self.trace):
-            raise IndexError(
-                f"InsertTraceAt received invalid index ({index}) for length of list ({len(self.trace)})")
-
-        self.trace.insert(index, scen_info)
+    @staticmethod
+    def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
+        return f"Scenario={pair[0].name}, State={pair[1]}"
