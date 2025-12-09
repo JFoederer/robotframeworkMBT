@@ -27,7 +27,8 @@ if __name__ == '__main__':
 
     if utest:
         utestrun = unittest.main(module=None,
-                                 argv=[__file__, 'discover', os.path.join(THIS_DIR, 'utest')],
+                                 argv=[__file__, 'discover',
+                                       os.path.join(THIS_DIR, 'utest')],
                                  exit=False)
         if not utestrun.result.wasSuccessful():
             sys.exit(1)

@@ -32,10 +32,13 @@
 
 class TraceState:
     def __init__(self, n_scenarios):
-        self._c_pool = [False] * n_scenarios # coverage pool: True means scenario is in trace
-        self._tried = [[]]   # Keeps track of the scenarios already tried at each step in the trace
-        self._trace = []     # Choice trace, when was which scenario inserted (e.g. ['1', '2.1', '3', '2.0'])
-        self._snapshots = [] # Keeps details for elements in trace
+        # coverage pool: True means scenario is in trace
+        self._c_pool = [False] * n_scenarios
+        # Keeps track of the scenarios already tried at each step in the trace
+        self._tried = [[]]
+        # Choice trace, when was which scenario inserted (e.g. ['1', '2.1', '3', '2.0'])
+        self._trace = []
+        self._snapshots = []  # Keeps details for elements in trace
         self._open_refinements = []
 
     @property
@@ -124,7 +127,8 @@ class TraceState:
             self._tried.append([])
             self._open_refinements.append(index)
         self._trace.append(id)
-        self._snapshots.append(TraceSnapShot(id, scenario, model, self.coverage_drought))
+        self._snapshots.append(TraceSnapShot(
+            id, scenario, model, self.coverage_drought))
 
     def can_rewind(self):
         return len(self._trace) > 0
@@ -156,6 +160,7 @@ class TraceState:
 
     def __len__(self):
         return len(self._snapshots)
+
 
 class TraceSnapShot:
     def __init__(self, id, inserted_scenario, model_state, drought=0):

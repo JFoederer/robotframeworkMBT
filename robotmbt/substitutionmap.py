@@ -41,8 +41,9 @@ class SubstitutionMap:
     constraints. solve() takes the current set of example values and assigns
     a unique concrete value to each.
     """
+
     def __init__(self):
-        self.substitutions = {} # {example_value:Constraint}
+        self.substitutions = {}  # {example_value:Constraint}
         self.solution = {}      # {example_value:solution_value}
 
     def __str__(self):
@@ -51,7 +52,8 @@ class SubstitutionMap:
 
     def copy(self):
         new = SubstitutionMap()
-        new.substitutions = {k: v.copy() for k,v in self.substitutions.items()}
+        new.substitutions = {k: v.copy()
+                             for k, v in self.substitutions.items()}
         new.solution = self.solution.copy()
         return new
 
@@ -71,7 +73,8 @@ class SubstitutionMap:
         while unsolved_subs:
             unsolved_subs.sort(key=lambda i: len(substitutions[i].optionset))
             example_value = unsolved_subs[0]
-            solution[example_value] = random.choice(substitutions[example_value].optionset)
+            solution[example_value] = random.choice(
+                substitutions[example_value].optionset)
             subs_stack.append(example_value)
             others_list = []
             try:
@@ -95,13 +98,15 @@ class SubstitutionMap:
                             subs_stack.pop()
                     except IndexError:
                         # nothing left to roll back, no options remaining
-                        raise ValueError("No solution found within the set of given constraints")
+                        raise ValueError(
+                            "No solution found within the set of given constraints")
                     last_item = subs_stack[-1]
                     unsolved_subs.insert(0, last_item)
                     for other in [e for e in substitutions if e != last_item]:
                         substitutions[other].undo_remove()
                     try:
-                        substitutions[last_item].remove_option(solution.pop(last_item))
+                        substitutions[last_item].remove_option(
+                            solution.pop(last_item))
                         rollback_done = True
                     except ValueError:
                         # next level must also be rolled back
@@ -119,7 +124,8 @@ class Constraint:
         except:
             self.optionset = None
         if not self.optionset or isinstance(constraint, str):
-            raise ValueError(f"Invalid option set for initial constraint: {constraint}")
+            raise ValueError(
+                f"Invalid option set for initial constraint: {constraint}")
         self.removed_stack = []
 
     def __repr__(self):
@@ -132,7 +138,8 @@ class Constraint:
         return Constraint(self.optionset)
 
     def add_constraint(self, constraint):
-        if constraint is None: return
+        if constraint is None:
+            return
         self.optionset = [opt for opt in self.optionset if opt in constraint]
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')

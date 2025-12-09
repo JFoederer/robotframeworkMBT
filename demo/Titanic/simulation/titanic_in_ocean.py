@@ -41,4 +41,3 @@ class TitanicInOcean(FloatingObject):
 
     def __repr__(self):
         return super().__repr__() + f", sunk={self.sunk}))"
-

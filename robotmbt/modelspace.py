@@ -34,15 +34,17 @@ import copy
 
 from .steparguments import StepArguments
 
+
 class ModellingError(Exception):
     pass
+
 
 class ModelSpace:
     def __init__(self, reference_id=None):
         self.ref_id = str(reference_id)
         self.std_attrs = []
         self.props = dict()
-        self.values = dict() # For using literals without having to use quotes (abc='abc')
+        self.values = dict()  # For using literals without having to use quotes (abc='abc')
         self.scenario_vars = []
         self.std_attrs = dir(self)
 
@@ -65,7 +67,8 @@ class ModelSpace:
 
     def del_prop(self, name):
         if name == 'scenario':
-            raise ModellingError(f"scenario is a reserved attribute and cannot be removed.")
+            raise ModellingError(
+                f"scenario is a reserved attribute and cannot be removed.")
         if name not in self.props:
             raise ModellingError(f"Delete failed, '{name}' is not defined.")
         self.props.pop(name)
@@ -78,11 +81,13 @@ class ModelSpace:
             return self.__dict__.keys()
 
     def new_scenario_scope(self):
-        self.scenario_vars.append(RecursiveScope(self.scenario_vars[-1] if len(self.scenario_vars) else None))
+        self.scenario_vars.append(RecursiveScope(
+            self.scenario_vars[-1] if len(self.scenario_vars) else None))
         self.props['scenario'] = self.scenario_vars[-1]
 
     def end_scenario_scope(self):
-        assert len(self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
+        assert len(
+            self.scenario_vars) > 0, ".end_scenario_scope() called, but there is no scenario scope open."
         self.scenario_vars.pop()
         if len(self.scenario_vars):
             self.props['scenario'] = self.scenario_vars[-1]
@@ -103,7 +108,8 @@ class ModelSpace:
         for p in self.props:
             exec(f"{p} = self.props['{p}']", local_locals)
         for v in self.values:
-            value = f"'{self.values[v]}'" if isinstance(self.values[v], str) else self.values[v]
+            value = f"'{self.values[v]}'" if isinstance(
+                self.values[v], str) else self.values[v]
             exec(f"{v} = {value}", local_locals)
         try:
             result = eval(expr, local_locals)
@@ -118,7 +124,7 @@ class ModelSpace:
                 self.__handle_attribute_error(err)
         except NameError as missing:
             if missing.name == expr:
-                raise # Putting only a name in an expression can be used as exists check
+                raise  # Putting only a name in an expression can be used as exists check
             self.__add_alias(missing.name, step_args)
             result = self.process_expression(expression, step_args)
         except AttributeError as err:
@@ -141,12 +147,14 @@ class ModelSpace:
         if missing_name == 'scenario':
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
-        matching_args = [arg.value for arg in step_args if arg.codestring == missing_name]
+        matching_args = [
+            arg.value for arg in step_args if arg.codestring == missing_name]
         value = matching_args[0] if matching_args else missing_name
         if isinstance(value, str):
-            for esc_char in "$@&=": # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
+            for esc_char in "$@&=":  # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
                 value = value.replace(f'\\{esc_char}', f'\\\\{esc_char}')
-            value = value.replace("'", r"\'") # Needed because we use single quotes in low level processing later on
+            # Needed because we use single quotes in low level processing later on
+            value = value.replace("'", r"\'")
         self.values[missing_name] = value
 
     @staticmethod
@@ -177,6 +185,7 @@ class ModelSpace:
                 status += f"    {attr}={value}\n"
         return status
 
+
 class RecursiveScope:
     """
     Generic scoping object with the properties needed for handling scenario variables with refinement.
@@ -190,6 +199,7 @@ class RecursiveScope:
     executed on the highest available level. Creating new attributes, will make the current level the
     highest available level for that atrribute.
     """
+
     def __init__(self, outer):
         super().__setattr__('_outer_scope', outer)
 
@@ -206,7 +216,7 @@ class RecursiveScope:
 
     def __iter__(self):
         return iter([(attr, getattr(self, attr)) for attr in dir(self._outer_scope) + dir(self)
-                                                          if not attr.startswith('__') and attr != '_outer_scope'])
+                     if not attr.startswith('__') and attr != '_outer_scope'])
 
     def __bool__(self):
         return any(True for _ in self)

@@ -44,8 +44,8 @@ class TestSubstitutionMap(unittest.TestCase):
         sm = SubstitutionMap()
         sm.substitute('A', [1])
         sm.substitute('B', [2])
-        self.assertEqual(sm.solve(), {'A':1, 'B':2})
-        self.assertEqual(sm.solution, {'A':1, 'B':2})
+        self.assertEqual(sm.solve(), {'A': 1, 'B': 2})
+        self.assertEqual(sm.solution, {'A': 1, 'B': 2})
 
     def test_single_overlapping_options_have_no_solution(self):
         sm = SubstitutionMap()
@@ -124,14 +124,14 @@ class TestSubstitutionMap(unittest.TestCase):
         with varying data helps to detect randomisation flukes and
         algorithmic blind spots, like order preference.
         """
-        variations = [{'A':[1, 2], 'B':[2, 3], 'C':[3, 2]},
-                      {'A':[2, 1], 'B':[2, 3], 'C':[2, 3]},
-                      {'A':[1, 2], 'B':[3, 2], 'C':[2, 3]},
-                      {'A':[2, 1], 'B':[3, 2], 'C':[3, 2]},
-                      {'A':[2, 3], 'B':[1, 2], 'C':[2, 3]},
-                      {'A':[2, 3], 'B':[2, 3], 'C':[1, 2]},
-                      {'A':[3, 2], 'B':[2, 1], 'C':[2, 3]},
-                      {'A':[3, 2], 'B':[3, 2], 'C':[2, 1]}]
+        variations = [{'A': [1, 2], 'B': [2, 3], 'C': [3, 2]},
+                      {'A': [2, 1], 'B': [2, 3], 'C': [2, 3]},
+                      {'A': [1, 2], 'B': [3, 2], 'C': [2, 3]},
+                      {'A': [2, 1], 'B': [3, 2], 'C': [3, 2]},
+                      {'A': [2, 3], 'B': [1, 2], 'C': [2, 3]},
+                      {'A': [2, 3], 'B': [2, 3], 'C': [1, 2]},
+                      {'A': [3, 2], 'B': [2, 1], 'C': [2, 3]},
+                      {'A': [3, 2], 'B': [3, 2], 'C': [2, 1]}]
         for variant in variations:
             sm = SubstitutionMap()
             for example_value, constraint in variant.items():
@@ -355,8 +355,8 @@ class TestConstraint(unittest.TestCase):
         c.remove_option('four')
         c.add_constraint(['one', 'two'])
         self.assertCountEqual(c.optionset, ['two'])
-        c.undo_remove() # four was never in there, so isn't added, and three
-                        # was removed by adding a constraint and is ignored.
+        c.undo_remove()  # four was never in there, so isn't added, and three
+        # was removed by adding a constraint and is ignored.
         self.assertCountEqual(c.optionset, ['two'])
         c.undo_remove()
         self.assertCountEqual(c.optionset, ['one', 'two'])

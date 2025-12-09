@@ -79,8 +79,10 @@ class TestRandomSeeding(unittest.TestCase):
             SuiteProcessors._init_randomiser("new")
             new_seed = mock.call_args.args[0]
             self._is_generated_seed(new_seed)
-            self.assertNotIn('***', new_seed.translate({ord(c):'*' for c in 'aeiouy'}))
-            self.assertNotIn('***', new_seed.translate({ord(c):'*' for c in 'bcdfghjklmnpqrstvwxz'}))
+            self.assertNotIn(
+                '***', new_seed.translate({ord(c): '*' for c in 'aeiouy'}))
+            self.assertNotIn(
+                '***', new_seed.translate({ord(c): '*' for c in 'bcdfghjklmnpqrstvwxz'}))
 
     def _is_generated_seed(self, arg):
         """

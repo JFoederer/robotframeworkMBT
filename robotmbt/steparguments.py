@@ -55,6 +55,7 @@ class StepArguments(list):
     def modified(self):
         return any([arg.modified for arg in self])
 
+
 class StepArgument:
     # kind list
     EMBEDDED = 'EMBEDDED'
@@ -66,13 +67,13 @@ class StepArgument:
     def __init__(self, arg_name, value, kind=None, is_default=False):
         self.name = arg_name
         self.org_value = value
-        self.kind = kind # one of the values from the kind list
+        self.kind = kind  # one of the values from the kind list
         self._value = None
         self._codestr = None
         self.value = value
-        self.is_default = is_default # indicates that the argument was not
-                # filled in from the scenario. This argment's value is taken
-                # from the keyword's default as provided by Robot.
+        self.is_default = is_default  # indicates that the argument was not
+        # filled in from the scenario. This argment's value is taken
+        # from the keyword's default as provided by Robot.
 
     @property
     def arg(self):
@@ -97,7 +98,8 @@ class StepArgument:
         return self._codestr
 
     def copy(self):
-        cp = StepArgument(self.arg.strip('${}'), self.value, self.kind, self.is_default)
+        cp = StepArgument(self.arg.strip('${}'), self.value,
+                          self.kind, self.is_default)
         cp.org_value = self.org_value
         return cp
 
