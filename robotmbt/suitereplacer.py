@@ -30,13 +30,14 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from robot.libraries.BuiltIn import BuiltIn;Robot = BuiltIn()
-from robot.api.deco import keyword
-from robot.api import logger
-import robot.running.model as rmodel
-
-from .suiteprocessors import SuiteProcessors
 from .suitedata import Suite, Scenario, Step
+from .suiteprocessors import SuiteProcessors
+import robot.running.model as rmodel
+from robot.api import logger
+from robot.api.deco import keyword
+from robot.libraries.BuiltIn import BuiltIn
+Robot = BuiltIn()
+
 
 class SuiteReplacer:
     ROBOT_LIBRARY_SCOPE = 'GLOBAL'
@@ -56,14 +57,15 @@ class SuiteReplacer:
     def processor_lib(self):
         if self._processor_lib is None:
             self._processor_lib = SuiteProcessors() if self.processor_lib_name is None \
-                                                    else Robot.get_library_instance(self.processor_lib_name)
+                else Robot.get_library_instance(self.processor_lib_name)
         return self._processor_lib
 
     @property
     def processor_method(self):
         if self._processor_method is None:
             if not hasattr(self.processor_lib, self.processor_name):
-                Robot.fail(f"Processor '{self.processor_name}' not available for model-based processor library {self.processor_lib_name}")
+                Robot.fail(
+                    f"Processor '{self.processor_name}' not available for model-based processor library {self.processor_lib_name}")
             self._processor_method = getattr(self._processor_lib, self.processor_name)
         return self._processor_method
 
@@ -117,7 +119,7 @@ class SuiteReplacer:
             step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.setup = step_info
         if in_suite.teardown and parent is not None:
-            step_info =Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
+            step_info = Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
             step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.teardown = step_info
         for st in in_suite.suites:
@@ -170,13 +172,13 @@ class SuiteReplacer:
         for tc in suite_model.scenarios:
             new_tc = target_suite.tests.create(name=tc.name)
             if tc.setup:
-                new_tc.setup= rmodel.Keyword(name=tc.setup.keyword,
-                                             args=tc.setup.posnom_args_str,
-                                             type='setup')
+                new_tc.setup = rmodel.Keyword(name=tc.setup.keyword,
+                                              args=tc.setup.posnom_args_str,
+                                              type='setup')
             if tc.teardown:
-                new_tc.teardown= rmodel.Keyword(name=tc.teardown.keyword,
-                                                args=tc.teardown.posnom_args_str,
-                                                type='teardown')
+                new_tc.teardown = rmodel.Keyword(name=tc.teardown.keyword,
+                                                 args=tc.teardown.posnom_args_str,
+                                                 type='teardown')
             for step in tc.steps:
                 if step.keyword == 'VAR':
                     new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])

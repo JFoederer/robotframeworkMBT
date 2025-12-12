@@ -17,7 +17,8 @@ class MapAnimation:
     def plot_static_elements(self, areas, locations):
         # Plot the areas as squares
         if not self.plot_initialized:
-            self._import_dependencies()  # Import here, to avoid any missing dependency problems in case matplotlib is not installed
+            # Import here, to avoid any missing dependency problems in case matplotlib is not installed
+            self._import_dependencies()
 
             self.fig, self.ax = plt.subplots()
             self.ax.set_aspect('equal')
@@ -25,10 +26,11 @@ class MapAnimation:
         for area_name, area in areas.items():
             width = abs(area.upper_left_bound.latitude - area.lower_right_bound.latitude)
             height = abs(area.upper_left_bound.longitude - area.lower_right_bound.longitude)
-            rect = Rectangle((area.lower_right_bound.longitude, area.upper_left_bound.latitude), height, width, alpha=0.4)
+            rect = Rectangle((area.lower_right_bound.longitude, area.upper_left_bound.latitude),
+                             height, width, alpha=0.4)
             self.ax.add_patch(rect)
-            self.ax.annotate(area_name, (area.lower_right_bound.longitude, area.upper_left_bound.latitude), color='black')
-
+            self.ax.annotate(area_name, (area.lower_right_bound.longitude,
+                             area.upper_left_bound.latitude), color='black')
 
         # Plot the locations
         colors = [
@@ -85,7 +87,7 @@ class MapAnimation:
 
         # Plot the floating objects
         for obj in floating_objects:
-            if isinstance(obj, TitanicInOcean):# Set the rotation angle in degrees
+            if isinstance(obj, TitanicInOcean):  # Set the rotation angle in degrees
                 angle_degrees = obj.direction
 
                 # Convert angle to radians
@@ -98,7 +100,7 @@ class MapAnimation:
 
                 # Draw the arrow
                 self.ax.annotate("", xy=(obj.longitude + dx, obj.latitude + dy), xytext=(obj.longitude, obj.latitude),
-                    arrowprops=dict(arrowstyle="->"), gid='floating_object')
+                                 arrowprops=dict(arrowstyle="->"), gid='floating_object')
 
                 if obj.sunk:
                     icon = 'rs'  # red square
@@ -106,7 +108,7 @@ class MapAnimation:
                     icon = 'ys'  # yellow square
                     # Draw the arrow
                     self.ax.annotate("", xy=(obj.longitude + dx, obj.latitude + dy), xytext=(obj.longitude, obj.latitude),
-                        arrowprops=dict(arrowstyle='->'), gid='floating_object')
+                                     arrowprops=dict(arrowstyle='->'), gid='floating_object')
                 self.ax.plot(obj.longitude, obj.latitude, icon, label='Titanic', gid='floating_object')
             elif isinstance(obj, Iceberg):
                 self.ax.plot(obj.longitude, obj.latitude, 'w^', label='Iceberg', gid='floating_object')

@@ -42,6 +42,7 @@ from .suitedata import Suite, Scenario, Step
 from .tracestate import TraceState
 from .steparguments import StepArgument, StepArguments
 
+
 class SuiteProcessors:
     def echo(self, in_suite):
         return in_suite
@@ -85,7 +86,7 @@ class SuiteProcessors:
             scenario.src_id = id
         self.scenarios = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
-                "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+                     "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
         random.shuffle(self.scenarios)
@@ -113,7 +114,7 @@ class SuiteProcessors:
                     break
                 tail = self._rewind()
                 logger.debug("Having to roll back up to "
-                            f"{tail.scenario.name if tail else 'the beginning'}")
+                             f"{tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user()
             else:
                 self.active_model.new_scenario_scope()
@@ -154,7 +155,7 @@ class SuiteProcessors:
         if error_list:
             err_msg = "Steps with errors in their model info found:\n"
             err_msg += '\n'.join([f"{s.keyword} [{s.model_info['error']}] used in {s.parent.name}"
-                                      for s in error_list])
+                                  for s in error_list])
             raise Exception(err_msg)
 
     def _try_to_fit_in_scenario(self, index, candidate, retry_flag):
@@ -193,7 +194,8 @@ class SuiteProcessors:
                 return False
             while i_refine is not None:
                 self.active_model.new_scenario_scope()
-                m_inserted = self._try_to_fit_in_scenario(i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
+                m_inserted = self._try_to_fit_in_scenario(
+                    i_refine, self._scenario_with_repeat_counter(i_refine), retry_flag)
                 if m_inserted:
                     insert_valid_here = True
                     try:
@@ -201,8 +203,8 @@ class SuiteProcessors:
                         model_scratchpad = self.active_model.copy()
                         for expr in exit_conditions:
                             if model_scratchpad.process_expression(expr, part2.steps[1].args) is False:
-                                 insert_valid_here = False
-                                 break
+                                insert_valid_here = False
+                                break
                     except Exception:
                         insert_valid_here = False
                     if insert_valid_here:
@@ -261,7 +263,8 @@ class SuiteProcessors:
                         return no_split
                     if refine_here:
                         front, back = scenario.split_at_step(scenario.steps.index(step))
-                        remaining_steps = '\n\t'.join([step.full_keyword, '- '*35] + [s.full_keyword for s in back.steps[1:]])
+                        remaining_steps = '\n\t'.join([step.full_keyword, '- '*35] +
+                                                      [s.full_keyword for s in back.steps[1:]])
                         remaining_steps = SuiteProcessors.escape_robot_vars(remaining_steps)
                         edge_step = Step('Log', f"Refinement follows for step:\n\t{remaining_steps}", parent=scenario)
                         edge_step.gherkin_kw = step.gherkin_kw
@@ -302,7 +305,7 @@ class SuiteProcessors:
     @staticmethod
     def _relevant_expressions(step):
         if step.gherkin_kw is None and not step.model_info:
-            return [] # model info is optional for action keywords
+            return []  # model info is optional for action keywords
         expressions = []
         if 'IN' not in step.model_info or 'OUT' not in step.model_info:
             raise Exception(f"Model info incomplete for step: {step}")
@@ -334,7 +337,7 @@ class SuiteProcessors:
                         if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
                             org_example = step.args[modded_arg].org_value
                             if step.gherkin_kw == 'then':
-                                constraint = None # No new constraints are processed for then-steps
+                                constraint = None  # No new constraints are processed for then-steps
                                 if org_example not in subs.substitutions:
                                     # if a then-step signals the first use of an example value, it is considered a new definition
                                     subs.substitute(org_example, [org_example])
@@ -342,7 +345,7 @@ class SuiteProcessors:
                             if not constraint and org_example not in subs.substitutions:
                                 raise ValueError(f"No options to choose from at first assignment to {org_example}")
                             if constraint and constraint != '.*':
-                                options =  m.process_expression(constraint, step.args)
+                                options = m.process_expression(constraint, step.args)
                                 if options == 'exec':
                                     raise ValueError(f"Invalid constraint for argument substitution: {expr}")
                                 if not options:
@@ -378,7 +381,8 @@ class SuiteProcessors:
         try:
             subs.solve()
         except ValueError as err:
-            logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n    {err}: {subs}")
+            logger.debug(
+                f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n    {err}: {subs}")
             return None
 
         # Update scenario with generated values
@@ -403,7 +407,7 @@ class SuiteProcessors:
                 if expression.casefold().startswith(var.arg.casefold()):
                     assignment_expr = expression.replace(var.arg, '', 1).strip()
                     if not assignment_expr.startswith('=') or assignment_expr.startswith('=='):
-                        break # not an assignment
+                        break  # not an assignment
                     constraint = assignment_expr.replace('=', '', 1).strip()
                     return var.arg, constraint
         raise ValueError(f"Invalid argument substitution: {expression}")
@@ -428,7 +432,8 @@ class SuiteProcessors:
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':
-            logger.info(f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
+            logger.info(
+                f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
@@ -441,14 +446,15 @@ class SuiteProcessors:
     def _generate_seed():
         """Creates a random string of 5 words between 3 and 6 letters long"""
         vowels = ['a', 'e', 'i', 'o', 'u', 'y']
-        consonants = ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z']
+        consonants = ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
+                      'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z']
 
         words = []
         for word in range(5):
             prior_choice = random.choice([vowels, consonants])
-            last_choice =  random.choice([vowels, consonants])
-            string = random.choice(prior_choice) + random.choice(last_choice) # add first two letters
-            for letter in range(random.randint(1, 4)):                        # add 1 to 4 more letters
+            last_choice = random.choice([vowels, consonants])
+            string = random.choice(prior_choice) + random.choice(last_choice)  # add first two letters
+            for letter in range(random.randint(1, 4)):                         # add 1 to 4 more letters
                 if prior_choice is last_choice:
                     new_choice = consonants if prior_choice is vowels else vowels
                 else:

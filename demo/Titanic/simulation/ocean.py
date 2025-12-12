@@ -3,9 +3,10 @@ from typing import List, Any
 from simulation.floating_object import FloatingObject
 from simulation.location_on_grid import LocationOnGrid, AreaOnGrid
 
-SECONDS_IN_MINUTE  = 60
+SECONDS_IN_MINUTE = 60
 COLLISION_INTERVAL = 10  # Following should hold True; SECONDS_IN_MINUTE % COLLISION_INTERVAL == 0
 COLLISION_THRESHOLD = 0.6
+
 
 class Ocean:
     _instance = None

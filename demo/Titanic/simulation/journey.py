@@ -6,6 +6,8 @@ class StatusOfJourney(Enum):
     ON_THE_WAY = 2
     ARRIVED = 3
     SUNK = 4
+
+
 class Journey:
 
     _instance = None

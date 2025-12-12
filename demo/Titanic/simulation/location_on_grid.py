@@ -11,7 +11,7 @@ class LocationOnGrid:
 
     def __str__(self):
         return f"{'N' if self.latitude >= 0 else 'S'}{abs(self.latitude):08.5f} "\
-               f"{'E' if self.longitude >= 0 else 'W'}{abs(self.longitude):08.5f}"
+            f"{'E' if self.longitude >= 0 else 'W'}{abs(self.longitude):08.5f}"
 
     def distance_to(self, other_object: 'LocationOnGrid'):
         """
