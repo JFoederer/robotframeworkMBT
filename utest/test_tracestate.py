@@ -72,7 +72,7 @@ class TestTraceState(unittest.TestCase):
     def test_candidates_come_in_order_when_accepted(self):
         ts = TraceState(3)
         candidates = []
-        for scenario in  range(3):
+        for scenario in range(3):
             candidates.append(ts.next_candidate())
             ts.confirm_full_scenario(candidates[-1], scenario, {})
         candidates.append(ts.next_candidate())
@@ -81,7 +81,7 @@ class TestTraceState(unittest.TestCase):
     def test_candidates_come_in_order_when_rejected(self):
         ts = TraceState(3)
         candidates = []
-        for _ in  range(3):
+        for _ in range(3):
             candidates.append(ts.next_candidate())
             ts.reject_scenario(candidates[-1])
         candidates.append(ts.next_candidate())
@@ -91,7 +91,7 @@ class TestTraceState(unittest.TestCase):
         ts = TraceState(3)
         candidates = []
         ts.reject_scenario(0)
-        for scenario in  range(3):
+        for scenario in range(3):
             candidates.append(ts.next_candidate())
             ts.confirm_full_scenario(candidates[-1], scenario, {})
         candidates.append(ts.next_candidate())
@@ -208,7 +208,8 @@ class TestTraceState(unittest.TestCase):
         retry_third = ts.next_candidate()
         ts.confirm_full_scenario(retry_third, retry_third, {})
         self.assertIs(ts.coverage_reached(), True)
-        self.assertEqual(ts.get_trace(), [retry_first, retry_second, retry_third])
+        self.assertEqual(ts.get_trace(), [
+                         retry_first, retry_second, retry_third])
 
     def test_highest_part_when_index_not_present(self):
         ts = TraceState(1)

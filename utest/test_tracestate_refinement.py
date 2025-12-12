@@ -160,7 +160,8 @@ class TestTraceStateRefinement(unittest.TestCase):
         self.assertIs(ts.coverage_reached(), False)
         ts.confirm_full_scenario(top_level, 'T1.0', {})
         self.assertIs(ts.coverage_reached(), True)
-        self.assertEqual(ts.get_trace(), ['T1.1', 'M1.1', 'B1', 'M1.0', 'T1.0'])
+        self.assertEqual(ts.get_trace(), [
+                         'T1.1', 'M1.1', 'B1', 'M1.0', 'T1.0'])
 
     def test_rewind_to_swap_nested_refinement(self):
         ts = TraceState(3)
@@ -180,7 +181,8 @@ class TestTraceStateRefinement(unittest.TestCase):
         self.assertIs(ts.coverage_reached(), False)
         ts.confirm_full_scenario(top_level, 'T1.0', {})
         self.assertIs(ts.coverage_reached(), True)
-        self.assertEqual(ts.get_trace(), ['T1.1', 'M1.1', 'B1', 'M1.0', 'T1.0'])
+        self.assertEqual(ts.get_trace(), [
+                         'T1.1', 'M1.1', 'B1', 'M1.0', 'T1.0'])
 
     def test_rewind_nested_refinement_as_one(self):
         ts = TraceState(4)
@@ -297,16 +299,19 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.push_partial_scenario(0, 'T1.1', {})
         ts.push_partial_scenario(1, 'M1.1', {})
         ts.push_partial_scenario(2, 'B1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), [
+                         'T1.1', 'M1.1', 'B1.1'])
 
     def test_closing_refinement_removes_it_from_list(self):
         ts = TraceState(4)
         ts.push_partial_scenario(0, 'T1.1', {})
         ts.push_partial_scenario(1, 'M1.1', {})
         ts.push_partial_scenario(2, 'B1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), [
+                         'T1.1', 'M1.1', 'B1.1'])
         ts.confirm_full_scenario(2, 'B1.0', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+        self.assertEqual(
+            ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
 
     def test_multi_step_refinement_is_reported_only_once(self):
         ts = TraceState(4)
@@ -315,16 +320,19 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.confirm_full_scenario(2, 'B1', {})
         ts.push_partial_scenario(1, 'M1.2', {})
         ts.confirm_full_scenario(3, 'B2', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+        self.assertEqual(
+            ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
 
     def test_rewind_open_refinement_removes_it_from_list(self):
         ts = TraceState(4)
         ts.push_partial_scenario(0, 'T1.1', {})
         ts.push_partial_scenario(1, 'M1.1', {})
         ts.push_partial_scenario(2, 'B1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), [
+                         'T1.1', 'M1.1', 'B1.1'])
         ts.rewind()
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+        self.assertEqual(
+            ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
 
     def test_rewind_finished_scenario_with_refinement_removes_enclosed_refinements(self):
         ts = TraceState(5)
@@ -333,11 +341,12 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.push_partial_scenario(2, 'M1.1', {})
         ts.push_partial_scenario(3, 'B1.1', {})
         ts.confirm_full_scenario(4, 'S1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.find_scenarios_with_active_refinement(), [
+                         'T2.1', 'M1.1', 'B1.1'])
         ts.confirm_full_scenario(3, 'B1.0', {})
         ts.confirm_full_scenario(2, 'M1.0', {})
         self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
-        ts.rewind() # Middle including its Bottom refinement
+        ts.rewind()  # Middle including its Bottom refinement
         self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
 
 

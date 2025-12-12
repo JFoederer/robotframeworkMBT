@@ -24,7 +24,8 @@ class TitanicLib:
         if titanic.sunk:
             self.builtin.log(f"Pointing towards Davy Jones' locker")
             return
-        port_location = self.builtin.run_keyword(f"Location of port {location}")
+        port_location = self.builtin.run_keyword(
+            f"Location of port {location}")
         new_direction = titanic.calculate_direction(port_location)
 
         titanic.direction = new_direction
@@ -34,7 +35,8 @@ class TitanicLib:
     def titanic_stops(self):
         titanic = TitanicInOcean.instance
         titanic.titanic.throttle = 0
-        titanic.speed = 0  # TODO should happen over time (due to throttle being > 0)
+        # TODO should happen over time (due to throttle being > 0)
+        titanic.speed = 0
         self.builtin.log("Now it is time for Titanic to stop at new location")
 
     @keyword("Titanic moves full speed ahead")
@@ -44,13 +46,16 @@ class TitanicLib:
             self.builtin.log(f"There seems to be an issue with the throttle")
             return
         titanic.titanic.throttle = 1
-        titanic.speed = 700  # TODO Figure out what this speed means. Does time calculation make sense?!?!
-        self.builtin.log(f"Here we go through the new location with speed {titanic.speed}")
+        # TODO Figure out what this speed means. Does time calculation make sense?!?!
+        titanic.speed = 700
+        self.builtin.log(
+            f"Here we go through the new location with speed {titanic.speed}")
 
     @keyword("Titanic's position")
     def titanic_location(self):
         titanic = TitanicInOcean.instance
-        loc = LocationOnGrid(longitude=titanic.longitude, latitude=titanic.latitude)
+        loc = LocationOnGrid(longitude=titanic.longitude,
+                             latitude=titanic.latitude)
         self.builtin.log(f"Titanic's current position is: {loc}")
         return loc
 

@@ -22,7 +22,9 @@ areas = {
     'Iceberg alley': AreaOnGrid(LocationOnGrid(latitude=43, longitude=-45), LocationOnGrid(latitude=48, longitude=-50))
 }
 
-atlantic_area = AreaOnGrid(LocationOnGrid(latitude=35, longitude=-1.41), LocationOnGrid(latitude=65, longitude=-74))
+atlantic_area = AreaOnGrid(LocationOnGrid(
+    latitude=35, longitude=-1.41), LocationOnGrid(latitude=65, longitude=-74))
+
 
 def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
@@ -35,7 +37,8 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
         # Set up the window
         stdscr.nodelay(True)  # Non-blocking input
         stdscr.timeout(100)  # Refresh every 100 milliseconds
-        stdscr.addstr(0, 0, "Q=Quit. 0=Stop Titanic. WASD-controls (WS control speed, AD control rotation, no need to press and hold)")
+        stdscr.addstr(
+            0, 0, "Q=Quit. 0=Stop Titanic. WASD-controls (WS control speed, AD control rotation, no need to press and hold)")
 
         objective = 1
         iceberg_alley_reached = False
@@ -44,7 +47,8 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
         while True:
             journey.passed_time(100)
 
-            map_animation.update_floating_objects(journey.ocean.floating_objects)
+            map_animation.update_floating_objects(
+                journey.ocean.floating_objects)
 
             if not atlantic_area.is_location_within_area(tio):
                 tio.direction -= 180
@@ -55,15 +59,19 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
                 if areas['Iceberg alley'].is_location_within_area(tio):
                     iceberg_alley_reached = True
                 elif iceberg_alley_reached:
-                    stdscr.addstr(objective, 0, "Objective 1: Safely cross Iceberg Alley  [Achieved]")
+                    stdscr.addstr(
+                        objective, 0, "Objective 1: Safely cross Iceberg Alley  [Achieved]")
                     objective = 2
-                    stdscr.addstr(objective, 0, "Objective 2: Sail to New York")
+                    stdscr.addstr(
+                        objective, 0, "Objective 2: Sail to New York")
             elif objective == 2:
                 if tio.distance_to(locations['New York']) < 0.5:
                     tio.speed = 0
-                    stdscr.addstr(objective, 0, "Objective 2: Sail to New York           [Achieved]")
+                    stdscr.addstr(
+                        objective, 0, "Objective 2: Sail to New York           [Achieved]")
                     objective = 4
-                    stdscr.addstr(objective, 0, "You made it to New York!!  Press Q to exit.")
+                    stdscr.addstr(
+                        objective, 0, "You made it to New York!!  Press Q to exit.")
 
             if tio.sunk:
                 stdscr.addstr(objective+2, 0,
@@ -97,7 +105,6 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
             # Continue with the rest of the game logic
 
-
     # Initialize curses
     stdscr = curses.initscr()
     curses.noecho()  # Disable automatic echoing of pressed keys
@@ -127,7 +134,8 @@ if __name__ == '__main__':
     location = locations["Southampton"]
 
     t = Titanic(0, steering_direction=0)
-    tio = TitanicInOcean(t, longitude=location.longitude - 1, latitude=location.latitude, speed=0, direction=270)
+    tio = TitanicInOcean(t, longitude=location.longitude - 1,
+                         latitude=location.latitude, speed=0, direction=270)
     ocean.floating_objects.append(tio)
 
     iceberg = Iceberg(latitude=45.5, longitude=-47.5)
@@ -138,4 +146,3 @@ if __name__ == '__main__':
     map_animation.update_floating_objects(ocean.floating_objects)
 
     run_game(map_animation, journey, tio, atlantic_area)
-

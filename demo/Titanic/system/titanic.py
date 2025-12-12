@@ -3,7 +3,8 @@ class Titanic:
 
     def __init__(self, throttle, steering_direction):
         self.throttle = throttle  # percentage
-        self.steering_direction = steering_direction  # degrees (0 means steering straight)
+        # degrees (0 means steering straight)
+        self.steering_direction = steering_direction
         self.damaged = False
 
     def __repr__(self):
