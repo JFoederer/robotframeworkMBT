@@ -16,10 +16,8 @@ if __name__ == '__main__':
     THIS_DIR = os.path.dirname(os.path.abspath(__file__))
     OUTPUT_ROOT = os.path.join(THIS_DIR, 'results')
     SCENARIO_FOLDER = os.path.join(THIS_DIR, 'Titanic_scenarios')
-    HIT_MISS_TAG = 'hit' if len(
-        sys.argv) == 1 or sys.argv[1].casefold() != 'hit' else 'miss'
-    EXTENDED_TAG = 'extended' if len(
-        sys.argv) == 1 or sys.argv[1].casefold() != 'extended' else 'dummy'
+    HIT_MISS_TAG = 'hit' if len(sys.argv) == 1 or sys.argv[1].casefold() != 'hit' else 'miss'
+    EXTENDED_TAG = 'extended' if len(sys.argv) == 1 or sys.argv[1].casefold() != 'extended' else 'dummy'
 
     # The base folder needs to be added to the python path to resolve the dependencies. You
     # will also need to add this path to your IDE options when running from there.

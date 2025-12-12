@@ -24,12 +24,10 @@ class MapAnimation:
             self.ax.set_aspect('equal')
 
         for area_name, area in areas.items():
-            width = abs(area.upper_left_bound.latitude -
-                        area.lower_right_bound.latitude)
-            height = abs(area.upper_left_bound.longitude -
-                         area.lower_right_bound.longitude)
-            rect = Rectangle((area.lower_right_bound.longitude,
-                             area.upper_left_bound.latitude), height, width, alpha=0.4)
+            width = abs(area.upper_left_bound.latitude - area.lower_right_bound.latitude)
+            height = abs(area.upper_left_bound.longitude - area.lower_right_bound.longitude)
+            rect = Rectangle((area.lower_right_bound.longitude, area.upper_left_bound.latitude),
+                             height, width, alpha=0.4)
             self.ax.add_patch(rect)
             self.ax.annotate(area_name, (area.lower_right_bound.longitude,
                              area.upper_left_bound.latitude), color='black')
@@ -47,8 +45,7 @@ class MapAnimation:
         ]
         ci = 0
         for location_name, location in locations.items():
-            self.ax.plot(location.longitude, location.latitude,
-                         colors[ci % len(colors)], label=location_name)
+            self.ax.plot(location.longitude, location.latitude, colors[ci % len(colors)], label=location_name)
             ci += 1
 
         # # Set the Atlantic area bounds atlantic_area = MapLib.atlantic_area width = abs(
@@ -112,11 +109,9 @@ class MapAnimation:
                     # Draw the arrow
                     self.ax.annotate("", xy=(obj.longitude + dx, obj.latitude + dy), xytext=(obj.longitude, obj.latitude),
                                      arrowprops=dict(arrowstyle='->'), gid='floating_object')
-                self.ax.plot(obj.longitude, obj.latitude, icon,
-                             label='Titanic', gid='floating_object')
+                self.ax.plot(obj.longitude, obj.latitude, icon, label='Titanic', gid='floating_object')
             elif isinstance(obj, Iceberg):
-                self.ax.plot(obj.longitude, obj.latitude, 'w^',
-                             label='Iceberg', gid='floating_object')
+                self.ax.plot(obj.longitude, obj.latitude, 'w^', label='Iceberg', gid='floating_object')
 
         # Redraw the plot
         plt.draw()

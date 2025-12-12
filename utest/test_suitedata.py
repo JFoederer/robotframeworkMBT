@@ -103,8 +103,7 @@ class TestSuites(unittest.TestCase):
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
     def test_error_in_subsuite_scenario_is_detected(self):
-        self.topsuite.suites[0].scenarios[0].steps[1].model_info = dict(
-            error='oops')
+        self.topsuite.suites[0].scenarios[0].steps[1].model_info = dict(error='oops')
         self.assertIs(self.topsuite.has_error(), True)
         errorsteps = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
@@ -193,8 +192,7 @@ class TestScenarios(unittest.TestCase):
         self.assertIs(self.scenario.has_error(), True)
         errorsteps = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 2)
-        self.assertEqual([s.model_info['error']
-                         for s in errorsteps], ['oops', 'oh ow'])
+        self.assertEqual([s.model_info['error'] for s in errorsteps], ['oops', 'oh ow'])
 
     def test_by_default_setup_and_teardown_are_empty(self):
         self.assertIs(self.scenario.setup, None)
@@ -205,16 +203,14 @@ class TestScenarios(unittest.TestCase):
         step.model_info = dict(error='oops')
         self.scenario.setup = step
         self.assertIs(self.scenario.has_error(), True)
-        self.assertEqual(self.scenario.steps_with_errors(),
-                         [self.scenario.setup])
+        self.assertEqual(self.scenario.steps_with_errors(), [self.scenario.setup])
 
     def test_teardown_errors(self):
         step = Step('my teardown', parent=self.scenario)
         step.model_info = dict(error='oops')
         self.scenario.teardown = step
         self.assertIs(self.scenario.has_error(), True)
-        self.assertEqual(self.scenario.steps_with_errors(),
-                         [self.scenario.teardown])
+        self.assertEqual(self.scenario.steps_with_errors(), [self.scenario.teardown])
 
     def test_combined_errors(self):
         setup_step = Step('my setup', parent=self.scenario)
@@ -284,8 +280,7 @@ class TestScenarios(unittest.TestCase):
         self.assertNotEqual(dup.name, self.scenario.name)
         self.assertIsNot(dup.steps[0], self.scenario.steps[0])
         self.assertEqual(dup.steps[0].keyword, self.scenario.steps[0].keyword)
-        self.assertNotEqual(dup.steps[-1].keyword,
-                            self.scenario.steps[-1].keyword)
+        self.assertNotEqual(dup.steps[-1].keyword, self.scenario.steps[-1].keyword)
 
     def test_exteranally_determined_attributes_are_copied_along(self):
         self.scenario.src_id = 7
@@ -378,78 +373,59 @@ class TestSteps(unittest.TestCase):
         step.add_robot_dependent_data(RobotKwStub())
         self.assertNotIn('error', step.model_info)
         step.args['${bar}'].value = 'new bar'
-        self.assertEqual(str(step), RobotKwStub.STEPTEXT.replace(
-            'bar_value', 'new bar'))
+        self.assertEqual(str(step), RobotKwStub.STEPTEXT.replace('bar_value', 'new bar'))
 
     def test_all_arguments_are_part_of_the_full_keyword_text(self, mock):
-        step = Step(RobotKwStub.STEPTEXT, 'posA',
-                    'pos2=posB', 'named1=namedA', parent=None)
-        self.assertEqual(
-            step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=namedA', parent=None)
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
 
     def test_return_value_assignment_is_part_of_the_full_keyword_text(self, mock):
         step = Step(RobotKwStub.STEPTEXT, assign=('${output}',), parent=None)
-        self.assertEqual(step.full_keyword,
-                         "${output}    " + RobotKwStub.STEPTEXT)
+        self.assertEqual(step.full_keyword, "${output}    " + RobotKwStub.STEPTEXT)
 
     def test_return_value_assignment_with_eq_is_part_of_the_full_keyword_text(self, mock):
         step = Step(RobotKwStub.STEPTEXT, assign=('${output}=',), parent=None)
-        self.assertEqual(step.full_keyword,
-                         "${output}=    " + RobotKwStub.STEPTEXT)
+        self.assertEqual(step.full_keyword, "${output}=    " + RobotKwStub.STEPTEXT)
 
     def test_return_value_assignment_with_eq_after_space_is_part_of_the_full_keyword_text(self, mock):
         step = Step(RobotKwStub.STEPTEXT, assign=('${output} =',), parent=None)
-        self.assertEqual(step.full_keyword,
-                         "${output} =    " + RobotKwStub.STEPTEXT)
+        self.assertEqual(step.full_keyword, "${output} =    " + RobotKwStub.STEPTEXT)
 
     def test_return_value_multi_assignment_is_part_of_the_full_keyword_text(self, mock):
-        step = Step(RobotKwStub.STEPTEXT, assign=(
-            '${output1}', '${output2}='), parent=None)
-        self.assertEqual(
-            step.full_keyword, "${output1}    ${output2}=    " + RobotKwStub.STEPTEXT)
+        step = Step(RobotKwStub.STEPTEXT, assign=('${output1}', '${output2}='), parent=None)
+        self.assertEqual(step.full_keyword, "${output1}    ${output2}=    " + RobotKwStub.STEPTEXT)
 
     def test_argument_with_default_is_omitted_from_keyword_when_not_mentioned_named(self, mock):
         step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', parent=None)
         step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
-                                       StubArgument(
-                                           name='pos2',   value='posB',   is_default=False, kind='NAMED'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='NAMED'),
                                        StubArgument(name='named1', value='namedA', is_default=True,  kind='NAMED')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB'))
-        self.assertEqual(step.full_keyword,
-                         f"{RobotKwStub.STEPTEXT}    posA    pos2=posB")
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB")
 
     def test_argument_with_default_is_omitted_from_keyword_when_not_mentioned_positional(self, mock):
         step = Step(RobotKwStub.STEPTEXT, 'posA', 'posB', parent=None)
         step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
-                                       StubArgument(
-                                           name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
                                        StubArgument(name='named1', value='namedA', is_default=True,  kind='POSITIONAL')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'posB'))
-        self.assertEqual(step.full_keyword,
-                         f"{RobotKwStub.STEPTEXT}    posA    posB")
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    posB")
 
     def test_argument_with_default_is_included_in_keyword_when_mentioned_named(self, mock):
-        step = Step(RobotKwStub.STEPTEXT, 'posA',
-                    'pos2=posB', 'named1=namedA', parent=None)
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'pos2=posB', 'named1=namedA', parent=None)
         step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
-                                       StubArgument(
-                                           name='pos2',   value='posB',   is_default=False, kind='NAMED'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='NAMED'),
                                        StubArgument(name='named1', value='namedA', is_default=False, kind='NAMED')])
-        self.assertTupleEqual(step.posnom_args_str,
-                              ('posA', 'pos2=posB', 'named1=namedA'))
-        self.assertEqual(
-            step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
+        self.assertTupleEqual(step.posnom_args_str, ('posA', 'pos2=posB', 'named1=namedA'))
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    pos2=posB    named1=namedA")
 
     def test_argument_with_default_is_included_in_keyword_when_mentioned_positional(self, mock):
-        step = Step(RobotKwStub.STEPTEXT, 'posA',
-                    'posB', 'namedA', parent=None)
+        step = Step(RobotKwStub.STEPTEXT, 'posA', 'posB', 'namedA', parent=None)
         step.args = StubStepArguments([StubArgument(name='pos1',   value='posA',   is_default=False, kind='POSITIONAL'),
-                                       StubArgument(
-                                           name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
+                                       StubArgument(name='pos2',   value='posB',   is_default=False, kind='POSITIONAL'),
                                        StubArgument(name='named1', value='namedA', is_default=False, kind='POSITIONAL')])
         self.assertTupleEqual(step.posnom_args_str, ('posA', 'posB', 'namedA'))
-        self.assertEqual(step.full_keyword,
-                         f"{RobotKwStub.STEPTEXT}    posA    posB    namedA")
+        self.assertEqual(step.full_keyword, f"{RobotKwStub.STEPTEXT}    posA    posB    namedA")
 
     def test_positional_and_named_arguments_are_available_in_robot_tuple_format(self, mock):
         argtuple = 'posA', 'pos2=posB', 'named1=namedA'

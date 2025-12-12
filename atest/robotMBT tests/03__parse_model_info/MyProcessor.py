@@ -7,10 +7,8 @@ class MyProcessor:
         for scenario in in_suite.scenarios:
             assert scenario.steps, msg
             for step in scenario.steps:
-                assert step.model_info['IN'] == [
-                    'Alfa'], f"{msg} in step {step.keyword}"
-                assert step.model_info['OUT'] == [
-                    'Beta', 'Gamma delta', 'Epsilon'], f"{msg} in step {step.keyword}"
+                assert step.model_info['IN'] == ['Alfa'], f"{msg} in step {step.keyword}"
+                assert step.model_info['OUT'] == ['Beta', 'Gamma delta', 'Epsilon'], f"{msg} in step {step.keyword}"
         return in_suite
 
     def _fail_on_step_errors(self):

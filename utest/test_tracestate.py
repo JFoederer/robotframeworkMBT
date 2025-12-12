@@ -208,8 +208,7 @@ class TestTraceState(unittest.TestCase):
         retry_third = ts.next_candidate()
         ts.confirm_full_scenario(retry_third, retry_third, {})
         self.assertIs(ts.coverage_reached(), True)
-        self.assertEqual(ts.get_trace(), [
-                         retry_first, retry_second, retry_third])
+        self.assertEqual(ts.get_trace(), [retry_first, retry_second, retry_third])
 
     def test_highest_part_when_index_not_present(self):
         ts = TraceState(1)
