@@ -1,7 +1,7 @@
-# This workflow installs required Python dependencies and then runs the available tests.
+# This workflow installs required Python dependencies and then runs the demo.
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-python
 
-name: Run Acceptance and Unit tests
+name: Run Demo
 
 on:
   pull_request:
@@ -13,18 +13,23 @@ permissions:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    runs-on: windows-latest  # Deliberately different OS compared to the test run.
 
     steps:
     - uses: actions/checkout@v4
     - name: Set up Python
       uses: actions/setup-python@v3
       with:
-        python-version: "3.10"  # Only the oldest supported Python version is included here
+        python-version: "3.14"  # Deliberately different Python version compared to the test run.
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip   # upgrade pip to latest version
         pip install .                         # install pyproject.toml dependencies - excludes optional dependencies (such as visualisation)
-    - name: Run tests
+    - name: Run basic demo (no repeating scenarios)
+      working-directory: ./demo/Titanic
       run: |
-        python run_tests.py
+        python run_demo.py miss
+    - name: Run extended demo
+      working-directory: ./demo/Titanic
+      run: |
+        python run_demo.py extended
