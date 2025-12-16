@@ -355,8 +355,7 @@ class TestConstraint(unittest.TestCase):
         c.remove_option('four')
         c.add_constraint(['one', 'two'])
         self.assertCountEqual(c.optionset, ['two'])
-        c.undo_remove()
-        # four was never in there, so isn't added, and three
+        c.undo_remove()  # four was never in there, so isn't added, and three
         # was removed by adding a constraint and is ignored.
         self.assertCountEqual(c.optionset, ['two'])
         c.undo_remove()

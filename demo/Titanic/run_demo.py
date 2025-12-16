@@ -21,12 +21,10 @@ if __name__ == '__main__':
 
     # The base folder needs to be added to the python path to resolve the dependencies. You
     # will also need to add this path to your IDE options when running from there.
-    exitcode = robot.run_cli(['--outputdir', OUTPUT_ROOT,
-                              '--pythonpath', THIS_DIR,
-                              '--exclude', HIT_MISS_TAG,
-                              '--exclude', EXTENDED_TAG,
-                              '--loglevel', 'DEBUG:INFO',
-                              SCENARIO_FOLDER],
-                             exit=False)
-
-    sys.exit(exitcode)
+    robot.run_cli(['--outputdir', OUTPUT_ROOT,
+                   '--pythonpath', THIS_DIR,
+                   '--exclude', HIT_MISS_TAG,
+                   '--exclude', EXTENDED_TAG,
+                   '--loglevel', 'DEBUG:INFO',
+                   SCENARIO_FOLDER],
+                  exit=False)
