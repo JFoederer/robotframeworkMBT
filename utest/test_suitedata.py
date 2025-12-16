@@ -78,7 +78,7 @@ class TestSuites(unittest.TestCase):
     def test_error_in_scenario_is_detected(self):
         self.topsuite.scenarios[0].steps[1].model_info = dict(error='oops')
         self.assertIs(self.topsuite.has_error(), True)
-        errorsteps  = self.topsuite.steps_with_errors()
+        errorsteps = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
@@ -105,7 +105,7 @@ class TestSuites(unittest.TestCase):
     def test_error_in_subsuite_scenario_is_detected(self):
         self.topsuite.suites[0].scenarios[0].steps[1].model_info = dict(error='oops')
         self.assertIs(self.topsuite.has_error(), True)
-        errorsteps  = self.topsuite.steps_with_errors()
+        errorsteps = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
 
@@ -156,7 +156,7 @@ class TestSuites(unittest.TestCase):
         errorsteps = self.topsuite.steps_with_errors()
         self.assertEqual(len(errorsteps), 4)
         self.assertEqual(set([e.model_info['error'] for e in errorsteps]),
-            {'setup oops','scenario oops', 'sub scenario oops', 'sub teardown oops'})
+                         {'setup oops', 'scenario oops', 'sub scenario oops', 'sub teardown oops'})
 
 
 class TestScenarios(unittest.TestCase):
@@ -173,7 +173,7 @@ class TestScenarios(unittest.TestCase):
         self.assertEqual(self.scenario.longname, self.scenario.name)
 
     def test_longname_with_parent_includes_both_names(self):
-        p = lambda:None # Create an object to assign the name attribute to
+        def p(): return None  # Create an object to assign the name attribute to
         p.longname = 'long'
         scenario = Scenario('name', p)
         self.assertEqual(scenario.longname, 'long.name')
@@ -185,12 +185,12 @@ class TestScenarios(unittest.TestCase):
     def test_step_errors_are_reported(self):
         self.scenario.steps[0].model_info = dict(error='oops')
         self.assertIs(self.scenario.has_error(), True)
-        errorsteps  = self.scenario.steps_with_errors()
+        errorsteps = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 1)
         self.assertEqual(errorsteps[0].model_info['error'], 'oops')
         self.scenario.steps[1].model_info = dict(error='oh ow')
         self.assertIs(self.scenario.has_error(), True)
-        errorsteps  = self.scenario.steps_with_errors()
+        errorsteps = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 2)
         self.assertEqual([s.model_info['error'] for s in errorsteps], ['oops', 'oh ow'])
 
@@ -222,7 +222,7 @@ class TestScenarios(unittest.TestCase):
         self.scenario.steps[0].model_info = dict(error='oops in scenario 1')
         self.scenario.steps[7].model_info = dict(error='oops in scenario 2')
         self.assertIs(self.scenario.has_error(), True)
-        errorsteps  = self.scenario.steps_with_errors()
+        errorsteps = self.scenario.steps_with_errors()
         self.assertEqual(len(errorsteps), 4)
         self.assertEqual([e.model_info['error'] for e
                           in self.scenario.steps_with_errors()],
@@ -284,6 +284,7 @@ class TestScenarios(unittest.TestCase):
 
     def test_exteranally_determined_attributes_are_copied_along(self):
         self.scenario.src_id = 7
+
         class Dummy:
             def copy(self):
                 return 'dummy'
@@ -304,15 +305,15 @@ class TestSteps(unittest.TestCase):
         Gg1 = Step('Given step Gg1', parent=parent)
         Ga1 = Step('and step Ga1', parent=parent)
         Gb1 = Step('but step Gb1', parent=parent)
-        Gg1.gherkin_kw= Ga1.gherkin_kw= Gb1.gherkin_kw= 'given'
+        Gg1.gherkin_kw = Ga1.gherkin_kw = Gb1.gherkin_kw = 'given'
         Ww1 = Step('When step Ww1', parent=parent)
         Wa1 = Step('and step Wa1', parent=parent)
         Wb1 = Step('BUT step Wb1', parent=parent)
-        Ww1.gherkin_kw= Wa1.gherkin_kw= Wb1.gherkin_kw= 'when'
+        Ww1.gherkin_kw = Wa1.gherkin_kw = Wb1.gherkin_kw = 'when'
         Tt1 = Step('Then step Tt1', parent=parent)
         Ta1 = Step('And step Ta1', parent=parent)
         Tb1 = Step('but step Tb1', parent=parent)
-        Tt1.gherkin_kw= Ta1.gherkin_kw= Tb1.gherkin_kw= 'then'
+        Tt1.gherkin_kw = Ta1.gherkin_kw = Tb1.gherkin_kw = 'then'
         return [Kw1, Gg1, Ga1, Gb1, Ww1, Wa1, Wb1, Tt1, Ta1, Tb1]
 
     def test_full_names(self, mock):
@@ -337,8 +338,8 @@ class TestSteps(unittest.TestCase):
 
     def test_gherkin_keywords_are_lower_case(self, mock):
         source = [None, 'given', 'Given', 'GIVEN',
-                        'wHEN' , 'wHEn',  'WHEn',
-                        'TheN' , 'theN',  'thEN']
+                        'wHEN', 'wHEn',  'WHEn',
+                        'TheN', 'theN',  'thEN']
         expected = [None] + 3*['given'] + 3*['when'] + 3*['then']
         for s, gkw in zip(self.steps, source):
             s.gherkin_kw = gkw
@@ -347,8 +348,8 @@ class TestSteps(unittest.TestCase):
 
     def test_step_keywords_are_kept_as_is(self, mock):
         expected = [None, 'Given', 'and', 'but',
-                          'When' , 'and', 'BUT',
-                          'Then' , 'And', 'but']
+                          'When', 'and', 'BUT',
+                          'Then', 'And', 'but']
         for s, e in zip(self.steps, expected):
             self.assertEqual(s.step_kw, e)
 
@@ -446,7 +447,7 @@ class TestSteps(unittest.TestCase):
                      :OUT: expr3 | expr4
                   """
         step.add_robot_dependent_data(kw)
-        self.assertEqual(step.model_info, dict( IN=['expr1', 'expr2'],
+        self.assertEqual(step.model_info, dict(IN=['expr1', 'expr2'],
                                                OUT=['expr3', 'expr4']))
 
     def test_model_info_errors_are_reported(self, mock):
@@ -461,22 +462,23 @@ class TestSteps(unittest.TestCase):
 
 class RobotKwStub:
     STEPTEXT = "Given step with foo_value and bar_value as arguments"
+
     def __init__(self):
         self.name = "step with ${foo} and ${bar} as arguments"
         self._doc = "*model info*\n:IN: None\n:OUT: None"
         self.args = self.argstub()
         self.error = False
         self.embedded = SimpleNamespace(args=['${foo}', '${bar}'],
-                                        parse_args= lambda _: ['foo_value', 'bar_value'])
+                                        parse_args=lambda _: ['foo_value', 'bar_value'])
 
     class argstub:
         argument_names = []
-        map = lambda x,y,z: ([], [])
-        __iter__ = lambda _: iter([])
+        def map(x, y, z): return ([], [])
+        def __iter__(_): return iter([])
 
 
 class StubStepArguments(list):
-    modified = True # trigger modified status to get arguments processed, rather then just echoed
+    modified = True  # trigger modified status to get arguments processed, rather then just echoed
 
 
 class StubArgument(SimpleNamespace):
