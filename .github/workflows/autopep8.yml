@@ -1,0 +1,34 @@
+name: autopep8 Check
+
+on: [pull_request]
+
+jobs:
+  autopep8-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install autopep8
+        run: pip install autopep8
+
+      - name: Check formatting with autopep8
+        id: check
+        run: |
+          # Check if autopep8 would make changes
+          formatting_issues=$(autopep8 --diff --recursive --max-line-length 120 .)
+          if [[ formatting_issues = *[$" \t\n"]* ]] then
+            echo "No formatting issues found."
+          else
+            echo "Formatting issues found:"
+            printf "%s\n" "$formatting_issues"
+            echo "------------------------------"
+            echo "-- Formatting issues found! --"
+            echo "------------------------------"
+            exit 1
+          fi
+

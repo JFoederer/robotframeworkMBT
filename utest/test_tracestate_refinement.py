@@ -337,7 +337,7 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.confirm_full_scenario(3, 'B1.0', {})
         ts.confirm_full_scenario(2, 'M1.0', {})
         self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
-        ts.rewind() # Middle including its Bottom refinement
+        ts.rewind()  # Middle including its Bottom refinement
         self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
 
 

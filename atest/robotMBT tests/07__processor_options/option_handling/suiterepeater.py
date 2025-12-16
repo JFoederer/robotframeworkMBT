@@ -2,6 +2,7 @@ import copy
 
 from robot.api.deco import library
 
+
 @library(auto_keywords=None, listener=True)
 class SuiteRepeater:
     """
@@ -9,10 +10,11 @@ class SuiteRepeater:
     Setting bonus_scenario=${True} repeats 1 additional time
     sub-suites are ignored
     """
+
     def process_test_suite(self, in_suite, repeat=1, **kwargs):
         n_repeats = int(repeat)
         if kwargs.get('bonus_scenario', False):
-            n_repeats +=1
+            n_repeats += 1
         out_suite = copy.deepcopy(in_suite)
         out_suite.scenarios = n_repeats*out_suite.scenarios
         for i in range(len(out_suite.scenarios)):

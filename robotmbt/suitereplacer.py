@@ -124,14 +124,14 @@ class SuiteReplacer:
 
         if in_suite.setup and parent is not None:
             step_info = Step(in_suite.setup.name, *
-            in_suite.setup.args, parent=out_suite)
+                             in_suite.setup.args, parent=out_suite)
             step_info.add_robot_dependent_data(
                 Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.setup = step_info
 
         if in_suite.teardown and parent is not None:
             step_info = Step(in_suite.teardown.name, *
-            in_suite.teardown.args, parent=out_suite)
+                             in_suite.teardown.args, parent=out_suite)
             step_info.add_robot_dependent_data(
                 Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.teardown = step_info
@@ -151,7 +151,7 @@ class SuiteReplacer:
 
             if tc.teardown:
                 step_info = Step(tc.teardown.name, *
-                tc.teardown.args, parent=scenario)
+                                 tc.teardown.args, parent=scenario)
                 step_info.add_robot_dependent_data(
                     Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.teardown = step_info

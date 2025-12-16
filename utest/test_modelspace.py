@@ -222,7 +222,7 @@ class TestModelSpace(unittest.TestCase):
         if sys.version_info >= (3, 13):
             self.assertEqual(str(cm.exception), "foo used before definition")
         else:
-            self.assertEqual(str(cm.exception), "None used before assignment") # <-- Known issue in Python 3.10/11/12
+            self.assertEqual(str(cm.exception), "None used before assignment")  # <-- Known issue in Python 3.10/11/12
 
     def test_fail_when_comparing_unknown_property(self):
         self.m.add_prop('foo')
@@ -380,8 +380,8 @@ class TestScenarioScopeVars(unittest.TestCase):
         self.m.process_expression('scenario.foo = bar')
         self.m.process_expression('new zz')
         self.m.process_expression('zz.Z = 26')
-        self.assertTrue(self.m.get_status_text().endswith( "scenario:\n"
-                                                            "    foo=bar\n"))
+        self.assertTrue(self.m.get_status_text().endswith("scenario:\n"
+                                                          "    foo=bar\n"))
 
     def test_exclude_scenario_vars_from_status_text_when_empty(self):
         self.m.new_scenario_scope()
