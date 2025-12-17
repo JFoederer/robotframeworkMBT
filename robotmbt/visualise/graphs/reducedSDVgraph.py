@@ -1,9 +1,10 @@
 import networkx
-from robotmbt.modelspace import ModelSpace
 
+from robotmbt.modelspace import ModelSpace
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.graphs.scenariodeltavaluegraph import ScenarioDeltaValueGraph
 from robotmbt.visualise.models import ScenarioInfo, StateInfo, TraceInfo
+
 
 # TODO add tests for this graph representation
 class ReducedSDVGraph(AbstractGraph[tuple[ScenarioInfo, set[tuple[str, str]]], None]):
@@ -38,6 +39,7 @@ class ReducedSDVGraph(AbstractGraph[tuple[ScenarioInfo, set[tuple[str, str]]], N
             for new_node in nodes:
                 if current_node in new_node:
                     self.final_trace[i] = new_node
+        self.start_node = frozenset(['start'])
 
     @staticmethod
     def select_node_info(pairs: list[tuple[ScenarioInfo, StateInfo]], index: int) \
