@@ -9,13 +9,13 @@ from bokeh.models import (
     Plot, Range1d, Circle, Rect,
     Arrow, NormalHead,
     Bezier, ColumnDataSource, ResetTool,
-    SaveTool, WheelZoomTool, PanTool, Text
+    SaveTool, WheelZoomTool, PanTool, Text,
+    FullscreenTool, Title
 )
 from bokeh.embed import file_html
 from bokeh.resources import CDN
 from math import sqrt
 import networkx as nx
-
 
 class NetworkVisualiser:
     """
@@ -46,9 +46,10 @@ class NetworkVisualiser:
     EXECUTED_LABEL_COLOR = 'black'
     UNEXECUTED_LABEL_COLOR = '#A9A9A9'
 
-    def __init__(self, graph: AbstractGraph):
+    def __init__(self, graph: AbstractGraph, suite_name: str = ""):
         self.plot = None
         self.graph = graph
+        self.suite_name = suite_name
         self.node_props = {}  # Store node properties for arrow calculations
         self.graph_layout = {}
 
@@ -105,9 +106,13 @@ class NetworkVisualiser:
                          x_range=x_range,
                          y_range=y_range)
 
+        # add title
+        self.plot.add_layout(Title(text=self.suite_name, align="center"), "above")
+
         # add tools
         self.plot.add_tools(ResetTool(), SaveTool(),
-                            WheelZoomTool(), PanTool())
+                            WheelZoomTool(), PanTool(),
+                            FullscreenTool())
 
     def _calculate_text_dimensions(self, text: str) -> tuple[float, float]:
         """Calculate width and height needed for text based on actual text length"""
