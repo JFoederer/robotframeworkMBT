@@ -10,6 +10,10 @@ on:
 permissions:
   contents: read
 
+defaults:
+  run:
+    working-directory: ./demo/Titanic
+
 jobs:
   build:
 
@@ -23,13 +27,11 @@ jobs:
         python-version: "3.14"  # Deliberately different Python version compared to the test run.
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip   # upgrade pip to latest version
-        pip install .                         # install pyproject.toml dependencies - excludes optional dependencies (such as visualisation)
+        python -m pip install --upgrade pip  # upgrade pip to latest version
+        pip install -r requirements.txt      # install pyproject.toml dependencies - excludes optional dependencies (such as visualisation)
     - name: Run basic demo (no repeating scenarios)
-      working-directory: ./demo/Titanic
       run: |
         python run_demo.py miss
     - name: Run extended demo
-      working-directory: ./demo/Titanic
       run: |
         python run_demo.py extended
