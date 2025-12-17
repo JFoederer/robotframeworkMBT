@@ -1,9 +1,10 @@
 import networkx
-from robotmbt.modelspace import ModelSpace
 
+from robotmbt.modelspace import ModelSpace
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.graphs.scenariodeltavaluegraph import ScenarioDeltaValueGraph
 from robotmbt.visualise.models import ScenarioInfo, StateInfo, TraceInfo
+
 
 # TODO add tests for this graph representation
 class ReducedSDVGraph(AbstractGraph[tuple[ScenarioInfo, set[tuple[str, str]]], None]):
@@ -18,8 +19,9 @@ class ReducedSDVGraph(AbstractGraph[tuple[ScenarioInfo, set[tuple[str, str]]], N
     def chain_equiv(self, node1, node2) -> bool:
         context = self.networkx
         if not node1 == 'start' and not node2 == 'start' and self.ids[node1][0] == self.ids[node2][0] and \
-                (context.has_edge(node1, node2) or context.has_edge(node2, node1)):
-            return len(set(context.edges(node1)) ^ set(context.edges(node2))) <= 2
+                (networkx.has_path(context, node1, node2) or networkx.has_path(context, node2, node1)):
+            return len(set(context.in_edges(node1)) ^ set(context.in_edges(node2))) <= 2 and \
+                len(set(context.out_edges(node1)) ^ set(context.out_edges(node2))) <= 2
         else:
             return False
 
