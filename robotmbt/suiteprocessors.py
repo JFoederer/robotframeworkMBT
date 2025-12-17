@@ -106,7 +106,7 @@ class SuiteProcessors:
 
         self.visualiser = None
         if graph != '' and VISUALISE:
-            self.visualiser = Visualiser(graph)
+            self.visualiser = Visualiser(graph, in_suite.name)  # Pass suite name
         elif graph != '' and not VISUALISE:
             logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed.'
                         'Install them with `pip install .[visualization]`.')
@@ -166,10 +166,6 @@ class SuiteProcessors:
     def __update_visualisation(self):
         if self.visualiser is not None:
             self.visualiser.update_trace(self.tracestate, self.active_model)
-
-    def __write_visualisation(self):
-        if self.visualiser is not None:
-            logger.info(self.visualiser.generate_visualisation(), html=True)
 
     def __write_visualisation(self):
         if self.visualiser is not None:
