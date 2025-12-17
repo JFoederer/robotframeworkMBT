@@ -1,6 +1,6 @@
 # Contribution guidelines RobotMBT
 
-Welcome! Thank you for considering to contribute to this project. Your contribution already starts when you use this software and share your experiences with people around you. 
+Welcome! Thank you for considering to contribute to this project. Your contribution already starts when you use this software and share your experiences with people around you.
 
 ## Communication channels
 ### Slack
@@ -9,8 +9,8 @@ If you want to share/ask/answer any questions, the [Robot Framework Slack](http:
 ### GitHub
 If you want to get involved on GitHub, you can so by submitting issues or offering code improvements. These guidelines will help you to find your way. These guidelines expect readers to have a basic knowledge about open source as well as why and how to contribute to an open source project. If you are new to these topics, please have a look at the generic [Open Source Guides](https://opensource.guide/) first.
 
-## Code of Conduct (CoC)
-If you want to be part of this community, then we expect you to respect our norms and values. These are in line with the [GitHub CoC](https://docs.github.com/en/site-policy/github-terms/github-community-code-of-conduct) and the [Slack CoC](https://docs.slack.dev/community-code-of-conduct/). In short, we expect you to:
+## Code of Conduct
+If you want to be part of this community, then we expect you to respect our norms and values. These are in line with the [GitHub Code of Conduct](https://docs.github.com/en/site-policy/github-terms/github-community-code-of-conduct) and the [Slack Code of Conduct](https://docs.slack.dev/community-code-of-conduct/). In short, we expect you to:
 
 - Be welcoming.
 - Be kind.
@@ -18,7 +18,7 @@ If you want to be part of this community, then we expect you to respect our norm
 
 
 ## Submitting issues
-Defects and enhancements are tracked in [GitHub Issues](https://github.com/JFoederer/robotframeworkMBT/issues). Please make sure the issue is caused by this project in particular before submitting an issue here. If you are unsure if something is worth submitting, you can first ask on [Slack](http://slack.robotframework.org/). Before submitting a new issue, it is always a good idea to check if something similar was already reported. If it is, please add your comments to the existing issue instead of creating a new one. Communication in issues on GitHub is done in English.
+Defects and enhancements are tracked in [GitHub Issues](https://github.com/JFoederer/robotframeworkMBT/issues). Before submitting an issue here, please make sure the issue is caused by this project in particular. If you are unsure if something is worth submitting, you can first ask on [Slack](http://slack.robotframework.org/). Before submitting a new issue, it is always a good idea to check if something similar was already reported. If it is, please add your comments to the existing issue instead of creating a new one. Communication in issues on GitHub is done in English.
 
 Take notice that issues do not get resolved by themselves. Someone will need to spend time on the topic. Be prepared to wait, contribute yourself or arrange budget to hire someone for the job.
 
@@ -87,7 +87,7 @@ For this project, we are not maintaining separate requirements documentation. Th
 
 Tests are located in the `atest` and `utest` folders, which stands for _acceptance test_ and _unit test_ respectively. The acceptance tests are Robot tests that cover user-visible behaviour using black-box testing techniques. They typically do not cover all details, unless some Robot Framework interaction is involved. The unit tests go more in-depth, including white box techniques to cover the _dark corners_ of the code. Choose the right type of test for what you are covering.
 
-A specific challenge for this project is that there is a lot of test case generation going on. Be wary that variations in the generation process can not alter the intended coverage of a test and do not yield false positives (passing results without proof for passing), such as checking `all` results in an empty list. Lastly: keep the resulting number of test cases in a run deterministic, so that we prevent flakey tests (tests that sometimes fail or pass).
+A specific challenge for this project is that there is a lot of test case generation going on. Be wary that variations in the generation process do not alter the intended coverage of a test and do not yield false positives (passing results without proof for passing), such as checking "_all_" results in an empty list. Lastly: keep the resulting total number of test cases in a run deterministic. This allows for a quick check that all test cases are still being generated.
 
 
 ### Code style
@@ -101,13 +101,12 @@ Researchers have suggested that longer lines are better suited for cases when th
 
 
 #### Docstrings, comments and logging
-Docstrings are written using a black-box approach. One should not need to know the inside of a class or function in order to use it. 
-
-- Use comments to annotate code for maintainers. 
-- Prevent trivial comments and use descriptive names to make your code self-explanatory. 
+- Docstrings are written using a black-box approach. One should not need to know the inside of a class or function in order to use it. 
+- Use comments to annotate code for maintainers.
+- Prevent trivial comments and use descriptive names to make your code self-explanatory.
 - When documenting external interfaces, also check whether the user documentation requires an update.
-- Log useful information that is runtime-dependent. 
-    - Information that is useful after a passing test run is logged at info-level. 
-    - Information that is useful for analysing failed tests is logged at debug-level. 
+- Log useful information that is runtime-dependent.
+  - Information that is useful after a passing test run is logged at info-level.
+  - Information that is useful for analysing failed tests is logged at debug-level.
 
 - Be careful not to make assumptions in what you log: Recheck log statements if your changes affect the context in which the code is run, and only report about what you know to be true.
