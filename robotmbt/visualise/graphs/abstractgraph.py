@@ -24,28 +24,32 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         for trace in info.all_traces:
             for i in range(len(trace)):
                 if i > 0:
-                    from_node = self._get_or_create_id(self.select_node_info(trace, i - 1))
+                    from_node = self._get_or_create_id(
+                        self.select_node_info(trace, i - 1))
                 else:
                     from_node = 'start'
-                to_node = self._get_or_create_id(self.select_node_info(trace, i))
+                to_node = self._get_or_create_id(
+                    self.select_node_info(trace, i))
                 self._add_node(from_node)
                 self._add_node(to_node)
-                self.networkx.add_edge(from_node, to_node,
-                                       label=self.create_edge_label(self.select_edge_info(trace[i])))
+                self._add_edge(from_node, to_node,
+                               self.create_edge_label(self.select_edge_info(trace[i])))
 
         # Set the final trace and add any missing nodes/edges
         self.final_trace = ['start']
         for i in range(len(info.current_trace)):
             if i > 0:
-                from_node = self._get_or_create_id(self.select_node_info(info.current_trace, i - 1))
+                from_node = self._get_or_create_id(
+                    self.select_node_info(info.current_trace, i - 1))
             else:
                 from_node = 'start'
-            to_node = self._get_or_create_id(self.select_node_info(info.current_trace, i))
+            to_node = self._get_or_create_id(
+                self.select_node_info(info.current_trace, i))
             self.final_trace.append(to_node)
             self._add_node(from_node)
             self._add_node(to_node)
-            self.networkx.add_edge(from_node, to_node,
-                                   label=self.create_edge_label(self.select_edge_info(info.current_trace[i])))
+            self._add_edge(from_node, to_node,
+                           self.create_edge_label(self.select_edge_info(info.current_trace[i])))
 
     def get_final_trace(self) -> list[str]:
         """
@@ -71,7 +75,27 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         Add node if it doesn't already exist.
         """
         if node not in self.networkx.nodes:
-            self.networkx.add_node(node, label=self.create_node_label(self.ids[node]))
+            self.networkx.add_node(
+                node, label=self.create_node_label(self.ids[node]))
+
+    def _add_edge(self, from_node: str, to_node: str, label: str):
+        """
+        Add edge if it doesn't already exist.
+        If edge exists, update the label information
+        """
+        if (from_node, to_node) in self.networkx.edges:
+            if label == '':
+                return
+            old_label = nx.get_edge_attributes(self.networkx, 'label')[
+                (from_node, to_node)]
+            if label in old_label.split('\n'):
+                return
+            new_label = old_label + '\n' + label
+            attr = {(from_node, to_node): {'label': new_label}}
+            nx.set_edge_attributes(self.networkx, attr)
+        else:
+            self.networkx.add_edge(
+                from_node, to_node, label=label)
 
     @staticmethod
     @abstractmethod
