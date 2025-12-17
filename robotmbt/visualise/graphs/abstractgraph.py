@@ -19,6 +19,7 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
 
         # Add the start node
         self.networkx.add_node('start', label='start')
+        self.start_node = 'start'
 
         # Add nodes and edges for all traces
         for trace in info.all_traces:
