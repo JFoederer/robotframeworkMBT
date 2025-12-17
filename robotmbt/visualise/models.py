@@ -46,6 +46,17 @@ class StateInfo:
         space.props[name] = prop
         return cls(space)
 
+    def difference(self, new_state) -> set[tuple[str, str]]:
+        left: dict[str, dict | str] = self.properties.copy()
+        for key in left.keys():
+            left[key] = str(left[key])
+        right: dict[str, dict | str] = new_state.properties.copy()
+        for key in right.keys():
+            right[key] = str(right[key])
+        temp: set[tuple[str, str]] = set(right.items()) - set(left.items())  # type inference goes doodoo here
+        return temp
+
+
     def __init__(self, state: ModelSpace):
         self.domain = state.ref_id
 
