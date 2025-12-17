@@ -10,8 +10,8 @@ class ScenarioStateGraph(AbstractGraph[tuple[ScenarioInfo, StateInfo], None]):
     """
 
     @staticmethod
-    def select_node_info(pair: tuple[ScenarioInfo, StateInfo]) -> tuple[ScenarioInfo, StateInfo]:
-        return pair
+    def select_node_info(pairs: list[tuple[ScenarioInfo, StateInfo]], index: int) -> tuple[ScenarioInfo, StateInfo]:
+        return pairs[index]
 
     @staticmethod
     def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> None:

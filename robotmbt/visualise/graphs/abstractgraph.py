@@ -24,10 +24,10 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         for trace in info.all_traces:
             for i in range(len(trace)):
                 if i > 0:
-                    from_node = self._get_or_create_id(self.select_node_info(trace[i - 1]))
+                    from_node = self._get_or_create_id(self.select_node_info(trace, i - 1))
                 else:
                     from_node = 'start'
-                to_node = self._get_or_create_id(self.select_node_info(trace[i]))
+                to_node = self._get_or_create_id(self.select_node_info(trace, i))
                 self._add_node(from_node)
                 self._add_node(to_node)
                 self.networkx.add_edge(from_node, to_node,
@@ -37,10 +37,10 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         self.final_trace = ['start']
         for i in range(len(info.current_trace)):
             if i > 0:
-                from_node = self._get_or_create_id(self.select_node_info(info.current_trace[i - 1]))
+                from_node = self._get_or_create_id(self.select_node_info(info.current_trace, i - 1))
             else:
                 from_node = 'start'
-            to_node = self._get_or_create_id(self.select_node_info(info.current_trace[i]))
+            to_node = self._get_or_create_id(self.select_node_info(info.current_trace, i))
             self.final_trace.append(to_node)
             self._add_node(from_node)
             self._add_node(to_node)
@@ -75,7 +75,7 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
 
     @staticmethod
     @abstractmethod
-    def select_node_info(pair: tuple[ScenarioInfo, StateInfo]) -> NodeInfo:
+    def select_node_info(pair: list[tuple[ScenarioInfo, StateInfo]], index: int) -> NodeInfo:
         """
         Select the info to use to compare nodes and generate their labels for a specific graph type.
         """
