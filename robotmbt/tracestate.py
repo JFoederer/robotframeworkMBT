@@ -162,5 +162,9 @@ class TraceSnapShot:
     def __init__(self, id, inserted_scenario, model_state, drought=0):
         self.id = id
         self.scenario = inserted_scenario
-        self.model = model_state.copy()
+        self._model = model_state.copy()
         self.coverage_drought = drought
+
+    @property
+    def model(self):
+        return self._model.copy()
