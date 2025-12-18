@@ -34,15 +34,17 @@ import copy
 
 from .steparguments import StepArguments
 
+
 class ModellingError(Exception):
     pass
+
 
 class ModelSpace:
     def __init__(self, reference_id=None):
         self.ref_id = str(reference_id)
         self.std_attrs = []
         self.props = dict()
-        self.values = dict() # For using literals without having to use quotes (abc='abc')
+        self.values = dict()  # For using literals without having to use quotes (abc='abc')
         self.scenario_vars = []
         self.std_attrs = dir(self)
 
@@ -118,7 +120,7 @@ class ModelSpace:
                 self.__handle_attribute_error(err)
         except NameError as missing:
             if missing.name == expr:
-                raise # Putting only a name in an expression can be used as exists check
+                raise  # Putting only a name in an expression can be used as exists check
             self.__add_alias(missing.name, step_args)
             result = self.process_expression(expression, step_args)
         except AttributeError as err:
@@ -144,9 +146,9 @@ class ModelSpace:
         matching_args = [arg.value for arg in step_args if arg.codestring == missing_name]
         value = matching_args[0] if matching_args else missing_name
         if isinstance(value, str):
-            for esc_char in "$@&=": # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
+            for esc_char in "$@&=":  # Prevent "Syntaxwarning: invalid escape sequence" on Robot escapes like '\$' and '\='
                 value = value.replace(f'\\{esc_char}', f'\\\\{esc_char}')
-            value = value.replace("'", r"\'") # Needed because we use single quotes in low level processing later on
+            value = value.replace("'", r"\'")  # Needed because we use single quotes in low level processing later on
         self.values[missing_name] = value
 
     @staticmethod
@@ -177,6 +179,7 @@ class ModelSpace:
                 status += f"    {attr}={value}\n"
         return status
 
+
 class RecursiveScope:
     """
     Generic scoping object with the properties needed for handling scenario variables with refinement.
@@ -190,6 +193,7 @@ class RecursiveScope:
     executed on the highest available level. Creating new attributes, will make the current level the
     highest available level for that atrribute.
     """
+
     def __init__(self, outer):
         super().__setattr__('_outer_scope', outer)
 
@@ -206,7 +210,7 @@ class RecursiveScope:
 
     def __iter__(self):
         return iter([(attr, getattr(self, attr)) for attr in dir(self._outer_scope) + dir(self)
-                                                          if not attr.startswith('__') and attr != '_outer_scope'])
+                     if not attr.startswith('__') and attr != '_outer_scope'])
 
     def __bool__(self):
         return any(True for _ in self)

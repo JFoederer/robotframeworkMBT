@@ -41,9 +41,10 @@ class SubstitutionMap:
     constraints. solve() takes the current set of example values and assigns
     a unique concrete value to each.
     """
+
     def __init__(self):
-        self.substitutions = {} # {example_value:Constraint}
-        self.solution = {}      # {example_value:solution_value}
+        self.substitutions = {}  # {example_value:Constraint}
+        self.solution = {}       # {example_value:solution_value}
 
     def __str__(self):
         src = self.solution or self.substitutions
@@ -51,7 +52,7 @@ class SubstitutionMap:
 
     def copy(self):
         new = SubstitutionMap()
-        new.substitutions = {k: v.copy() for k,v in self.substitutions.items()}
+        new.substitutions = {k: v.copy() for k, v in self.substitutions.items()}
         new.solution = self.solution.copy()
         return new
 
@@ -132,7 +133,8 @@ class Constraint:
         return Constraint(self.optionset)
 
     def add_constraint(self, constraint):
-        if constraint is None: return
+        if constraint is None:
+            return
         self.optionset = [opt for opt in self.optionset if opt in constraint]
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')

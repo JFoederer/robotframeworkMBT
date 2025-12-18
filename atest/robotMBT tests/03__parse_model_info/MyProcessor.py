@@ -15,5 +15,5 @@ class MyProcessor:
         if self.in_suite.has_error():
             msg = "\n".join(["Error(s) detected in at least one step"] +
                             [f"{step.kw_wo_gherkin} FAILED: {step.model_info['error']}"
-                             for  step in self.in_suite.steps_with_errors()])
+                             for step in self.in_suite.steps_with_errors()])
             raise Exception(msg)

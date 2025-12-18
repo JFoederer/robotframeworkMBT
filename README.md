@@ -205,6 +205,10 @@ If you want to set configuration options for use in multiple test suites without
 
 Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#dictionary-variable) (`&{ }`) can be used to group related options and pass them as one set.
 
+## Contributing
+
+If you have feedback, ideas, or want to get involved in coding, then check out the [Contribution guidelines](https://github.com/JFoederer/robotframeworkMBT/blob/main/CONTRIBUTING.md).
+
 ## Disclaimer
 
 Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent, and no deprecation warnings are being issued yet.

@@ -17,14 +17,16 @@ if __name__ == '__main__':
     OUTPUT_ROOT = os.path.join(THIS_DIR, 'results')
     SCENARIO_FOLDER = os.path.join(THIS_DIR, 'Titanic_scenarios')
     HIT_MISS_TAG = 'hit' if len(sys.argv) == 1 or sys.argv[1].casefold() != 'hit' else 'miss'
-    EXTENDED_TAG = 'extended' if  len(sys.argv) == 1 or sys.argv[1].casefold() != 'extended' else 'dummy'
+    EXTENDED_TAG = 'extended' if len(sys.argv) == 1 or sys.argv[1].casefold() != 'extended' else 'dummy'
 
     # The base folder needs to be added to the python path to resolve the dependencies. You
     # will also need to add this path to your IDE options when running from there.
-    robot.run_cli(['--outputdir', OUTPUT_ROOT,
-                   '--pythonpath', THIS_DIR,
-                   '--exclude', HIT_MISS_TAG,
-                   '--exclude', EXTENDED_TAG,
-                   '--loglevel', 'DEBUG:INFO',
-                   SCENARIO_FOLDER],
-                   exit=False)
+    exitcode = robot.run_cli(['--outputdir', OUTPUT_ROOT,
+                              '--pythonpath', THIS_DIR,
+                              '--exclude', HIT_MISS_TAG,
+                              '--exclude', EXTENDED_TAG,
+                              '--loglevel', 'DEBUG:INFO',
+                              SCENARIO_FOLDER],
+                             exit=False)
+
+    sys.exit(exitcode)

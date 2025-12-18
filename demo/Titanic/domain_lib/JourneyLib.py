@@ -10,6 +10,7 @@ from domain_lib.MapLib import MapLib
 from simulation.titanic_in_ocean import TitanicInOcean
 from simulation.journey import Journey
 
+
 class JourneyLib:
     _journey = None
 

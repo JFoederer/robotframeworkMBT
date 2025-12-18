@@ -24,6 +24,7 @@ areas = {
 
 atlantic_area = AreaOnGrid(LocationOnGrid(latitude=35, longitude=-1.41), LocationOnGrid(latitude=65, longitude=-74))
 
+
 def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
     import curses
@@ -35,7 +36,8 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
         # Set up the window
         stdscr.nodelay(True)  # Non-blocking input
         stdscr.timeout(100)  # Refresh every 100 milliseconds
-        stdscr.addstr(0, 0, "Q=Quit. 0=Stop Titanic. WASD-controls (WS control speed, AD control rotation, no need to press and hold)")
+        stdscr.addstr(
+            0, 0, "Q=Quit. 0=Stop Titanic. WASD-controls (WS control speed, AD control rotation, no need to press and hold)")
 
         objective = 1
         iceberg_alley_reached = False
@@ -97,7 +99,6 @@ def run_game(map_animation, journey, tio: TitanicInOcean, atlantic_area):
 
             # Continue with the rest of the game logic
 
-
     # Initialize curses
     stdscr = curses.initscr()
     curses.noecho()  # Disable automatic echoing of pressed keys
@@ -138,4 +139,3 @@ if __name__ == '__main__':
     map_animation.update_floating_objects(ocean.floating_objects)
 
     run_game(map_animation, journey, tio, atlantic_area)
-

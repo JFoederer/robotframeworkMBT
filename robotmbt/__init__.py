@@ -33,9 +33,11 @@
 from .version import VERSION
 from .suitereplacer import SuiteReplacer
 
+
 class robotmbt(SuiteReplacer):
     """
     Process test suites on-the-fly to optimise test suite execution
     """
+
 
 __version__ = VERSION

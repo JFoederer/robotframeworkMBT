@@ -160,11 +160,11 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg1.codestring, arg2.codestring)
 
     def test_other_values_become_unique_identifiers(self):
-        valuelist = ['bar', 'foo bar', 'foo2bar', '${bar}',  # strings
-                     ' ', '\t', '\n', '  ', ' \n', '\a',     # whitespace/non-printable
-                     '#', '+-', '-+', '"', "'", 'パイ',      # special characters
-                     max, 'elif', 'import', 'new', 'del',    # reserved words
-                     lambda x: x/2, self, unittest.TestCase] # functions and objects
+        valuelist = ['bar', 'foo bar', 'foo2bar', '${bar}',   # strings
+                     ' ', '\t', '\n', '  ', ' \n', '\a',      # whitespace/non-printable
+                     '#', '+-', '-+', '"', "'", 'パイ',       # special characters
+                     max, 'elif', 'import', 'new', 'del',     # reserved words
+                     lambda x: x/2, self, unittest.TestCase]  # functions and objects
         argsset = set()
         for v in valuelist:
             arg = StepArgument('foo', v)
@@ -235,10 +235,10 @@ class TestStepArguments(unittest.TestCase):
         argset = StepArguments([StepArgument('foo1', 'bar1'),
                                 StepArgument('foo2', 'bar2')])
         self.assertEqual(argset.fill_in_args("\t${foo1} and ${foo2}@#$%s  $$$$${foo2}${foo1}}"),
-                                             "\tbar1 and bar2@#$%s  $$$$bar2bar1}")
+                         "\tbar1 and bar2@#$%s  $$$$bar2bar1}")
 
     def test_can_use_robot_arguments_in_code_fragments(self):
-        args = StepArguments([StepArgument('foo1', '3bar'), # 3bar needs to be converted to a valid identifier
+        args = StepArguments([StepArgument('foo1', '3bar'),  # 3bar needs to be converted to a valid identifier
                               StepArgument('foo2', '3bar')])
         assignment = "${foo1} = 'magic'"
         lc = locals()
@@ -289,6 +289,7 @@ class TestStepArguments(unittest.TestCase):
         self.assertFalse(argset.modified)
         argset['${foo2}'].value = 'bar3'
         self.assertTrue(argset.modified)
+
 
 if __name__ == '__main__':
     unittest.main()
