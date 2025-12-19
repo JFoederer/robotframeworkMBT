@@ -33,7 +33,6 @@
 import unittest
 from robotmbt.tracestate import TraceState
 
-
 class TestTraceState(unittest.TestCase):
     def test_an_empty_tracestate_doesnt_do_so_much(self):
         ts = TraceState(0)
