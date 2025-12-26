@@ -31,10 +31,10 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 class TraceState:
-    def __init__(self, scenario_indexes):
-        if len(scenario_indexes) != len(set(scenario_indexes)):
-            raise ValueError("Scenarios must be uniquely identifiable")
+    def __init__(self, scenario_indexes: list[int]):
         self.c_pool = {index: 0 for index in scenario_indexes}
+        if len(self.c_pool) != len(scenario_indexes):
+            raise ValueError("Scenarios must be uniquely identifiable")
         self._tried = [[]]    # Keeps track of the scenarios already tried at each step in the trace
         self._snapshots = []  # Keeps details for elements in trace
         self._open_refinements = []

@@ -89,7 +89,8 @@ class SuiteProcessors:
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        random.shuffle(self.scenarios)
+        self.shuffled = [s.src_id for s in self.scenarios]
+        random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         # a short trace without the need for repeating scenarios is preferred
         self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
@@ -105,7 +106,7 @@ class SuiteProcessors:
         return self.out_suite
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
-        self.tracestate = TraceState(range(len(self.scenarios)))
+        self.tracestate = TraceState(self.shuffled)
         self.active_model = ModelSpace()
         while not self.tracestate.coverage_reached():
             i_candidate = self.tracestate.next_candidate(retry=allow_duplicate_scenarios)
@@ -142,7 +143,7 @@ class SuiteProcessors:
     def _scenario_with_repeat_counter(self, index):
         """Fetches the scenario by index and, if this scenario is already used in the trace,
         adds a repetition counter to its name."""
-        candidate = self.scenarios[index]
+        candidate = next(s for s in self.scenarios if s.src_id == index)
         rep_count = self.tracestate.count(index)
         if rep_count:
             candidate = candidate.copy()
@@ -214,7 +215,8 @@ class SuiteProcessors:
                     else:
                         logger.debug(f"Scenario did not meet refinement conditions {exit_conditions}")
                         logger.debug(f"last state:\n{self.active_model.get_status_text()}")
-                    logger.debug(f"Reconsidering {self.scenarios[i_refine].name}, scenario excluded")
+                    scenario_name = next(s.name for s in self.scenarios if s.src_id == i_refine)
+                    logger.debug(f"Reconsidering {scenario_name}, scenario excluded")
                     self._rewind()
                     self._report_tracestate_to_user()
                 i_refine = self.tracestate.next_candidate(retry=retry_flag)
@@ -413,13 +415,8 @@ class SuiteProcessors:
         raise ValueError(f"Invalid argument substitution: {expression}")
 
     def _report_tracestate_to_user(self):
-        user_trace = "["
-        for snapshot in self.tracestate:
-            part = f".{snapshot.id.split('.')[1]}" if '.' in snapshot.id else ""
-            user_trace += f"{snapshot.scenario.src_id}{part}, "
-        user_trace = user_trace[:-2] + "]" if ',' in user_trace else "[]"
-        reject_trace = [self.scenarios[i].src_id for i in self.tracestate.tried]
-        logger.debug(f"Trace: {user_trace} Reject: {reject_trace}")
+        user_trace = f"[{', '.join(self.tracestate.id_trace)}]"
+        logger.debug(f"Trace: {user_trace} Reject: {list(self.tracestate.tried)}")
 
     def _report_tracestate_wrapup(self):
         logger.info("Trace composed:")
