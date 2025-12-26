@@ -105,7 +105,7 @@ class SuiteProcessors:
         return self.out_suite
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
-        self.tracestate = TraceState(len(self.scenarios))
+        self.tracestate = TraceState(range(len(self.scenarios)))
         self.active_model = ModelSpace()
         while not self.tracestate.coverage_reached():
             i_candidate = self.tracestate.next_candidate(retry=allow_duplicate_scenarios)
