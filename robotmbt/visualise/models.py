@@ -5,6 +5,10 @@ from robot.api import logger
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 
+import jsonpickle
+import tempfile
+import os
+
 
 class ScenarioInfo:
     """
@@ -53,9 +57,9 @@ class StateInfo:
         right: dict[str, dict | str] = new_state.properties.copy()
         for key in right.keys():
             right[key] = str(right[key])
-        temp: set[tuple[str, str]] = set(right.items()) - set(left.items())  # type inference goes doodoo here
+        # type inference goes doodoo here
+        temp: set[tuple[str, str]] = set(right.items()) - set(left.items())
         return temp
-
 
     def __init__(self, state: ModelSpace):
         self.domain = state.ref_id
@@ -104,6 +108,7 @@ class TraceInfo:
         self.all_traces: list[list[tuple[ScenarioInfo, StateInfo]]] = []
         self.previous_length: int = 0
         self.pushed: bool = False
+        self.path = "json/"
 
     def update_trace(self, scenario: ScenarioInfo | None, state: StateInfo, length: int):
         if length > self.previous_length:
@@ -125,7 +130,8 @@ class TraceInfo:
 
     def _push(self, scenario: ScenarioInfo, state: StateInfo, n: int):
         if n > 1:
-            logger.warn(f"Pushing multiple scenario/state pairs at once to trace info ({n})! Some info might be lost!")
+            logger.warn(
+                f"Pushing multiple scenario/state pairs at once to trace info ({n})! Some info might be lost!")
         for _ in range(n):
             self.current_trace.append((scenario, state))
         self.pushed = True
@@ -173,7 +179,33 @@ class TraceInfo:
             logger.warn(
                 f'TraceInfo got out of sync after {after}\nExpected scenario: {prev_scen}\nActual scenario: {scen}')
         if prev_state != state:
-            logger.warn(f'TraceInfo got out of sync after {after}\nExpected state: {prev_state}\nActual state: {state}')
+            logger.warn(
+                f'TraceInfo got out of sync after {after}\nExpected state: {prev_state}\nActual state: {state}')
+
+    def export_graph(self, suite_name: str, atest: bool = False) -> str | None:
+        encoded_instance = jsonpickle.encode(self)
+        name = suite_name.lower().replace(' ', '_')
+        if atest:
+            '''
+            temporary file to not accidentaly overwrite an existing file
+            mkstemp() is not ideal but given Python's limitations this is the easiest solution
+            as temporary file, a different method, is problamatic on Windows 
+            https://stackoverflow.com/a/57015383
+            '''
+            fd, path = tempfile.mkstemp()
+            with os.fdopen(fd, "w") as f:
+                f.write(encoded_instance)
+            return path
+        
+        with open(f"{self.path}{name}.json", "w") as f:
+            f.write(encoded_instance)
+        return None
+    
+    def import_graph(self, file_name: str):
+        with open(f"{self.path}{file_name}.json", "r") as f:
+            string = f.read()
+            self = jsonpickle.decode(string)
+            
 
     @staticmethod
     def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
