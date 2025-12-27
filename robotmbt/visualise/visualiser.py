@@ -24,22 +24,30 @@ class Visualiser:
         # just calls __init__, but without having underscores etc.
         return cls(graph_type)
 
-    def __init__(self, graph_type: str, suite_name: str = ""):
+    def __init__(self, graph_type: str, suite_name: str = "", export: bool = False, trace_info: TraceInfo = None):
         if graph_type != 'scenario' and graph_type != 'state' and graph_type != 'scenario-state' \
                 and graph_type != 'scenario-delta-value' and graph_type != 'reduced-sdv':
             raise ValueError(f"Unknown graph type: {graph_type}!")
 
         self.graph_type: str = graph_type
-        self.trace_info: TraceInfo = TraceInfo()
+        if trace_info == None:
+            self.trace_info: TraceInfo = TraceInfo()
+        else:
+            self.trace_info = trace_info
         self.suite_name = suite_name
+        self.export = export
 
     def update_trace(self, trace: TraceState, state: ModelSpace):
         if len(trace.get_trace()) > 0:
-            self.trace_info.update_trace(ScenarioInfo(trace.get_trace()[-1]), StateInfo(state), len(trace.get_trace()))
+            self.trace_info.update_trace(ScenarioInfo(
+                trace.get_trace()[-1]), StateInfo(state), len(trace.get_trace()))
         else:
             self.trace_info.update_trace(None, StateInfo(state), 0)
 
     def generate_visualisation(self) -> str:
+        if self.export:
+            self.trace_info.export_graph(self.suite_name)
+
         if self.graph_type == 'scenario':
             graph: AbstractGraph = ScenarioGraph(self.trace_info)
         elif self.graph_type == 'state':
@@ -50,10 +58,10 @@ class Visualiser:
             graph: AbstractGraph = ReducedSDVGraph(self.trace_info)
         else:
             graph: AbstractGraph = ScenarioStateGraph(self.trace_info)
-        
+
         vis = networkvisualiser.NetworkVisualiser(graph, self.suite_name)
         html_bokeh = vis.generate_html()
-        
+
         graph_size = networkvisualiser.NetworkVisualiser.GRAPH_SIZE_PX
-        
+
         return f'<iframe srcdoc="{html.escape(html_bokeh)}" width="{graph_size}px" height="{graph_size}px"></iframe>'
