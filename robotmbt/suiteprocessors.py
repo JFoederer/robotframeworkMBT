@@ -107,7 +107,6 @@ class SuiteProcessors:
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
         tracestate = TraceState(self.shuffled)
-        refinement_stack = []
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
             if candidate_id is None:  # No more candidates remaining for this level
@@ -122,7 +121,7 @@ class SuiteProcessors:
                     tracestate.reject_scenario(candidate_id)
                     continue
                 previous_len = len(tracestate)
-                self._try_to_fit_in_scenario(candidate, tracestate, refinement_stack)
+                self._try_to_fit_in_scenario(candidate, tracestate)
                 if len(tracestate) > previous_len:
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing(tracestate):
@@ -146,11 +145,10 @@ class SuiteProcessors:
 
     def _select_scenario_variant(self, candidate_id, tracestate):
         candidate = self._scenario_with_repeat_counter(candidate_id, tracestate)
-        scenarios_in_refinement = tracestate.find_scenarios_with_active_refinement()
-        if candidate_id in [s.src_id for s in scenarios_in_refinement]:
+        if candidate_id in tracestate.active_refinements:
             # reuse previous solution for all parts in split-up scenario
             candidate = candidate.copy()
-            candidate.data_choices = scenarios_in_refinement[candidate_id].data_choices.copy()
+            candidate.data_choices = tracestate.get_remainder(candidate_id).data_choices.copy()
         else:
             candidate = self._generate_scenario_variant(candidate, tracestate.model or ModelSpace())
         return candidate
@@ -176,16 +174,15 @@ class SuiteProcessors:
                                   for s in error_list])
             raise Exception(err_msg)
 
-    def _try_to_fit_in_scenario(self, candidate, tracestate, refinement_stack):
+    def _try_to_fit_in_scenario(self, candidate, tracestate):
         """
         Tries to insert the candidate scenario into the trace (in full or partial) and
-        updates tracestate and refinement_stack accordingly.
+        updates tracestate accordingly.
         """
         model = tracestate.model if tracestate.model else ModelSpace()
         model.new_scenario_scope()
         inserted, remainder, new_model, extra_data = self._process_scenario(candidate, model)
         if not inserted:  # insertion failed
-            model.end_scenario_scope()  # redundant??
             tracestate.reject_scenario(candidate.src_id)
             logger.debug(extra_data['fail_msg'])
             self._report_tracestate_to_user(tracestate)
@@ -193,21 +190,20 @@ class SuiteProcessors:
             new_model.end_scenario_scope()
             tracestate.confirm_full_scenario(inserted.src_id, inserted, new_model)
             logger.debug(f"Inserted scenario {inserted.src_id}, {inserted.name}")
-            if refinement_stack:
-                self._handle_refinement_exit(inserted, tracestate, refinement_stack)
+            if tracestate.is_refinement_active():
+                self._handle_refinement_exit(inserted, tracestate)
             self._report_tracestate_to_user(tracestate)
             logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
         else:  # the scenario is split into two parts, ready for refinement
             logger.debug(f"Partially inserted scenario {inserted.src_id}, {inserted.name}\n"
                          f"Refinement needed at step: {remainder.steps[1]}")
             inserted.name = f"{inserted.name} (part {tracestate.highest_part(inserted.src_id)+1})"
-            tracestate.push_partial_scenario(inserted.src_id, inserted, new_model)
-            refinement_stack.append(remainder)
+            tracestate.push_partial_scenario(inserted.src_id, inserted, new_model, remainder)
             self._report_tracestate_to_user(tracestate)
             logger.debug(f"last state:\n{new_model.get_status_text()}")
 
-    def _handle_refinement_exit(self, inserted_refinement, tracestate, refinement_stack):
-        refinement_tail = refinement_stack.pop()
+    def _handle_refinement_exit(self, inserted_refinement, tracestate):
+        refinement_tail = tracestate.get_remainder(tracestate.active_refinements[-1])
         exit_conditions = refinement_tail.steps[1].model_info['OUT']
         exit_conditions_processed = False
         for expr in exit_conditions:
@@ -221,7 +217,6 @@ class SuiteProcessors:
 
         if not exit_conditions_processed:
             self._rewind(tracestate)  # Reject insterted scenario. Even though it fits, it is not a refinement.
-            refinement_stack.append(refinement_tail)
             logger.debug(f"Reconsidering scenario {inserted_refinement.src_id}, {inserted_refinement.name}, "
                          f"did not meet refinement conditions: {exit_conditions}")
             return
@@ -238,14 +233,13 @@ class SuiteProcessors:
             new_model.end_scenario_scope()
             tracestate.confirm_full_scenario(tail_inserted.src_id, tail_inserted, new_model)
             logger.debug(f"Scenario '{tail_inserted.name}' completed after refinement")
-            if refinement_stack:
-                self._handle_refinement_exit(tail_inserted, tracestate, refinement_stack)
+            if tracestate.is_refinement_active():
+                self._handle_refinement_exit(tail_inserted, tracestate)
         else:
             logger.debug(f"Partially inserted remainder of scenario {tail_inserted.src_id}, {tail_inserted.name}\n"
                          f"refinement needed at step: {remainder.steps[1]}")
             tail_inserted.name = f"{tail_inserted.name} (part {tracestate.highest_part(tail_inserted.src_id)+1})"
-            tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, new_model)
-            refinement_stack.append(remainder)
+            tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, new_model, remainder)
 
     @staticmethod
     def _split_for_refinement(scenario, step):
@@ -264,7 +258,9 @@ class SuiteProcessors:
         return (front, back)
 
     def _rewind(self, tracestate, drought_recovery=False):
-        # Todo: Rewind needs to consider refinement stack.
+        if tracestate[-1].remainder and tracestate.highest_part(tracestate[-1].remainder.src_id) > 1:
+            # When rewinding an 'in between' part, rewind both the part and the refinement
+            tracestate.rewind()
         tail = tracestate.rewind()
         while drought_recovery and tracestate.coverage_drought:
             tail = tracestate.rewind()
@@ -278,24 +274,23 @@ class SuiteProcessors:
 
     @staticmethod
     def _process_scenario(scenario, model):
-        m = model.copy()
         for step in scenario.steps:
             if 'error' in step.model_info:
-                return None, None, m, dict(fail_masg=f"Error in scenario {scenario.name} "
-                                           f"at step {step}: {step.model_info['error']}")
+                return None, None, model, dict(fail_masg=f"Error in scenario {scenario.name} "
+                                               f"at step {step}: {step.model_info['error']}")
             for expr in SuiteProcessors._relevant_expressions(step):
                 try:
-                    if m.process_expression(expr, step.args) is False:
+                    if model.process_expression(expr, step.args) is False:
                         if step.gherkin_kw in ['when', None] and expr in step.model_info['OUT']:
                             part1, part2 = SuiteProcessors._split_for_refinement(scenario, step)
-                            return part1, part2, m, dict()
+                            return part1, part2, model, dict()
                         else:
-                            return None, None, m, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
-                                                       f"{scenario.name}, due to step '{step}': [{expr}] is False")
+                            return None, None, model, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
+                                                           f"{scenario.name}, due to step '{step}': [{expr}] is False")
                 except Exception as err:
-                    return None, None, m, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, {scenario.name},"
-                                               f" due to step '{step}': [{expr}] {err}")
-        return scenario.copy(), None, m, dict()
+                    return None, None, model, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
+                                                   f"{scenario.name}, due to step '{step}': [{expr}] {err}")
+        return scenario.copy(), None, model, dict()
 
     @staticmethod
     def _relevant_expressions(step):

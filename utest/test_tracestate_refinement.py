@@ -280,33 +280,33 @@ class TestTraceStateRefinement(unittest.TestCase):
 
     def test_initially_no_scenario_is_in_refinement(self):
         ts = TraceState([1])
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), [])
+        self.assertEqual(ts.active_refinements, [])
 
     def test_full_scenario_is_not_reported_as_refinement(self):
         ts = TraceState([1, 2])
         ts.confirm_full_scenario(1, 'S1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), [])
+        self.assertEqual(ts.active_refinements, [])
 
     def test_push_partial_opens_refinement(self):
         ts = TraceState([1, 2])
-        ts.push_partial_scenario(0, 'S1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['S1.1'])
+        ts.push_partial_scenario(1, 'S1.1', {})
+        self.assertEqual(ts.active_refinements, [1])
 
     def test_nested_refinements_are_all_reported_as_in_refinement(self):
         ts = TraceState([1, 2, 3, 4])
         ts.push_partial_scenario(1, 'T1.1', {})
         ts.push_partial_scenario(2, 'M1.1', {})
         ts.push_partial_scenario(3, 'B1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.active_refinements, [1, 2, 3])
 
     def test_closing_refinement_removes_it_from_list(self):
         ts = TraceState([1, 2, 3, 4])
         ts.push_partial_scenario(1, 'T1.1', {})
         ts.push_partial_scenario(2, 'M1.1', {})
         ts.push_partial_scenario(3, 'B1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.active_refinements, [1, 2, 3])
         ts.confirm_full_scenario(3, 'B1.0', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+        self.assertEqual(ts.active_refinements, [1, 2])
 
     def test_multi_step_refinement_is_reported_only_once(self):
         ts = TraceState([1, 2, 3, 4])
@@ -315,16 +315,16 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.confirm_full_scenario(3, 'B1', {})
         ts.push_partial_scenario(2, 'M1.2', {})
         ts.confirm_full_scenario(4, 'B2', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+        self.assertEqual(ts.active_refinements, [1, 2])
 
     def test_rewind_open_refinement_removes_it_from_list(self):
         ts = TraceState([1, 2, 3, 4])
         ts.push_partial_scenario(1, 'T1.1', {})
         ts.push_partial_scenario(2, 'M1.1', {})
         ts.push_partial_scenario(3, 'B1.1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.active_refinements, [1, 2, 3])
         ts.rewind()
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T1.1', 'M1.1'])
+        self.assertEqual(ts.active_refinements, [1, 2])
 
     def test_rewind_finished_scenario_with_refinement_removes_enclosed_refinements(self):
         ts = TraceState([1, 2, 3, 4, 5])
@@ -333,12 +333,84 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.push_partial_scenario(3, 'M1.1', {})
         ts.push_partial_scenario(4, 'B1.1', {})
         ts.confirm_full_scenario(5, 'S1', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1', 'M1.1', 'B1.1'])
+        self.assertEqual(ts.active_refinements, [2, 3, 4])
         ts.confirm_full_scenario(4, 'B1.0', {})
         ts.confirm_full_scenario(3, 'M1.0', {})
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
+        self.assertEqual(ts.active_refinements, [2])
         ts.rewind()  # Middle including its Bottom refinement
-        self.assertEqual(ts.find_scenarios_with_active_refinement(), ['T2.1'])
+        self.assertEqual(ts.active_refinements, [2])
+
+    def test_is_refinement_active_no_index(self):
+        ts = TraceState([1, 2, 3])
+        self.assertFalse(ts.is_refinement_active())
+        ts.confirm_full_scenario(1, 'one', {})
+        self.assertFalse(ts.is_refinement_active())
+        ts.push_partial_scenario(2, 'part1', {})
+        self.assertTrue(ts.is_refinement_active())
+        ts.confirm_full_scenario(3, 'refinment', {})
+        self.assertTrue(ts.is_refinement_active())
+        ts.push_partial_scenario(2, 'part2', {})
+        self.assertTrue(ts.is_refinement_active())
+        ts.confirm_full_scenario(2, 'remainder', {})
+        self.assertFalse(ts.is_refinement_active())
+        ts.rewind()
+        self.assertFalse(ts.is_refinement_active())
+        ts.rewind()
+        self.assertFalse(ts.is_refinement_active())
+
+    def test_is_refinement_active_by_index(self):
+        ts = TraceState([1, 2, 3])
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertFalse(ts.is_refinement_active(2))
+        ts.confirm_full_scenario(1, 'one', {})
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertFalse(ts.is_refinement_active(2))
+        ts.push_partial_scenario(2, 'part1', {})
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertTrue(ts.is_refinement_active(2))
+        self.assertFalse(ts.is_refinement_active(3))
+        ts.push_partial_scenario(3, 'refinement head', {})
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertTrue(ts.is_refinement_active(2))
+        self.assertTrue(ts.is_refinement_active(3))
+        ts.confirm_full_scenario(3, 'refinement tail', {})
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertTrue(ts.is_refinement_active(2))
+        self.assertFalse(ts.is_refinement_active(3))
+        ts.push_partial_scenario(2, 'part2', {})
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertTrue(ts.is_refinement_active(2))
+        ts.rewind()
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertTrue(ts.is_refinement_active(2))
+        ts.confirm_full_scenario(2, 'remainder', {})
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertFalse(ts.is_refinement_active(2))
+        ts.rewind()
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertFalse(ts.is_refinement_active(2))
+        ts.rewind()
+        self.assertFalse(ts.is_refinement_active(1))
+        self.assertFalse(ts.is_refinement_active(2))
+
+    def test_remainder_can_be_set_and_retrieved(self):
+        ts = TraceState([1, 2])
+        ts.push_partial_scenario(1, 'one part1', {}, 'one part2')
+        ts.push_partial_scenario(2, 'two part1', {}, 'two parts 2+3')
+        self.assertEqual(ts.get_remainder(1), 'one part2')
+        self.assertEqual(ts.get_remainder(2), 'two parts 2+3')
+        ts.push_partial_scenario(2, 'two part2', {}, 'two part3')
+        self.assertEqual(ts.get_remainder(2), 'two part3')
+        ts.rewind()
+        self.assertEqual(ts.get_remainder(2), 'two parts 2+3')
+        ts.push_partial_scenario(2, 'two part2', {}, 'two part3B')
+        self.assertEqual(ts.get_remainder(2), 'two part3B')
+        ts.confirm_full_scenario(2, 'two', {})
+        self.assertEqual(ts.get_remainder(1), 'one part2')
+        self.assertIsNone(ts.get_remainder(2))
+        ts.confirm_full_scenario(1, 'one', {})
+        self.assertIsNone(ts.get_remainder(1))
+        self.assertIsNone(ts.get_remainder(2))
 
 
 if __name__ == '__main__':

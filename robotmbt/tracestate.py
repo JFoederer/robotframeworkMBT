@@ -49,9 +49,6 @@ class TraceState:
         """returns the indices that were rejected or previously inserted at the current position"""
         return tuple(self._tried[-1])
 
-    def coverage_reached(self):
-        return all(self.c_pool.values())
-
     @property
     def coverage_drought(self):
         """Number of scenarios since last new coverage"""
@@ -61,28 +58,39 @@ class TraceState:
     def id_trace(self):
         return [snap.id for snap in self._snapshots]
 
+    @property
+    def active_refinements(self):
+        return self._open_refinements[:]
+
+    def coverage_reached(self):
+        return all(self.c_pool.values())
+
     def get_trace(self):
         return [snap.scenario for snap in self._snapshots]
 
     def next_candidate(self, retry=False):
         for i in self.c_pool:
-            if i not in self._tried[-1] and not self._is_refinement_active(i) and self.count(i) == 0:
+            if i not in self._tried[-1] and not self.is_refinement_active(i) and self.count(i) == 0:
                 return i
         if not retry:
             return None
         for i in self.c_pool:
-            if i not in self._tried[-1] and not self._is_refinement_active(i):
+            if i not in self._tried[-1] and not self.is_refinement_active(i):
                 return i
         return None
 
     def count(self, index):
-        """Count the number of times the index is present in the trace.
-        unfinished partial scenarios are excluded."""
+        """
+        Count the number of times the index is present in the trace.
+        unfinished partial scenarios are excluded.
+        """
         return self.c_pool[index]
 
     def highest_part(self, index):
-        """Given the current trace and an index, returns the highest part number of an ongoing
-        refinement for the related scenario. Returns 0 when there is no refinement active."""
+        """
+        Given the current trace and an index, returns the highest part number of an ongoing
+        refinement for the related scenario. Returns 0 when there is no refinement active.
+        """
         for i in range(1, len(self.id_trace)+1):
             if self.id_trace[-i] == f'{index}':
                 return 0
@@ -90,15 +98,24 @@ class TraceState:
                 return int(self.id_trace[-i].split('.')[1])
         return 0
 
-    def _is_refinement_active(self, index):
-        return self.highest_part(index) != 0
+    def is_refinement_active(self, index=None):
+        """
+        When called with an index, returns True if that scenario is currently being refined
+        When index is ommitted, return True if any refinement is active
+        """
+        if index is None:
+            return self._open_refinements != []
+        else:
+            return self.highest_part(index) != 0
 
-    def find_scenarios_with_active_refinement(self):
-        scenarios = []
-        for i in self._open_refinements:
-            index = -self.id_trace[::-1].index(f'{i}.1')-1
-            scenarios.append(self._snapshots[index].scenario)
-        return scenarios
+    def get_remainder(self, index):
+        """
+        When pushing a partial scenario, the remainder can be passed along for safe keeping.
+        This method retrieves the remainder for the last part that was pushed.
+        """
+        last_part = self.highest_part(index)
+        index = -self.id_trace[::-1].index(f'{index}.{last_part}')-1
+        return self._snapshots[index].remainder
 
     def reject_scenario(self, i_scenario):
         """Trying a scenario excludes it from further cadidacy on this level"""
@@ -107,24 +124,24 @@ class TraceState:
     def confirm_full_scenario(self, index, scenario, model):
         c_drought = 0 if self.c_pool[index] == 0 else self.coverage_drought+1
         self.c_pool[index] += 1
-        if self._is_refinement_active(index):
+        if self.is_refinement_active(index):
             id = f"{index}.0"
             self._open_refinements.pop()
         else:
             id = str(index)
             self._tried[-1].append(index)
             self._tried.append([])
-        self._snapshots.append(TraceSnapShot(id, scenario, model, c_drought))
+        self._snapshots.append(TraceSnapShot(id, scenario, model, drought=c_drought))
 
-    def push_partial_scenario(self, index, scenario, model):
-        if self._is_refinement_active(index):
+    def push_partial_scenario(self, index, scenario, model, remainder=None):
+        if self.is_refinement_active(index):
             id = f"{index}.{self.highest_part(index)+1}"
         else:
             id = f"{index}.1"
             self._tried[-1].append(index)
             self._tried.append([])
             self._open_refinements.append(index)
-        self._snapshots.append(TraceSnapShot(id, scenario, model, self.coverage_drought))
+        self._snapshots.append(TraceSnapShot(id, scenario, model, remainder, self.coverage_drought))
 
     def can_rewind(self):
         return len(self._snapshots) > 0
@@ -159,9 +176,10 @@ class TraceState:
 
 
 class TraceSnapShot:
-    def __init__(self, id, inserted_scenario, model_state, drought=0):
+    def __init__(self, id, inserted_scenario, model_state, remainder=None, drought=0):
         self.id = id
         self.scenario = inserted_scenario
+        self.remainder = remainder
         self._model = model_state.copy()
         self.coverage_drought = drought
 
