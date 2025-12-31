@@ -60,7 +60,7 @@ ${person A} passes the birthday card ${back/on} to ${person B}
     Log    Thank you ${person A}, I'll be sure to put my name on here.
     Set suite variable    ${has_card}    ${person B}
 
-${person} refuses to write their name on the birthday card
+${person} writes their name in invisible ink on the birthday card
     [Documentation]    *model info*
     ...    :IN: birthday_card
     ...    :OUT: birthday_card

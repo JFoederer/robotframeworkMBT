@@ -401,6 +401,25 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertIs(ts.next_candidate(), None)
         self.assertIs(tail, None)
 
+    def test_tried_entries_after_rewind(self):
+        ts = TraceState([1, 2, 10, 11, 12, 20, 21])
+        ts.push_partial_scenario(1, 'part1', {})
+        ts.reject_scenario(10)
+        ts.reject_scenario(11)
+        ts.confirm_full_scenario(2, 'two', {})
+        ts.push_partial_scenario(1, 'part2', {})
+        ts.reject_scenario(20)
+        ts.reject_scenario(21)
+        self.assertEqual(ts.tried, (20, 21))
+        ts.rewind()
+        self.assertEqual(ts.tried, ())
+        ts.rewind()
+        self.assertEqual(ts.tried, (10, 11, 2))
+        ts.reject_scenario(12)
+        self.assertEqual(ts.tried, (10, 11, 2, 12))
+        ts.rewind()
+        self.assertEqual(ts.tried, (1,))
+
     def test_highest_part_after_first_part(self):
         ts = TraceState([1])
         ts.push_partial_scenario(1, 'part1', {})

@@ -139,8 +139,8 @@ class TraceState:
         else:
             id = f"{index}.1"
             self._tried[-1].append(index)
-            self._tried.append([])
             self._open_refinements.append(index)
+        self._tried.append([])
         self._snapshots.append(TraceSnapShot(id, scenario, model, remainder, self.coverage_drought))
 
     def can_rewind(self):
@@ -157,11 +157,10 @@ class TraceState:
                 self.rewind()
             return self.rewind()
 
+        self._tried.pop()
         if '.' not in id:
-            self._tried.pop()
             self.c_pool[index] -= 1
         if id.endswith('.1'):
-            self._tried.pop()
             self._open_refinements.pop()
         return self._snapshots[-1] if self._snapshots else None
 

@@ -1,28 +1,37 @@
 *** Settings ***
-Documentation     This suite contains a scenario that can be repeated indefinitely, but
-...               doing so will not get you any closer to the final scenario. The model
-...               should detect that this is a lost cause and report this to the user.
+Documentation     This suite confirms that a scenario that can be inserted at the place
+...               of refinement based on its entry conditions, but afterwards does not
+...               satisfy the high-level scenario's exit conditions, is rejected.
 Suite Setup       Expect failing suite processing
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
+
 
 *** Test Cases ***
 Buying a card
     When someone buys a birthday card
     then there is a blank birthday card available
 
-Signing the card in invisible ink
+high-level scenario
     Given there is a birthday card
-    when everybody writes their name in invisible ink on the birthday card
-    then the birthday card has 0 names written on it
+    when Two people write their name on the birthday card
+    then the birthday card has 2 names written on it
 
-At least 42 people can write their name on the card
-    Skip when unreachable
-    Given the birthday card has 41 names written on it
-    when someone writes their name on the birthday card
-    then the birthday card has 42 names written on it
+low-level scenario
+    Given there is a birthday card
+    when Someone writes their name on the birthday card
+    then the birthday card has 'Someone' written on it
+
 
 *** Keywords ***
+Two people write their name on the birthday card
+    [Documentation]
+    ...    *model info*
+    ...    :IN: scenario.count = len(birthday_card.names)
+    ...    :OUT: len(birthday_card.names) == scenario.count+2
+    Skip when unreachable
+    Length should be    ${names}    ${2}
+
 Expect failing suite processing
     Run keyword and expect error    Unable to compose*    Treat this test suite Model-based
     Set suite variable    ${expected_error_detected}    ${True}

@@ -218,7 +218,7 @@ class SuiteProcessors:
         if not exit_conditions_processed:
             self._rewind(tracestate)  # Reject insterted scenario. Even though it fits, it is not a refinement.
             logger.debug(f"Reconsidering scenario {inserted_refinement.src_id}, {inserted_refinement.name}, "
-                         f"did not meet refinement conditions: {exit_conditions}")
+                         f"did not meet refinement exit condition: {exit_conditions}")
             return
 
         tail_inserted, remainder, new_model, extra_data = self._process_scenario(refinement_tail, tracestate.model)
