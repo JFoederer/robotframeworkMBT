@@ -1,15 +1,16 @@
 *** Settings ***
 Documentation     This suite uses refinement and equivalence partitioning. The high-level scenario
 ...               requires just a single key example from the equivalence class and uses just one
-...               concrete example. This scenario is then refined by two more detailed examples
-...               that use 2 different actors with specific characters. One is concise, the other
-...               a bit more elaborate. This implies that for at least one set of examples the
-...               high-level scenario's example value does not match the low-level scenario's
-...               example value. They must however still be matched, and kept identical, under
-...               refinement.
+...               concrete example. This scenario can be refined by two more detailed examples
+...               that use 2 different actors. This implies that one refinement example will match
+...               the high-level scenario's example, the other does not. To complete the trace,
+...               the high-level scenario must be repeated, once with each possible refinement.
+...               The example values between the high- and low-level scenarios must be matched,
+...               and kept identical, under refinement.
 Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_data_variation.resource
 Library           robotmbt
+
 
 *** Test Cases ***
 Background

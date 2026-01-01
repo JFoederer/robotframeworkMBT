@@ -145,12 +145,7 @@ class SuiteProcessors:
 
     def _select_scenario_variant(self, candidate_id, tracestate):
         candidate = self._scenario_with_repeat_counter(candidate_id, tracestate)
-        if candidate_id in tracestate.active_refinements:
-            # reuse previous solution for all parts in split-up scenario
-            candidate = candidate.copy()
-            candidate.data_choices = tracestate.get_remainder(candidate_id).data_choices.copy()
-        else:
-            candidate = self._generate_scenario_variant(candidate, tracestate.model or ModelSpace())
+        candidate = self._generate_scenario_variant(candidate, tracestate.model or ModelSpace())
         return candidate
 
     def _scenario_with_repeat_counter(self, index, tracestate):

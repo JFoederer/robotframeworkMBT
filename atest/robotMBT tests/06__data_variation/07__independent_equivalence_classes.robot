@@ -12,6 +12,7 @@ Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_data_variation.resource
 Library           robotmbt
 
+
 *** Test Cases ***
 Background
     Given Bahar is having their birthday

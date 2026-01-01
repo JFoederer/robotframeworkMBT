@@ -15,6 +15,7 @@ Documentation     This test suite focuses on the initialisation of model data fr
 Suite Setup       Treat this test suite Model-based
 Library           robotmbt
 
+
 *** Test Cases ***
 Background
     Given Bahar is throwing a party for their friends
