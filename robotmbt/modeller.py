@@ -49,13 +49,13 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
     """
     model = tracestate.model if tracestate.model else ModelSpace()
     model.new_scenario_scope()
-    inserted, remainder, new_model, extra_data = process_scenario(candidate, model)
+    inserted, remainder, extra_data = process_scenario(candidate, model)
     if not inserted:  # insertion failed
         tracestate.reject_scenario(candidate.src_id)
         logger.debug(extra_data['fail_msg'])
     elif not remainder:  # the scenario processed in full
-        new_model.end_scenario_scope()
-        tracestate.confirm_full_scenario(inserted.src_id, inserted, new_model)
+        model.end_scenario_scope()
+        tracestate.confirm_full_scenario(inserted.src_id, inserted, model)
         logger.debug(f"Inserted scenario {inserted.src_id}, {inserted.name}")
         if tracestate.is_refinement_active():
             handle_refinement_exit(inserted, tracestate)
@@ -63,27 +63,27 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
         logger.debug(f"Partially inserted scenario {inserted.src_id}, {inserted.name}\n"
                      f"Refinement needed at step: {remainder.steps[1]}")
         inserted.name = f"{inserted.name} (part {tracestate.highest_part(inserted.src_id)+1})"
-        tracestate.push_partial_scenario(inserted.src_id, inserted, new_model, remainder)
+        tracestate.push_partial_scenario(inserted.src_id, inserted, model, remainder)
 
 
-def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, Scenario, ModelSpace, dict[str, Any]]:
+def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, Scenario, dict[str, Any]]:
     for step in scenario.steps:
         if 'error' in step.model_info:
-            return None, None, model, dict(fail_masg=f"Error in scenario {scenario.name} "
-                                           f"at step {step}: {step.model_info['error']}")
+            return None, None, dict(fail_masg=f"Error in scenario {scenario.name} "
+                                    f"at step {step}: {step.model_info['error']}")
         for expr in _relevant_expressions(step):
             try:
                 if model.process_expression(expr, step.args) is False:
                     if step.gherkin_kw in ['when', None] and expr in step.model_info['OUT']:
                         part1, part2 = split_for_refinement(scenario, step)
-                        return part1, part2, model, dict()
+                        return part1, part2, dict()
                     else:
-                        return None, None, model, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
-                                                       f"{scenario.name}, due to step '{step}': [{expr}] is False")
+                        return None, None, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
+                                                f"{scenario.name}, due to step '{step}': [{expr}] is False")
             except Exception as err:
-                return None, None, model, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
-                                               f"{scenario.name}, due to step '{step}': [{expr}] {err}")
-    return scenario.copy(), None, model, dict()
+                return None, None, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
+                                        f"{scenario.name}, due to step '{step}': [{expr}] {err}")
+    return scenario.copy(), None, dict()
 
 
 def _relevant_expressions(step: Step) -> list[str]:
@@ -140,17 +140,18 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
                      f"did not meet refinement exit condition: {exit_conditions}")
         return
 
-    tail_inserted, remainder, new_model, extra_data = process_scenario(refinement_tail, tracestate.model)
+    model = tracestate.model
+    tail_inserted, remainder, extra_data = process_scenario(refinement_tail, model)
     if not tail_inserted:
         logger.debug(extra_data['fail_msg'])
         # Confirm then rewind, to roll back complete scenario, including its refiements
         # Because that exit check passed, this is an error in the refined scenario itself
-        tracestate.confirm_full_scenario(refinement_tail.src_id, refinement_tail, new_model)
+        tracestate.confirm_full_scenario(refinement_tail.src_id, refinement_tail, model)
         tail = rewind(tracestate)
         logger.debug(f"Having to roll back up to {tail.scenario.name if tail else 'the beginning'}")
     elif not remainder:
-        new_model.end_scenario_scope()
-        tracestate.confirm_full_scenario(tail_inserted.src_id, tail_inserted, new_model)
+        model.end_scenario_scope()
+        tracestate.confirm_full_scenario(tail_inserted.src_id, tail_inserted, model)
         logger.debug(f"Scenario '{tail_inserted.name}' completed after refinement")
         if tracestate.is_refinement_active():
             handle_refinement_exit(tail_inserted, tracestate)
@@ -158,7 +159,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
         logger.debug(f"Partially inserted remainder of scenario {tail_inserted.src_id}, {tail_inserted.name}\n"
                      f"refinement needed at step: {remainder.steps[1]}")
         tail_inserted.name = f"{tail_inserted.name} (part {tracestate.highest_part(tail_inserted.src_id)+1})"
-        tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, new_model, remainder)
+        tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, model, remainder)
 
 
 def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario:
