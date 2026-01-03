@@ -19,10 +19,10 @@ Someone writes their name on the card
     when Someone writes their name on the birthday card
     then the birthday card has 'Someone' written on it
 
-Refusing to share the birthday card
+Signing the card in invisible ink
     Given there is a birthday card
     and the birthday card has 'Someone' written on it
-    when Johan refuses to write their name on the birthday card
+    when Johan writes their name in invisible ink on the birthday card
     then the birthday card has 'Someone' written on it
     but the birthday card does not have 'Johan' written on it
 
