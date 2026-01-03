@@ -129,3 +129,35 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         Create the label for an edge given its chosen information.
         """
         pass
+
+    @staticmethod
+    @abstractmethod
+    def get_legend_info_final_trace_node() -> str:
+        """
+        Get the information to include in the legend for nodes that appear in the final trace.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_legend_info_other_node() -> str:
+        """
+        Get the information to include in the legend for nodes that do not appear in the final trace.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_legend_info_final_trace_edge() -> str:
+        """
+        Get the information to include in the legend for edges that appear in the final trace.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_legend_info_other_edge() -> str:
+        """
+        Get the information to include in the legend for edges that do not appear in the final trace.
+        """
+        pass
