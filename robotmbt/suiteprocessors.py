@@ -121,9 +121,8 @@ class SuiteProcessors:
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
                 self._report_tracestate_to_user(tracestate)
-                if tracestate.model:
-                    logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
                 if len(tracestate) > previous_len:
+                    logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing(tracestate):
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
