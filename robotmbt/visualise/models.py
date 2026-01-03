@@ -53,10 +53,16 @@ class StateInfo:
     def difference(self, new_state) -> set[tuple[str, str]]:
         left: dict[str, dict | str] = self.properties.copy()
         for key in left.keys():
-            left[key] = str(left[key])
+            res = ""
+            for k, v in sorted(left[key].items()):
+                res += f"\n\t{k}={v}"
+            left[key] = res
         right: dict[str, dict | str] = new_state.properties.copy()
         for key in right.keys():
-            right[key] = str(right[key])
+            res = ""
+            for k, v in sorted(right[key].items()):
+                res += f"\n\t{k}={v}"
+            right[key] = res
         # type inference goes doodoo here
         temp: set[tuple[str, str]] = set(right.items()) - set(left.items())
         return temp
@@ -196,16 +202,16 @@ class TraceInfo:
             with os.fdopen(fd, "w") as f:
                 f.write(encoded_instance)
             return path
-        
+
         with open(f"{self.path}{name}.json", "w") as f:
             f.write(encoded_instance)
         return None
-    
+
     def import_graph(self, file_name: str):
         with open(f"{self.path}{file_name}.json", "r") as f:
             string = f.read()
             self = jsonpickle.decode(string)
-            
+
 
     @staticmethod
     def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
