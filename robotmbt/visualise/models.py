@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from robot.api import logger
@@ -51,21 +52,30 @@ class StateInfo:
         return cls(space)
 
     def difference(self, new_state) -> set[tuple[str, str]]:
-        left: dict[str, dict | str] = self.properties.copy()
-        for key in left.keys():
+        old: dict[str, dict | str] = self.properties.copy()
+        new: dict[str, dict | str] = new_state.properties.copy()
+        temp = StateInfo._dict_deep_diff(old, new)
+        for key in temp.keys():
             res = ""
-            for k, v in sorted(left[key].items()):
+            for k, v in sorted(temp[key].items()):
                 res += f"\n\t{k}={v}"
-            left[key] = res
-        right: dict[str, dict | str] = new_state.properties.copy()
-        for key in right.keys():
-            res = ""
-            for k, v in sorted(right[key].items()):
-                res += f"\n\t{k}={v}"
-            right[key] = res
-        # type inference goes doodoo here
-        temp: set[tuple[str, str]] = set(right.items()) - set(left.items())
-        return temp
+            temp[key] = res
+        return set(temp.items())  # type inference goes wacky here
+
+    @staticmethod
+    def _dict_deep_diff(old_state: dict[str, any], new_state: dict[str, any]) -> dict[str, any]:
+        res = {}
+        for key in new_state.keys():
+            if key not in old_state:
+                res[key] = new_state[key]
+            elif isinstance(old_state[key], dict):
+                diff = StateInfo._dict_deep_diff(old_state[key], new_state[key])
+                if len(diff) != 0:
+                    res[key] = diff
+            elif old_state[key] != new_state[key]:
+                res[key] = new_state[key]
+        return res
+
 
     def __init__(self, state: ModelSpace):
         self.domain = state.ref_id
