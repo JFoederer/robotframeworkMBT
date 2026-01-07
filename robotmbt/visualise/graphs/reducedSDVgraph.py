@@ -25,12 +25,19 @@ class ReducedSDVGraph(AbstractGraph[tuple[ScenarioInfo, set[tuple[str, str]]], N
         else:
             return False
 
+    @staticmethod
+    def _generate_equiv_class_label(equiv_class, old_labels):
+        if len(equiv_class) == 1:
+            return old_labels[set(equiv_class).pop()]
+        else:
+            return "(merged: "+str(len(equiv_class))+")\n"+old_labels[set(equiv_class).pop()]
+
     def __init__(self, info: TraceInfo):
         super().__init__(info)
         old_labels = networkx.get_node_attributes(self.networkx, "label")
         self.networkx = networkx.quotient_graph(self.networkx, lambda x, y: self.chain_equiv(x, y),
                                                 node_data=lambda equiv_class: {
-                                                    'label': old_labels[set(equiv_class).pop()]},
+                                    'label': self._generate_equiv_class_label(equiv_class, old_labels)},
                                                 edge_data=lambda x, y: {'label': ''})
         # TODO make generated label more obvious to be equivalence class
         nodes = self.networkx.nodes
