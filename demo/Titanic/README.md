@@ -1,10 +1,10 @@
-# robotMBT Titanic demo
+# RobotMBT Titanic demo
 
 ## What is it?
 
-The purpose of this demo is to showcase the Model-Based Testing concepts available from the [robotMBT](https://github.com/JFoederer/robotframeworkMBT) library using a [BDD](https://en.wikipedia.org/wiki/Behavior-driven_development) style project. It is based on the principle of [specification by example](https://en.wikipedia.org/wiki/Specification_by_example), using _given-when-then_ style scenarios.
+The purpose of this demo is to showcase the Model-Based Testing concepts available from the [RobotMBT](https://github.com/JFoederer/robotframeworkMBT) library using a [BDD](https://en.wikipedia.org/wiki/Behavior-driven_development) style project. It is based on the principle of [specification by example](https://en.wikipedia.org/wiki/Specification_by_example), using _given-when-then_ style scenarios.
 
-Given-steps typically describe preconditions, i.e. state, but classically given-steps are implemented as actions to get to that desired precondition. Now, consider using [specification by example](https://en.wikipedia.org/wiki/Specification_by_example). If your specification is complete, and your examples are consistent, then any given-state must be reachable by operating the system within specification, following the examples. In this demo we use [robotMBT](https://github.com/JFoederer/robotframeworkMBT) to specify a complete story, on varying levels of detail, using small consise scenarios. Then we let [robotMBT](https://github.com/JFoederer/robotframeworkMBT) construct a complete storyline, so we don't have to worry about how to reach all the correct preconditions.
+Given-steps typically describe preconditions, i.e. state, but classically given-steps are implemented as actions to get to that desired precondition. Now, consider using [specification by example](https://en.wikipedia.org/wiki/Specification_by_example). If your specification is complete, and your examples are consistent, then any given-state must be reachable by operating the system within specification, following the examples. In this demo we use [RobotMBT](https://github.com/JFoederer/robotframeworkMBT) to specify a complete story, on varying levels of detail, using small consise scenarios. Then we let [RobotMBT](https://github.com/JFoederer/robotframeworkMBT) construct a complete storyline, so we don't have to worry about how to reach all the correct preconditions.
 
 Please keep in mind that the library and this demo are still in the early development phases and offered functionality is still limited. However, in good agile spirit, we still wanted to publish the results.
 
@@ -18,7 +18,7 @@ There are a total of 7 scenarios in this demo, 10 if you use the extended varian
 
 It might seem odd at first, seeing the [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) in a context that is typically used in more technical environments. However, the [BDD](https://en.wikipedia.org/wiki/Behavior-driven_development) process is mostly non-technical and using a topic like Titanic helps to prevent technical bias. Another important point is that we want to stick to writing and maintaining short, to-the-point scenarios. From these, we want to compose larger scenarios, describing behaviour of complex systems, start to end, like telling a story. What better use for that than a well known story?
 
-The [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) fits these criteria and, since it already happened, there should be little discussion on the specification. It will be interesting to see if the test case generation mechanism from [robotMBT](https://github.com/JFoederer/robotframeworkMBT) can reconstruct the familiar story, and then some variations thereof. After all, the maiden voyage of Titanic was just one example of what could have happened...
+The [story of Titanic](https://en.wikipedia.org/wiki/Sinking_of_the_Titanic) fits these criteria and, since it already happened, there should be little discussion on the specification. It will be interesting to see if the test case generation mechanism from [RobotMBT](https://github.com/JFoederer/robotframeworkMBT) can reconstruct the familiar story, and then some variations thereof. After all, the maiden voyage of Titanic was just one example of what could have happened...
 
 ## Running the demo
 

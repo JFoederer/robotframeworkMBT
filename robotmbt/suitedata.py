@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
+from typing import Any
 
 from robot.running.arguments.argumentvalidator import ArgumentValidator
 import robot.utils.notset
@@ -40,7 +41,7 @@ from .substitutionmap import SubstitutionMap
 
 
 class Suite:
-    def __init__(self, name: str, parent=None):
+    def __init__(self, name: str, parent: Any = None):
         self.name: str = name
         self.filename: str = ''
         self.parent: Suite | None = parent
@@ -62,30 +63,22 @@ class Suite:
     # list[Step | str | None], Step needs to be moved up
     def steps_with_errors(self):
         return (([self.setup] if self.setup and self.setup.has_error() else [])
-                + [e for s in map(Suite.steps_with_errors, self.suites)
-                   for e in s]
-                + [e for s in map(Scenario.steps_with_errors,
-                                  self.scenarios) for e in s]
+                + [e for s in map(Suite.steps_with_errors, self.suites) for e in s]
+                + [e for s in map(Scenario.steps_with_errors, self.scenarios) for e in s]
                 + ([self.teardown] if self.teardown and self.teardown.has_error() else []))
 
 
 class Scenario:
-    def __init__(self, name: str, parent=None):
+    def __init__(self, name: str, parent: Suite | None = None):
         self.name: str = name
-
-        # Parent scenario for easy searching, processing and referencing
+        # Parent scenario is kept for easy searching, processing and referencing
         # after steps and scenarios have been potentially moved around
         self.parent: Suite | None = parent
-
-        # Can be a single step or None, may also be a str in tests
         self.setup: Step | None = None
-
-        # Can be a single step or None, may also be a str in tests
         self.teardown: Step | None = None
-
         self.steps: list[Step] = []
         self.src_id: int | None = None
-        self.data_choices: dict | SubstitutionMap = {}  # may be Dummy type in a test
+        self.data_choices: dict | SubstitutionMap = {} # may be Dummy type in a test
 
     @property
     def longname(self) -> str:
@@ -128,30 +121,33 @@ class Scenario:
 class Step:
     def __init__(self, steptext: str, *args, parent: Suite | Scenario, assign: tuple[str] = (),
                  prev_gherkin_kw: str | None = None):
-        # first keyword cell of the Robot line, including step_kw,
+        # org_step is the first keyword cell of the Robot line, including step_kw,
         # excluding positional args, excluding variable assignment.
         self.org_step: str = steptext
-        # positional and named arguments as parsed from Robot text ('posA' , 'posB', 'named1=namedA')
+
+        # org_pn_args are the positional and named arguments as parsed
+        # from the Robot text ('posA' , 'posB', 'named1=namedA')
         self.org_pn_args = args
         # Parent scenario for easy searching and processing.
         self.parent: Suite | Scenario = parent
         # For when a keyword's return value is assigned to a variable.
         # Taken directly from Robot.
         self.assign: tuple[str] = assign
-        # 'given', 'when', 'then' or None for non-bdd keywords.
+
+        # gherkin_kw is one of 'given', 'when', 'then', or None for non-bdd keywords.
         self.gherkin_kw: str | None = self.step_kw \
             if str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] \
             else prev_gherkin_kw
+
         # Robot keyword with its embedded arguments in ${...} notation.
         self.signature: str | None = None
         # embedded arguments list of StepArgument objects.
         self.args: StepArguments = StepArguments()
         # Decouples StepArguments from the step text (refinement use case)
         self.detached: bool = False
-        # Modelling information is available as a dictionary.
-        # TODO: Maybe use a data structure for this instead of a dict with specific keys.
-        # The standard format is dict(IN=[], OUT=[]) and can
-        # optionally contain an error field.
+
+        # model_info contains modelling information as a dictionary. The standard format is
+        # dict(IN=[], OUT=[]) and can optionally contain an error field.
         # IN and OUT are lists of Python evaluatable expressions.
         # The `new vocab` form can be used to create new domain objects.
         # The `vocab.attribute` form can then be used to express relations
@@ -194,11 +190,11 @@ class Step:
         return self.args.fill_in_args(s)
 
     @property
-    def posnom_args_str(self) -> tuple[any]:
+    def posnom_args_str(self) -> tuple[Any]:
         """A tuple with all arguments in Robot accepted text format ('posA' , 'posB', 'named1=namedA')"""
         if self.detached or not self.args.modified:
             return self.org_pn_args
-        result: list[any] = []
+        result: list[Any] = []
         for arg in self.args:
             if arg.is_default:
                 continue
@@ -246,7 +242,7 @@ class Step:
 
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
-            self.model_info = self.__parse_model_info(robot_kw._doc)
+            self.model_info: dict[str, list[str] | str] = self.__parse_model_info(robot_kw._doc)
         except Exception as ex:
             self.model_info['error'] = str(ex)
 

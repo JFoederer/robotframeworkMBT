@@ -17,7 +17,8 @@ class MapAnimation:
     def plot_static_elements(self, areas, locations):
         # Plot the areas as squares
         if not self.plot_initialized:
-            self._import_dependencies()  # Import here, to avoid any missing dependency problems in case matplotlib is not installed
+            # Import here, to avoid any missing dependency problems in case matplotlib is not installed
+            self._import_dependencies()
 
             self.fig, self.ax = plt.subplots()
             self.ax.set_aspect('equal')

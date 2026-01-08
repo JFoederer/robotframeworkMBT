@@ -56,9 +56,7 @@ class SubstitutionMap:
     def copy(self):
         # -> Self
         new = SubstitutionMap()
-        new.substitutions = {k: v.copy()
-                             for k, v in self.substitutions.items()}
-
+        new.substitutions = {k: v.copy() for k, v in self.substitutions.items()}
         new.solution = self.solution.copy()
         return new
 

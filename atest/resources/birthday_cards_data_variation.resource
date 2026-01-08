@@ -61,7 +61,7 @@ the birthday card has ${n} different names written on it
     [Documentation]    *model info*
     ...    :IN: len(set(birthday_card.names)) == ${n}
     ...    :OUT: len(set(birthday_card.names)) == ${n}
-    Length should be    ${names}    ${{int(${n})}}
+    Length should be    ${{set(${names})}}    ${{int(${n})}}
 
 ${person} signs the birthday card
     [Documentation]    *model info*
