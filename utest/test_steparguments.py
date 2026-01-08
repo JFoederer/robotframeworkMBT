@@ -160,10 +160,10 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg1.codestring, arg2.codestring)
 
     def test_other_values_become_unique_identifiers(self):
-        valuelist = ['bar', 'foo bar', 'foo2bar', '${bar}',  # strings
-                     ' ', '\t', '\n', '  ', ' \n', '\a',     # whitespace/non-printable
-                     '#', '+-', '-+', '"', "'", 'パイ',      # special characters
-                     max, 'elif', 'import', 'new', 'del',    # reserved words
+        valuelist = ['bar', 'foo bar', 'foo2bar', '${bar}',   # strings
+                     ' ', '\t', '\n', '  ', ' \n', '\a',      # whitespace/non-printable
+                     '#', '+-', '-+', '"', "'", 'パイ',       # special characters
+                     max, 'elif', 'import', 'new', 'del',     # reserved words
                      lambda x: x/2, self, unittest.TestCase]  # functions and objects
         argsset = set()
         for v in valuelist:

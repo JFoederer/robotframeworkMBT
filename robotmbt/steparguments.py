@@ -32,6 +32,7 @@
 
 from keyword import iskeyword
 import builtins
+from typing import Any
 
 
 class StepArguments(list):
@@ -64,27 +65,27 @@ class StepArgument:
     NAMED = 'NAMED'
     FREE_NAMED = 'FREE_NAMED'
 
-    def __init__(self, arg_name: str, value: any, kind: str | None = None, is_default: bool = False):
+    def __init__(self, arg_name: str, value: Any, kind: str | None = None, is_default: bool = False):
         self.name: str = arg_name
-        self.org_value: any = value
+        self.org_value: Any = value
         self.kind: str | None = kind  # one of the values from the kind list
-        self._value: any = None
+        self._value: Any = None
         self._codestr: str | None = None
-        self.value: any = value
-        self.is_default: bool = is_default  # indicates that the argument was not
-        # filled in from the scenario. This argment's value is taken
-        # from the keyword's default as provided by Robot.
+        self.value: Any = value
+        # is_default indicates that the argument was not filled in from the scenario. This
+        # argment's value is taken from the keyword's default as provided by Robot.
+        self.is_default: bool = is_default  
 
     @property
     def arg(self) -> str:
         return "${%s}" % self.name
 
     @property
-    def value(self) -> any:
+    def value(self) -> Any:
         return self._value
 
     @value.setter
-    def value(self, value: any):
+    def value(self, value: Any):
         self._value = value
         self._codestr = self.make_codestring(value)
         self.is_default = False
@@ -107,7 +108,7 @@ class StepArgument:
         return f"{self.name}={self.value}"
 
     @staticmethod
-    def make_codestring(text: any) -> str:
+    def make_codestring(text: Any) -> str:
         codestr = str(text)
         if codestr.title() in ['None', 'True', 'False']:
             return codestr.title()
@@ -118,7 +119,7 @@ class StepArgument:
         return codestr
 
     @staticmethod
-    def make_identifier(s: any) -> str:
+    def make_identifier(s: Any) -> str:
         _s = str(s).replace(' ', '_')
         if _s.isidentifier():
             return f"{_s}_" if iskeyword(_s) or _s in dir(builtins) else _s

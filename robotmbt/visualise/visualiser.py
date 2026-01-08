@@ -25,7 +25,8 @@ class Visualiser:
         # just calls __init__, but without having underscores etc.
         return cls(graph_type)
 
-    def __init__(self, graph_type: str, suite_name: str = "", seed: str = "", export: bool = False, trace_info: TraceInfo = None):
+    def __init__(self, graph_type: str, suite_name: str = "", seed: str = "", export: bool = False,
+                 trace_info: TraceInfo = None):
         if graph_type != 'scenario' and graph_type != 'state' and graph_type != 'scenario-state' \
                 and graph_type != 'scenario-delta-value' and graph_type != 'reduced-sdv' \
                 and graph_type != 'delta-value':
@@ -40,12 +41,35 @@ class Visualiser:
         self.export = export
         self.seed = seed
 
-    def update_trace(self, trace: TraceState, state: ModelSpace):
-        if len(trace.get_trace()) > 0:
-            self.trace_info.update_trace(ScenarioInfo(
-                trace.get_trace()[-1]), StateInfo(state), len(trace.get_trace()))
+    def update_trace(self, trace: TraceState):
+        """
+        Uses the new snapshots from trace to update the trace info.
+        Multiple new snapshots can be pushed or popped at once.
+        """
+        trace_len = len(trace._snapshots)
+        # We don't have any information
+        if trace_len == 0:
+            self.trace_info.update_trace(None, StateInfo(ModelSpace()), 0)
+
+        # New snapshots have been pushed
+        elif trace_len > self.trace_info.previous_length:
+            prev = self.trace_info.previous_length
+            r = trace_len - prev
+            # Extract all snapshots that have been pushed and update our trace info with their scenario/model info
+            for i in range(r):
+                snap = trace._snapshots[prev + i]
+                scenario = snap.scenario
+                model = snap.model
+                if model is None:
+                    model = ModelSpace
+                self.trace_info.update_trace(ScenarioInfo(scenario), StateInfo(model), prev + i + 1)
+
+        # Snapshots have been removed
         else:
-            self.trace_info.update_trace(None, StateInfo(state), 0)
+            snap = trace._snapshots[-1]
+            scenario = snap.scenario
+            model = snap.model
+            self.trace_info.update_trace(ScenarioInfo(scenario), StateInfo(model), trace_len)
 
     def generate_visualisation(self) -> str:
         if self.export:
