@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
+from typing import Any
 
 from .steparguments import StepArguments
 
@@ -46,7 +47,7 @@ class ModelSpace:
         self.props: dict[str, RecursiveScope | ModelSpace] = dict()
 
         # For using literals without having to use quotes (abc='abc')
-        self.values: dict[str, any] = dict()
+        self.values: dict[str, Any] = dict()
         self.scenario_vars: list[RecursiveScope] = []
         self.std_attrs = dir(self)
 
@@ -96,7 +97,7 @@ class ModelSpace:
         else:
             self.props.pop('scenario')
 
-    def process_expression(self, expression: str, step_args: StepArguments = StepArguments()) -> any:
+    def process_expression(self, expression: str, step_args: StepArguments = StepArguments()) -> Any:
         expr = step_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))

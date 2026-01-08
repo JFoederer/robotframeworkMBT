@@ -489,5 +489,18 @@ class StubArgument(SimpleNamespace):
     FREE_NAMED = 'FREE_NAMED'
 
 
+
+class StubStepArguments(list):
+    modified = True  # trigger modified status to get arguments processed, rather then just echoed
+
+
+class StubArgument(SimpleNamespace):
+    EMBEDDED = 'EMBEDDED'
+    POSITIONAL = 'POSITIONAL'
+    VAR_POS = 'VAR_POS'
+    NAMED = 'NAMED'
+    FREE_NAMED = 'FREE_NAMED'
+
+
 if __name__ == '__main__':
     unittest.main()
