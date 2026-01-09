@@ -9,6 +9,8 @@ import jsonpickle
 import tempfile
 import os
 
+DESIRED_NAME_LINE_LENGTH = 20
+
 
 class ScenarioInfo:
     """
@@ -20,7 +22,7 @@ class ScenarioInfo:
     def __init__(self, scenario: Scenario | str):
         if isinstance(scenario, Scenario):
             # default case
-            self.name = scenario.name
+            self.name = self._split_name(scenario.name)
             self.src_id = scenario.src_id
         else:
             # unit tests
@@ -32,6 +34,55 @@ class ScenarioInfo:
 
     def __eq__(self, other):
         return self.src_id == other.src_id
+
+    @staticmethod
+    def _split_name(name: str) -> str:
+        """
+        Split a name into separate lines where each line is as close to the desired line length as possible.
+        """
+        # Split into words
+        words = name.split(" ")
+
+        # If any word is longer than the desired length, use that as the desired length instead
+        # (otherwise, we will always get a line (much) longer than the desired length, while the other lines will
+        # be constrained by the desired length)
+        desired_length = DESIRED_NAME_LINE_LENGTH
+        for i in words:
+            if len(i) > desired_length:
+                desired_length = len(i)
+
+        res = ""
+        line = words[0]
+        for i in words[1:]:
+            # If the previous line was fully appended, simply take the current word as the new line
+            if line == '\n':
+                line += i
+                continue
+
+            app_len = len(line + ' ' + i)
+
+            # If the word fully fits into the line, simply append it
+            if app_len < desired_length:
+                line = line + ' ' + i
+                continue
+
+            app_diff = abs(desired_length - app_len)
+            curr_diff = abs(desired_length - len(line))
+
+            # If the current line is closer to the desired length, use that
+            if curr_diff < app_diff:
+                res += line
+                line = '\n' + i
+            # If the current line with the new word is closer to the desired length, use that
+            else:
+                res += line + ' ' + i
+                line = '\n'
+
+        # Append the final line if it wasn't empty
+        if line != '\n':
+            res += line
+
+        return res
 
 
 class StateInfo:
@@ -74,7 +125,6 @@ class StateInfo:
             elif old_state[key] != new_state[key]:
                 res[key] = new_state[key]
         return res
-
 
     def __init__(self, state: ModelSpace):
         self.domain = state.ref_id
@@ -220,7 +270,6 @@ class TraceInfo:
         with open(f"{self.path}{file_name}.json", "r") as f:
             string = f.read()
             self = jsonpickle.decode(string)
-
 
     @staticmethod
     def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
