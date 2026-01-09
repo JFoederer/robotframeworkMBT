@@ -296,7 +296,7 @@ class NetworkVisualiser:
         if (!a.properties.end._value.properties.size._value.value) continue;
         if (a._base_end_size == null)
             a._base_end_size = a.properties.end._value.properties.size._value.value;
-        a.properties.end._value.properties.size._value.value = a._base_end_size * scale;
+        a.properties.end._value.properties.size._value.value = a._base_end_size * Math.sqrt(scale);
         a.change.emit();
     }}""")
 
