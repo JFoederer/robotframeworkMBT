@@ -512,6 +512,29 @@ class TestPartialScenarios(unittest.TestCase):
         ts.confirm_full_scenario(2, 'two remainder', {})
         self.assertEqual(ts.coverage_drought, 0)
 
+    def test_tracestates_can_be_copied(self):
+        ts = TraceState([1, 2, 3])
+        ts.confirm_full_scenario(1, 'one', {})
+        ts.confirm_full_scenario(2, 'two', {})
+        cp = ts.copy()
+        self.assertEqual(ts.c_pool, cp.c_pool)
+        self.assertEqual(ts.tried, cp.tried)
+        self.assertEqual(ts.active_refinements, cp.active_refinements)
+        self.assertEqual(ts[-1], cp[-1])
+
+    def test_tracestate_copies_are_independent(self):
+        ts = TraceState([1, 2, 3])
+        ts.confirm_full_scenario(1, 'one', {})
+        ts.confirm_full_scenario(2, 'two', {})
+        cp = ts.copy()
+        cp.push_partial_scenario(3, 'three', {})
+        self.assertNotEqual(ts.active_refinements, cp.active_refinements)
+        cp.confirm_full_scenario(3, 'two', {})
+        self.assertEqual(len(cp), len(ts)+2)
+        self.assertNotEqual(ts.c_pool, cp.c_pool)
+        cp.rewind()
+        self.assertIn(3, cp.tried)
+        self.assertNotIn(3, ts.tried)
 
 if __name__ == '__main__':
     unittest.main()

@@ -39,6 +39,14 @@ class TraceState:
         self._snapshots = []  # Keeps details for elements in trace
         self._open_refinements = []
 
+    def copy(self):
+        cp = TraceState(self.c_pool.keys())
+        cp.c_pool.update(self.c_pool)
+        cp._tried = [triedlist[:] for triedlist in self._tried]
+        cp._snapshots = self._snapshots[:]
+        cp._open_refinements = self._open_refinements[:]
+        return cp
+
     @property
     def model(self):
         """returns the model as it is at the end of the current trace"""
