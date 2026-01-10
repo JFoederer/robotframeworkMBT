@@ -536,5 +536,6 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertIn(3, cp.tried)
         self.assertNotIn(3, ts.tried)
 
+
 if __name__ == '__main__':
     unittest.main()
