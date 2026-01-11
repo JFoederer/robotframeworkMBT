@@ -87,8 +87,7 @@ class SuiteProcessors:
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        self.shuffled = [s.src_id for s in self.scenarios]
-        random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
+        self._prio_order = self._pre_explore_paths()[0]
 
         # a short trace without the need for repeating scenarios is preferred
         tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
@@ -103,53 +102,60 @@ class SuiteProcessors:
         self._report_tracestate_wrapup(tracestate)
         return self.out_suite
 
-    def _explore_paths(self):
+    def _pre_explore_paths(self):
+        id_list = [s.src_id for s in self.scenarios]
+        random.shuffle(id_list)  # pre-shuffle to prevent scenario 1 from always getting first prio
         tracestates = []
-        ids = [s.src_id for s in self.scenarios]
-        for scenario in self.scenarios:
-            scenarios = ids[:]
-            this_scenario = scenarios.pop(scenarios.index(scenario.src_id))
+        for prio_id in id_list:
+            # For each available id, give it pole position in the prio order and randomise the rest.
+            # The randomised bit will give some good variation and the prio_id will always be tried
+            # first giving more (not all) insight in its dependencies.
+            scenarios = id_list[:]
+            scenarios.remove(prio_id)
             random.shuffle(scenarios)
-            scenarios.insert(0, this_scenario)
+            scenarios.insert(0, prio_id)
             logger.debug(f"Exploring with prio order {scenarios}")
-            tracestates.append(TraceState(scenarios))
+            tracestate = TraceState(scenarios)
             count = 0
-            candidate_id = tracestates[-1].next_candidate(retry=False)
+            candidate_id = tracestate.next_candidate(retry=False)
             while candidate_id is not None:
                 count += 1
-                candidate = self._select_scenario_variant(candidate_id, tracestates[-1])
+                candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if candidate:  # No valid variant available in the current state
-                    modeller.try_to_fit_in_scenario(candidate, tracestates[-1])
+                    modeller.try_to_fit_in_scenario(candidate, tracestate)
                 else:
-                    tracestates[-1].reject_scenario(candidate_id)
-                candidate_id = tracestates[-1].next_candidate(retry=False)
-            logger.debug(f"Result trace: {tracestates[-1].id_trace} "
-                         f"of length {len(tracestates[-1])} after exploring {count} options.")
+                    tracestate.reject_scenario(candidate_id)
+                candidate_id = tracestate.next_candidate(retry=False)
+            tracestates.append(tracestate)
+            logger.debug(f"Result trace: {tracestate.id_trace} "
+                         f"of length {len(tracestate)} after exploring {count} options.")
 
-        map(self._report_tracestate_to_user, tracestates)
-
-        # suggested prio-order:
+        # first suggested prio-order:
         #    - all ids from src_id list of longest trace
-        #    - but all never reached scenarios (all tracestates) are moved to the front
-        #    - all unreached in this trace move in second place
-        longest = self._longest_trace(tracestates)
+        #    - but all unreached scenarios (over all traces) are moved to the front
+        #    - and all unreached in this trace move into second place
         unreached = self._unreached_scenarios(tracestates)
-        suggested_order = []
-        suggested_order += [id for id in longest.c_pool if id in unreached]
-        suggested_order += [id for id in longest.c_pool if id not in suggested_order and longest.count(id) == 0]
-        suggested_order += [id for id in longest.c_pool if longest.count(id) > 0]
-        logger.debug(f"1st suggestion: {suggested_order}")
+        longest = self._longest_trace(tracestates)
+        first_suggestion = [id for id in longest.c_pool if id in unreached]
+        first_suggestion += [id for id in longest.c_pool if id not in first_suggestion and longest.count(id) == 0]
+        first_suggestion += [id for id in longest.c_pool if longest.count(id) > 0]
+        logger.debug(f"Prio order suggestion: {first_suggestion}")
 
+        # second suggested prio-order:
+        #     - Take the last trace that saw a scenario inserted that had not been reached in any of the prior
+        #       traces. There may be a unique sequence in here to reach that scenario.
+        #     - reordering to insert unreached sceanrio is the same as with the first suggested prio-order
         latest_new = self._last_new_coverage(tracestates)
-        second_suggestion = []
-        second_suggestion += [id for id in latest_new.c_pool if id in unreached]
+        second_suggestion = [id for id in latest_new.c_pool if id in unreached]
         second_suggestion += [id for id in latest_new.c_pool
                               if id not in second_suggestion and latest_new.count(id) == 0]
         second_suggestion += [id for id in latest_new.c_pool if latest_new.count(id) > 0]
-        logger.debug(f"2nd suggestion: {second_suggestion}")
-        if second_suggestion != suggested_order:
-            logger.warn(f"Found one: {suggested_order} vs {second_suggestion}")
-        return suggested_order
+
+        suggestions = [first_suggestion]
+        if first_suggestion != second_suggestion:
+            logger.debug(f"2nd suggestion: {second_suggestion}")
+            suggestions.append(second_suggestion)
+        return suggestions
 
     @staticmethod
     def _longest_trace(tracestate_list):
@@ -159,9 +165,9 @@ class SuiteProcessors:
     @staticmethod
     def _last_new_coverage(tracestate_list):
         ids = []
-        last_trace = None
+        last_trace = tracestate_list[0]
         for tracestate in tracestate_list:
-            for id in [int(long_id.split('.')[0]) for long_id in tracestate.id_trace]:
+            for id in [int(float(long_id)) for long_id in tracestate.id_trace]:
                 if id not in ids:
                     ids.append(id)
                     last_trace = tracestate
@@ -175,8 +181,7 @@ class SuiteProcessors:
         return [id for id in total_coverage if total_coverage[id] == 0]
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
-        suggested_prio_order = self._explore_paths()
-        tracestate = TraceState(suggested_prio_order)
+        tracestate = TraceState(self._prio_order)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
             if candidate_id is None:  # No more candidates remaining for this level
