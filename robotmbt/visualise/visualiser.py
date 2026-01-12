@@ -71,10 +71,7 @@ class Visualiser:
             model = snap.model
             self.trace_info.update_trace(ScenarioInfo(scenario), StateInfo(model), trace_len)
 
-    def generate_visualisation(self) -> str:
-        if self.export:
-            self.trace_info.export_graph(self.suite_name)
-
+    def _get_graph(self) -> AbstractGraph:
         if self.graph_type == 'scenario':
             graph: AbstractGraph = ScenarioGraph(self.trace_info)
         elif self.graph_type == 'state':
@@ -87,6 +84,14 @@ class Visualiser:
             graph: AbstractGraph = DeltaValueGraph(self.trace_info)
         else:
             graph: AbstractGraph = ScenarioStateGraph(self.trace_info)
+
+        return graph
+
+    def generate_visualisation(self) -> str:
+        if self.export:
+            self.trace_info.export_graph(self.suite_name)
+
+        graph: AbstractGraph = self._get_graph()
 
         html_bokeh = networkvisualiser.NetworkVisualiser(graph, self.suite_name, self.seed).generate_html()
 
