@@ -92,7 +92,7 @@ class ModelSpace:
         else:
             self.props.pop('scenario')
 
-    def process_expression(self, expression: str, step_args: StepArguments =StepArguments()) -> Any:
+    def process_expression(self, expression: str, step_args: StepArguments = StepArguments()) -> Any:
         expr = step_args.fill_in_args(expression.strip(), as_code=True)
         if self._is_new_vocab_expression(expr):
             self.add_prop(self._vocab_term(expr))
