@@ -252,9 +252,9 @@ class TraceInfo:
         name = suite_name.lower().replace(' ', '_')
         if atest:
             '''
-            temporary file to not accidentaly overwrite an existing file
+            temporary file to not accidentally overwrite an existing file
             mkstemp() is not ideal but given Python's limitations this is the easiest solution
-            as temporary file, a different method, is problamatic on Windows 
+            as temporary file, a different method, is problematic on Windows 
             https://stackoverflow.com/a/57015383
             '''
             fd, path = tempfile.mkstemp()
