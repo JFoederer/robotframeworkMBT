@@ -114,3 +114,79 @@ Researchers have suggested that longer lines are better suited for cases when th
   - Information that is useful for analysing failed tests is logged at debug-level.
 
 - Be careful not to make assumptions in what you log: Recheck log statements if your changes affect the context in which the code is run, and only report about what you know to be true.
+
+### Creating new graphs
+
+Extending the functionality of the visualizer with new graph types can result in better insights into created tests. The visualizer makes use of an abstract graph class that makes it easy to create new graph types.
+
+To create a new graph type, create an instance of AbstractGraph, instantiating the following methods:
+- select_node_info: select the information you want to use to identify different nodes from all ScenarioInfo/StateInfo pairs that make up the different exploration steps. This info is also used to label nodes. Its return type has to match the first type used to instantiate AbstractGraph.
+- select_edge_info: ditto but for edges, which is also used for labeling. Its type has to match the second type used to instantiate AbstractGraph.
+- create_node_label: turn the selected information into a label for a node.
+- create_edge_label: ditto but for edges.
+- get_legend_info_final_trace_node: return the text you want to appear in the legend for nodes that appear in the final trace.
+- get_legend_info_other_node: ditto but for nodes that have been backtracked.
+- get_legend_info_final_trace_edge: ditto but for edges that appear in the final trace.
+- get_legend_info_other_edge: ditto but for edges that have backtracked.
+
+It is recommended to create a new file for each graph type under `/robotmbt/visualise/graphs/`.
+
+A simple example is given below. In this graph type, nodes represent scenarios encountered in exploration, and edges show the flow between these scenarios.
+
+```python
+class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
+    @staticmethod
+    def select_node_info(pairs: list[tuple[ScenarioInfo, StateInfo]], index: int) -> ScenarioInfo:
+        return pairs[index][0]
+
+    @staticmethod
+    def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> None:
+        return None
+ 
+    @staticmethod
+    def create_node_label(info: ScenarioInfo) -> str:
+        return info.name
+
+    @staticmethod
+    def create_edge_label(info: None) -> str:
+        return ''
+
+    @staticmethod
+    def get_legend_info_final_trace_node() -> str:
+        return "Executed Scenario (in final trace)"
+
+    @staticmethod
+    def get_legend_info_other_node() -> str:
+        return "Executed Scenario (backtracked)"
+
+    @staticmethod
+    def get_legend_info_final_trace_edge() -> str:
+        return "Execution Flow (final trace)"
+
+    @staticmethod
+    def get_legend_info_other_edge() -> str:
+        return "Execution Flow (backtracked)"
+```
+
+Once you have created a new Graph class, you can direct the visualizer to use it when your type is selected. 
+Edit `/robotmbt/visualise/visualiser.py` to not reject your graph type in `__init__` and construct your graph in `generate_visualisation` like the others. For our example:
+```python
+def __init__(self, graph_type: str, suite_name: str = "", seed: str = "", export: bool = False, trace_info: TraceInfo = None):
+        if graph_type != 'scenario' and [...]:
+            raise ValueError(f"Unknown graph type: {graph_type}!")
+
+        [...]
+```
+
+```python
+def generate_visualisation(self) -> str:
+    [...]
+
+    if self.graph_type == 'scenario':
+        graph: AbstractGraph = ScenarioGraph(self.trace_info)
+
+    [...]
+```
+
+Now, when selecting your graph type (in our example `Treat this test suite Model-based  graph=scenario`), your graph will get constructed!
+
