@@ -2,7 +2,7 @@
 Documentation     This suite consists of 3 scenarios. After inserting the leading
 ...               scenario, the trailing scenario cannot be reached, unless the middle
 ...               scenario is inserted twice.
-Suite Setup       Treat this test suite Model-based  graph=scenario
+Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 

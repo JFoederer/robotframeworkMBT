@@ -2,7 +2,7 @@
 Documentation     This suite cannot be completed by repeating a single scenario. Two
 ...               scenarios are linked in such a way that they must be repeated in
 ...               pairs to reach the final scenario.
-Suite Setup       Treat this test suite Model-based  graph=scenario
+Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 

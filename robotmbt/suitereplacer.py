@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+from typing import Any
+
+import robot.model
 
 # BSD 3-Clause License
 #
@@ -30,17 +33,12 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from typing import Any
-
-import robot.model
-
 from .suitedata import Suite, Scenario, Step
 from .suiteprocessors import SuiteProcessors
 import robot.running.model as rmodel
 from robot.api import logger
 from robot.api.deco import keyword
 from robot.libraries.BuiltIn import BuiltIn
-
 Robot = BuiltIn()
 
 
@@ -49,7 +47,7 @@ class SuiteReplacer:
     ROBOT_LISTENER_API_VERSION: int = 3
 
     def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
-        self.ROBOT_LIBRARY_LISTENER = self  # : Self
+        self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite: robot.model.TestSuite | None = None
         self.robot_suite: robot.model.TestSuite | None = None
         self.processor_lib_name: str | None = processor_lib
@@ -120,61 +118,41 @@ class SuiteReplacer:
         out_suite.filename = in_suite.source
 
         if in_suite.setup and parent is not None:
-            step_info = Step(in_suite.setup.name, *
-                             in_suite.setup.args, parent=out_suite)
-            step_info.add_robot_dependent_data(
-                Robot._namespace.get_runner(step_info.org_step).keyword)
+            step_info = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
+            step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.setup = step_info
-
         if in_suite.teardown and parent is not None:
-            step_info = Step(in_suite.teardown.name, *
-                             in_suite.teardown.args, parent=out_suite)
-            step_info.add_robot_dependent_data(
-                Robot._namespace.get_runner(step_info.org_step).keyword)
+            step_info = Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
+            step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.teardown = step_info
-
         for st in in_suite.suites:
-            out_suite.suites.append(
-                self.__process_robot_suite(st, parent=out_suite))
-
+            out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
             scenario = Scenario(tc.name, parent=out_suite)
             if tc.setup:
-                step_info = Step(
-                    tc.setup.name, *tc.setup.args, parent=scenario)
-                step_info.add_robot_dependent_data(
-                    Robot._namespace.get_runner(step_info.org_step).keyword)
+                step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
+                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.setup = step_info
-
             if tc.teardown:
-                step_info = Step(tc.teardown.name, *
-                                 tc.teardown.args, parent=scenario)
-                step_info.add_robot_dependent_data(
-                    Robot._namespace.get_runner(step_info.org_step).keyword)
+                step_info = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
+                step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.teardown = step_info
             last_gwt = None
-
             for step_def in tc.body:
                 if isinstance(step_def, rmodel.Keyword):
                     step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
                                      prev_gherkin_kw=last_gwt)
-                    step_info.add_robot_dependent_data(
-                        Robot._namespace.get_runner(step_info.org_step).keyword)
+                    step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                     scenario.steps.append(step_info)
-
                     if step_info.gherkin_kw:
                         last_gwt = step_info.gherkin_kw
-
                 elif isinstance(step_def, rmodel.Var):
-                    scenario.steps.append(
-                        Step('VAR', step_def.name, *step_def.value, parent=scenario))
+                    scenario.steps.append(Step('VAR', step_def.name, *step_def.value, parent=scenario))
                 else:
                     unsupported_step = Step(str(step_def), parent=scenario)
                     unsupported_step.model_info['error'] = f"Robot construct not supported"
                     scenario.steps.append(unsupported_step)
-
             out_suite.scenarios.append(scenario)
-
         return out_suite
 
     def __clearTestSuite(self, suite: robot.model.TestSuite):
@@ -206,11 +184,9 @@ class SuiteReplacer:
                                                  type='teardown')
             for step in tc.steps:
                 if step.keyword == 'VAR':
-                    new_tc.body.create_var(
-                        step.posnom_args_str[0], step.posnom_args_str[1:])
+                    new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
                 else:
-                    new_tc.body.create_keyword(
-                        name=step.keyword, assign=step.assign, args=step.posnom_args_str)
+                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
 
     def _start_suite(self, suite: Suite | None, result):
         self.current_suite = suite

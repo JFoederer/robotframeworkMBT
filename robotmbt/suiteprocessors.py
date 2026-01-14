@@ -41,20 +41,9 @@ from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario
 from .tracestate import TraceState
 
-try:
-    from .visualise.visualiser import Visualiser
-    from .visualise.models import TraceInfo
-
-    VISUALISE = True
-except ImportError:
-    Visualiser = None
-    TraceInfo = None
-    VISUALISE = False
-
 
 class SuiteProcessors:
-    @staticmethod
-    def echo(in_suite):
+    def echo(self, in_suite):
         return in_suite
 
     def flatten(self, in_suite: Suite) -> Suite:
@@ -72,7 +61,6 @@ class SuiteProcessors:
             if scenario.teardown:
                 scenario.steps.append(scenario.teardown)
                 scenario.teardown = None
-
         out_suite.scenarios = []
         for suite in in_suite.suites:
             subsuite = self.flatten(suite)
@@ -82,56 +70,26 @@ class SuiteProcessors:
                 if subsuite.teardown:
                     scenario.steps.append(subsuite.teardown)
             out_suite.scenarios.extend(subsuite.scenarios)
-
         out_suite.scenarios.extend(outer_scenarios)
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: Any = 'new', graph: str = '',
-                           to_json: bool = False, from_json: str = 'false') -> Suite:
+    def process_test_suite(self, in_suite: Suite, *, seed: Any = 'new'):
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
 
-        if from_json != 'false':
-            self._load_graph(graph, in_suite.name, from_json)
-
-        else:
-            self._run_test_suite(seed, graph, in_suite.name, to_json)
-
-        self.__write_visualisation()
-
-        return self.out_suite
-
-    def _load_graph(self, graph:str, suite_name: str, from_json: str):
-        traceinfo = TraceInfo()
-        traceinfo = traceinfo.import_graph(from_json)
-        self.visualiser = Visualiser(graph, suite_name, trace_info=traceinfo)
-
-    def _run_test_suite(self, seed: Any, graph: str, suite_name: str, to_json: bool):
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
         self.scenarios = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
-                        "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+                     "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
-        init_seed = self._init_randomiser(seed)
+        self._init_randomiser(seed)
         self.shuffled = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
-
-        self.visualiser = None
-        if graph != '' and VISUALISE:
-            try:
-                self.visualiser = Visualiser(graph, suite_name, init_seed, to_json)
-            except Exception as e:
-                self.visualiser = None
-                logger.warn(f'Could not initialise visualiser due to error!\n{e}')
-
-        elif graph != '' and not VISUALISE:
-            logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed.'
-                        'Refer to the README on how to install these dependencies.')
 
         # a short trace without the need for repeating scenarios is preferred
         tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
@@ -143,28 +101,26 @@ class SuiteProcessors:
                 raise Exception("Unable to compose a consistent suite")
 
         self.out_suite.scenarios = tracestate.get_trace()
+        self._report_tracestate_wrapup(tracestate)
+        return self.out_suite
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool) -> TraceState:
         tracestate = TraceState(self.shuffled)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
-            self.__update_visualisation(tracestate)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
                     break
                 tail = modeller.rewind(tracestate)
                 logger.debug(f"Having to roll back up to {tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user(tracestate)
-                self.__update_visualisation(tracestate)
             else:
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if not candidate:  # No valid variant available in the current state
                     tracestate.reject_scenario(candidate_id)
-                    self.__update_visualisation(tracestate)
                     continue
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
-                self.__update_visualisation(tracestate)
                 self._report_tracestate_to_user(tracestate)
                 if len(tracestate) > previous_len:
                     logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
@@ -172,30 +128,13 @@ class SuiteProcessors:
                     if self.__last_candidate_changed_nothing(tracestate):
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
                         modeller.rewind(tracestate)
-                        self.__update_visualisation(tracestate)
                     elif tracestate.coverage_drought > self.DROUGHT_LIMIT:
                         logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
                                      "Roll back to last coverage increase and try something else.")
                         modeller.rewind(tracestate, drought_recovery=True)
-                        self.__update_visualisation(tracestate)
                         self._report_tracestate_to_user(tracestate)
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
         return tracestate
-
-
-    def __update_visualisation(self, tracestate: TraceState):
-        if self.visualiser is not None:
-            try:
-                self.visualiser.update_trace(tracestate)
-            except Exception as e:
-                logger.warn(f'Could not update visualisation due to error!\n{e}')
-
-    def __write_visualisation(self):
-        if self.visualiser is not None:
-            try:
-                logger.info(self.visualiser.generate_visualisation(), html=True)
-            except Exception as e:
-                logger.warn(f'Could not generate visualisation due to error!\n{e}')
 
     @staticmethod
     def __last_candidate_changed_nothing(tracestate: TraceState) -> bool:
@@ -219,13 +158,12 @@ class SuiteProcessors:
         rep_count = tracestate.count(index)
         if rep_count:
             candidate = candidate.copy()
-            candidate.name = f"{candidate.name} (rep {rep_count + 1})"
+            candidate.name = f"{candidate.name} (rep {rep_count+1})"
         return candidate
 
     @staticmethod
     def _fail_on_step_errors(suite: Suite):
         error_list = suite.steps_with_errors()
-
         if error_list:
             err_msg = "Steps with errors in their model info found:\n"
             err_msg += '\n'.join([f"{s.keyword} [{s.model_info['error']}] used in {s.parent.name}"
@@ -245,23 +183,19 @@ class SuiteProcessors:
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
     @staticmethod
-    def _init_randomiser(seed: Any) -> str:
+    def _init_randomiser(seed: Any):
         if isinstance(seed, str):
             seed = seed.strip()
-
         if str(seed).lower() == 'none':
             logger.info(
                 f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
-            return ""
         elif str(seed).lower() == 'new':
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
-            return new_seed
         else:
             logger.info(f"seed={seed} (as provided)")
             random.seed(seed)
-            return seed
 
     @staticmethod
     def _generate_seed() -> str:
@@ -280,12 +214,9 @@ class SuiteProcessors:
                     new_choice = consonants if prior_choice is vowels else vowels
                 else:
                     new_choice = random.choice([vowels, consonants])
-
                 prior_choice = last_choice
                 last_choice = new_choice
                 string += random.choice(new_choice)
-
             words.append(string)
-
         seed = '-'.join(words)
         return seed
