@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-from robotmbt.tracestate import TraceSnapShot
-
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 
@@ -35,12 +33,26 @@ from robotmbt.suitedata import Scenario
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+class TraceSnapShot:
+    def __init__(self, id: str, inserted_scenario: Scenario | str, model_state: ModelSpace,
+                 remainder: Scenario | None = None, drought: int = 0):
+        self.id: str = id
+        self.scenario: str | Scenario = inserted_scenario
+        self.remainder: Scenario | None = remainder
+        self._model: ModelSpace = model_state.copy()
+        self.coverage_drought: int = drought
+
+    @property
+    def model(self):
+        return self._model.copy()
+
+
 class TraceState:
     def __init__(self, scenario_indexes: list[int]):
         self.c_pool = {index: 0 for index in scenario_indexes}
         if len(self.c_pool) != len(scenario_indexes):
             raise ValueError("Scenarios must be uniquely identifiable")
-        self._tried: list[list[int]] = [[]]    # Keeps track of the scenarios already tried at each step in the trace
+        self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
         self._snapshots: list[TraceSnapShot] = []  # Keeps details for elements in trace
         self._open_refinements: list[int] = []
 
@@ -96,7 +108,7 @@ class TraceState:
         Given the current trace and an index, returns the highest part number of an ongoing
         refinement for the related scenario. Returns 0 when there is no refinement active.
         """
-        for i in range(1, len(self.id_trace)+1):
+        for i in range(1, len(self.id_trace) + 1):
             if self.id_trace[-i] == f'{index}':
                 return 0
             if self.id_trace[-i].startswith(f'{index}.'):
@@ -119,7 +131,7 @@ class TraceState:
         This method retrieves the remainder for the last part that was pushed.
         """
         last_part = self.highest_part(index)
-        index = -self.id_trace[::-1].index(f'{index}.{last_part}')-1
+        index = -self.id_trace[::-1].index(f'{index}.{last_part}') - 1
         return self._snapshots[index].remainder
 
     def reject_scenario(self, i_scenario: int):
@@ -127,7 +139,7 @@ class TraceState:
         self._tried[-1].append(i_scenario)
 
     def confirm_full_scenario(self, index: int, scenario: Scenario | str, model: ModelSpace):
-        c_drought = 0 if self.c_pool[index] == 0 else self.coverage_drought+1
+        c_drought = 0 if self.c_pool[index] == 0 else self.coverage_drought + 1
         self.c_pool[index] += 1
         if self.is_refinement_active(index):
             id = f"{index}.0"
@@ -140,7 +152,7 @@ class TraceState:
 
     def push_partial_scenario(self, index: int, scenario: Scenario | str, model: ModelSpace, remainder=None):
         if self.is_refinement_active(index):
-            id = f"{index}.{self.highest_part(index)+1}"
+            id = f"{index}.{self.highest_part(index) + 1}"
         else:
             id = f"{index}.1"
             self._tried[-1].append(index)
@@ -177,16 +189,3 @@ class TraceState:
 
     def __len__(self):
         return len(self._snapshots)
-
-
-class TraceSnapShot:
-    def __init__(self, id: str, inserted_scenario: Scenario | str, model_state: ModelSpace, remainder: Scenario | None = None, drought: int = 0):
-        self.id: str = id
-        self.scenario: str | Scenario = inserted_scenario
-        self.remainder: Scenario | None = remainder
-        self._model: ModelSpace = model_state.copy()
-        self.coverage_drought: int = drought
-
-    @property
-    def model(self):
-        return self._model.copy()
