@@ -199,39 +199,6 @@ Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 
 Using `seed=new` will force generation of a new reusable seed and is identical to omitting the seed argument. To completely bypass seed generation and use the system's random source, use `seed=None`. This has even more variation but does not produce a reusable seed.
 
-### Graphs
-
-By default, no graphs are generated for test-runs. For development purposes, having a visual representation of the test-suite you are working on can be very useful. To have robotmbt generate a graph, ensure you have installed the optional dependencies (`pip install .[visualization]`) and pass the type as an argument:
-
-```
-Treat this test suite Model-based  graph=[type]
-```
-
-Here, `[type]` can be any of the supported graph types. Currently, the types included are:
-- `scenario-delta-value`
-
-Once the test suite has run, a graph will be included in the test's log, under the suite's `Treat this test suite Model-based` setup header.
-
-#### JSON exporting
-
-It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
-
-```
-Treat this test suite Model-based  graph=[type]  to_json=true
-```
-
-A JSON file named after the test suite will be created containing said information.
-
-#### JSON importing
-
-It is possible to skip running the exploration step and produce a graph (e.g. of another type) from previously exported data. This can be achieved by pointing the following argument to such a JSON file (just its name suffices, without the extension):
-
-```
-Treat this test suite Model-based  graph=[type]  from_json=[file_name]
-```
-
-A graph will be created from the imported data.
-
 ### Option management
 
 If you want to set configuration options for use in multiple test suites without having to repeat them, the keywords __Set model-based options__ and __Update model-based options__ can be used to configure RobotMBT library options. _Set_ takes the provided options and discards any previously set options. _Update_ allows you to modify existing options or add new ones. Reset all options by calling _Set_ without arguments. Direct options provided to __Treat this test suite model-based__ take precedence over library options and affect only the current test suite.
@@ -245,53 +212,3 @@ If you have feedback, ideas, or want to get involved in coding, then check out t
 ## Disclaimer
 
 Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent, and no deprecation warnings are being issued yet.
-
-
-## Development
-### Python virtual environment
-Installing the proper virtual environment can be done with the default `python -m venv ./.venv` command built into python. However, if you have another version of python on your system, this might break dependencies.
-
-#### Pipenv+Pyenv (verified on Windows and Linux)
-For the optimal experience (at least on Linux), we suggest installing the following packages:
-- [`pyenv`](https://github.com/pyenv/pyenv) (Linux/Mac) or [`pyenv-win`](https://github.com/pyenv-win/pyenv-win) (Windows)
-- [`pipenv`](https://github.com/pypa/pipenv) 
-
-Then, you can install a python virtual environment with:
-
-```bash
-pipenv --python <python_version>
-```
-..where the python version can be found in the `pyproject.toml`. For example, for 3.10: `pipenv --python 3.10`.
-
-You might need to manually make the folder `.venv` by doing `mkdir .venv`.
-
-You can verify if the install went correctly with:
-```bash
-pipenv check
-```
-This should return `Passed!`
-
-Errors related to minor versions (for example `3.10.0rc2` != `3.10.0`) can be ignored.
-
-Now activate the virtual environment by running 
-```bash 
-pipenv shell
-```
-
-..and you should have a virtual env! If you run
-```bash
-python --version
-```
-..while in your virtual environment, it should show the `<python_version>` from before.
-
-
-### Installing dependencies
-***NOTE: making sure that you are in the virtual environment***. 
-
-It is recommended that you also include the optional depedencies for visualisation, e.g.:
-```bash
-pip install ".[visualization]"
-```
-
-
-

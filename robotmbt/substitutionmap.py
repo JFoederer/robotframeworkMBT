@@ -43,18 +43,14 @@ class SubstitutionMap:
     """
 
     def __init__(self):
-        # {example_value:Constraint}
-        self.substitutions: dict[str, Constraint] = {}
-
-        # {example_value:solution_value}
-        self.solution: dict[str, int | str] = {}
+        self.substitutions = {}  # {example_value:Constraint}
+        self.solution = {}       # {example_value:solution_value}
 
     def __str__(self):
         src = self.solution or self.substitutions
         return ", ".join([f"{k} ⤝ {v}" for k, v in src.items()])
 
     def copy(self):
-        # -> Self
         new = SubstitutionMap()
         new.substitutions = {k: v.copy() for k, v in self.substitutions.items()}
         new.solution = self.solution.copy()
@@ -69,19 +65,16 @@ class SubstitutionMap:
 
     def solve(self) -> dict[str, str]:
         self.solution = {}
-        solution: dict[str, str] = dict()
+        solution = dict()
         substitutions = self.copy().substitutions
         unsolved_subs = list(substitutions)
         subs_stack = []
-
         while unsolved_subs:
             unsolved_subs.sort(key=lambda i: len(substitutions[i].optionset))
             example_value = unsolved_subs[0]
-            solution[example_value] = random.choice(
-                substitutions[example_value].optionset)
+            solution[example_value] = random.choice(substitutions[example_value].optionset)
             subs_stack.append(example_value)
             others_list = []
-
             try:
                 # exclude the choice from all others
                 for other in [e for e in substitutions if e != example_value]:
@@ -103,20 +96,17 @@ class SubstitutionMap:
                             subs_stack.pop()
                     except IndexError:
                         # nothing left to roll back, no options remaining
-                        raise ValueError(
-                            "No solution found within the set of given constraints")
+                        raise ValueError("No solution found within the set of given constraints")
                     last_item = subs_stack[-1]
                     unsolved_subs.insert(0, last_item)
                     for other in [e for e in substitutions if e != last_item]:
                         substitutions[other].undo_remove()
                     try:
-                        substitutions[last_item].remove_option(
-                            solution.pop(last_item))
+                        substitutions[last_item].remove_option(solution.pop(last_item))
                         rollback_done = True
                     except ValueError:
                         # next level must also be rolled back
                         example_value = last_item
-
         self.solution = solution
         return solution
 
@@ -126,15 +116,12 @@ class Constraint:
         try:
             # Keep the items in optionset unique. Refrain from using Python sets
             # due to non-deterministic behaviour when using random seeding.
-            self.optionset: list | None = list(dict.fromkeys(constraint))
+            self.optionset = list(dict.fromkeys(constraint))
         except:
-            self.optionset: list | None = None
+            self.optionset = None
         if not self.optionset or isinstance(constraint, str):
-            raise ValueError(
-                f"Invalid option set for initial constraint: {constraint}"
-            )
-
-        self.removed_stack: list[str | Placeholder] = []
+            raise ValueError(f"Invalid option set for initial constraint: {constraint}")
+        self.removed_stack = []
 
     def __repr__(self):
         return f'Constraint([{", ".join([str(e) for e in self.optionset])}])'
@@ -143,13 +130,11 @@ class Constraint:
         return iter(self.optionset)
 
     def copy(self):
-        # -> Self
         return Constraint(self.optionset)
 
     def add_constraint(self, constraint):
         if constraint is None:
             return
-
         self.optionset = [opt for opt in self.optionset if opt in constraint]
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')

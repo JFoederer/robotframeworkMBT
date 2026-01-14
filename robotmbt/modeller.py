@@ -39,7 +39,7 @@ from .modelspace import ModelSpace
 from .steparguments import StepArgument, StepArguments
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
-from .tracestate import TraceState, TraceSnapShot
+from .tracestate import TraceState
 
 
 def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
@@ -66,7 +66,7 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
         tracestate.push_partial_scenario(inserted.src_id, inserted, model, remainder)
 
 
-def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario | None, Scenario | None, dict[str, Any]]:
+def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, Scenario, dict[str, Any]]:
     for step in scenario.steps:
         if 'error' in step.model_info:
             return None, None, dict(fail_masg=f"Error in scenario {scenario.name} "
@@ -162,7 +162,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
         tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, model, remainder)
 
 
-def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario | None:
+def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario:
     scenario = scenario.copy()
     # collect set of constraints
     subs = SubstitutionMap()
@@ -239,7 +239,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     return scenario
 
 
-def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str]:
+def _parse_modifier_expression(expression: str, args: tuple[str]) -> tuple[str, str]:
     if expression.startswith('${'):
         for var in args:
             if expression.casefold().startswith(var.arg.casefold()):
@@ -251,7 +251,7 @@ def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[st
     raise ValueError(f"Invalid argument substitution: {expression}")
 
 
-def rewind(tracestate: TraceState, drought_recovery: bool = False) -> TraceSnapShot | None:
+def rewind(tracestate: TraceState, drought_recovery: bool = False) -> Scenario:
     if tracestate[-1].remainder and tracestate.highest_part(tracestate[-1].remainder.src_id) > 1:
         # When rewinding an 'in between' part, rewind both the part and the refinement
         tracestate.rewind()

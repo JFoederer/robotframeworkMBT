@@ -3,7 +3,7 @@ Documentation     This suite includes multiplicity on multiple ends. Most notabl
 ...               - Two scenarios that are equaly valid to include in the repetition part
 ...               - Two scenarios at the tail end that cannot be reached without the
 ...               \ \ repetitions, but each has a different style entry condition.
-Suite Setup       Treat this test suite Model-based  graph=scenario
+Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 

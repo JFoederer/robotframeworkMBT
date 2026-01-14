@@ -39,7 +39,7 @@ class StepArguments(list):
     def __init__(self, iterable=[]):
         super().__init__(item.copy() for item in iterable)
 
-    def fill_in_args(self, text: str, as_code: bool = False) -> str:
+    def fill_in_args(self, text: str, as_code: bool = False):
         result = text
         for arg in self:
             sub = arg.codestring if as_code else str(arg.value)
@@ -74,7 +74,7 @@ class StepArgument:
         self.value: Any = value
         # is_default indicates that the argument was not filled in from the scenario. This
         # argment's value is taken from the keyword's default as provided by Robot.
-        self.is_default: bool = is_default  
+        self.is_default: bool = is_default
 
     @property
     def arg(self) -> str:
@@ -99,7 +99,6 @@ class StepArgument:
         return self._codestr
 
     def copy(self):
-        # -> Self
         cp = StepArgument(self.arg.strip('${}'), self.value, self.kind, self.is_default)
         cp.org_value = self.org_value
         return cp

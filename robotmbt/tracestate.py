@@ -1,4 +1,9 @@
 # -*- coding: utf-8 -*-
+from robotmbt.tracestate import TraceSnapShot
+
+from robotmbt.modelspace import ModelSpace
+from robotmbt.suitedata import Scenario
+
 
 # BSD 3-Clause License
 #
@@ -30,33 +35,13 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from robotmbt.modelspace import ModelSpace
-from robotmbt.suitedata import Scenario
-
-class TraceSnapShot:
-    def __init__(self, id: str, inserted_scenario: Scenario | str, model_state: ModelSpace, remainder: Scenario | None = None, drought: int = 0):
-        self.id: str = id
-        self.scenario: str | Scenario = inserted_scenario
-        self.remainder: Scenario | None = remainder
-        self._model: ModelSpace = model_state.copy()
-        self.coverage_drought: int = drought
-
-    @property
-    def model(self):
-        return self._model.copy()
-
-
 class TraceState:
     def __init__(self, scenario_indexes: list[int]):
         self.c_pool = {index: 0 for index in scenario_indexes}
         if len(self.c_pool) != len(scenario_indexes):
             raise ValueError("Scenarios must be uniquely identifiable")
-        
-        # Keeps track of the scenarios already tried at each step in the trace
-        self._tried: list[list[int]] = [[]]    
-        
-        # Keeps details for elements in trace
-        self._snapshots: list[TraceSnapShot] = []  
+        self._tried: list[list[int]] = [[]]    # Keeps track of the scenarios already tried at each step in the trace
+        self._snapshots: list[TraceSnapShot] = []  # Keeps details for elements in trace
         self._open_refinements: list[int] = []
 
     @property
@@ -88,17 +73,15 @@ class TraceState:
     def get_trace(self) -> list[str | Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self, retry: bool=False):
+    def next_candidate(self, retry: bool = False):
         for i in self.c_pool:
             if i not in self._tried[-1] and not self.is_refinement_active(i) and self.count(i) == 0:
                 return i
-
         if not retry:
             return None
         for i in self.c_pool:
             if i not in self._tried[-1] and not self.is_refinement_active(i):
                 return i
-
         return None
 
     def count(self, index: int) -> int:
@@ -120,7 +103,7 @@ class TraceState:
                 return int(self.id_trace[-i].split('.')[1])
         return 0
 
-    def is_refinement_active(self, index: int = None) -> bool:
+    def is_refinement_active(self, index: int | None = None) -> bool:
         """
         When called with an index, returns True if that scenario is currently being refined
         When index is ommitted, return True if any refinement is active
@@ -157,8 +140,7 @@ class TraceState:
 
     def push_partial_scenario(self, index: int, scenario: Scenario | str, model: ModelSpace, remainder=None):
         if self.is_refinement_active(index):
-            id = f"{index}.{self.highest_part(index) + 1}"
-
+            id = f"{index}.{self.highest_part(index)+1}"
         else:
             id = f"{index}.1"
             self._tried[-1].append(index)
@@ -195,3 +177,16 @@ class TraceState:
 
     def __len__(self):
         return len(self._snapshots)
+
+
+class TraceSnapShot:
+    def __init__(self, id: str, inserted_scenario: Scenario | str, model_state: ModelSpace, remainder: Scenario | None = None, drought: int = 0):
+        self.id: str = id
+        self.scenario: str | Scenario = inserted_scenario
+        self.remainder: Scenario | None = remainder
+        self._model: ModelSpace = model_state.copy()
+        self.coverage_drought: int = drought
+
+    @property
+    def model(self):
+        return self._model.copy()
