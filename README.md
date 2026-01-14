@@ -199,6 +199,39 @@ Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 
 Using `seed=new` will force generation of a new reusable seed and is identical to omitting the seed argument. To completely bypass seed generation and use the system's random source, use `seed=None`. This has even more variation but does not produce a reusable seed.
 
+### Graphs
+
+By default, no graphs are generated for test-runs. For development purposes, having a visual representation of the test-suite you are working on can be very useful. To have robotmbt generate a graph, ensure you have installed the optional dependencies (`pip install .[visualization]`) and pass the type as an argument:
+
+```
+Treat this test suite Model-based  graph=[type]
+```
+
+Here, `[type]` can be any of the supported graph types. Currently, the types included are:
+- `scenario-delta-value`
+
+Once the test suite has run, a graph will be included in the test's log, under the suite's `Treat this test suite Model-based` setup header.
+
+#### JSON exporting
+
+It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
+
+```
+Treat this test suite Model-based  graph=[type]  to_json=true
+```
+
+A JSON file named after the test suite will be created containing said information.
+
+#### JSON importing
+
+It is possible to skip running the exploration step and produce a graph (e.g. of another type) from previously exported data. This can be achieved by pointing the following argument to such a JSON file (just its name suffices, without the extension):
+
+```
+Treat this test suite Model-based  graph=[type]  from_json=[file_name]
+```
+
+A graph will be created from the imported data.
+
 ### Option management
 
 If you want to set configuration options for use in multiple test suites without having to repeat them, the keywords __Set model-based options__ and __Update model-based options__ can be used to configure RobotMBT library options. _Set_ takes the provided options and discards any previously set options. _Update_ allows you to modify existing options or add new ones. Reset all options by calling _Set_ without arguments. Direct options provided to __Treat this test suite model-based__ take precedence over library options and affect only the current test suite.
