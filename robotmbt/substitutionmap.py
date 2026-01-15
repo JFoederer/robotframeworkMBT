@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import random
+from typing import Any
 
 
 class SubstitutionMap:
@@ -56,7 +57,7 @@ class SubstitutionMap:
         new.solution = self.solution.copy()
         return new
 
-    def substitute(self, example_value: str, constraint: list[int]):
+    def substitute(self, example_value: str, constraint: list[Any]):
         self.solution = {}
         if example_value in self.substitutions:
             self.substitutions[example_value].add_constraint(constraint)

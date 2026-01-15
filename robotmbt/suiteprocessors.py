@@ -74,7 +74,7 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: Any = 'new'):
+    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new'):
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -183,7 +183,7 @@ class SuiteProcessors:
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
     @staticmethod
-    def _init_randomiser(seed: Any):
+    def _init_randomiser(seed: str | int | bytes | bytearray):
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':

@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from robotmbt.modelspace import ModelSpace
-from robotmbt.suitedata import Scenario
-
 
 # BSD 3-Clause License
 #
@@ -33,11 +30,15 @@ from robotmbt.suitedata import Scenario
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from robotmbt.modelspace import ModelSpace
+from robotmbt.suitedata import Scenario
+
+
 class TraceSnapShot:
-    def __init__(self, id: str, inserted_scenario: Scenario | str, model_state: ModelSpace,
+    def __init__(self, id: str, inserted_scenario: Scenario, model_state: ModelSpace,
                  remainder: Scenario | None = None, drought: int = 0):
         self.id: str = id
-        self.scenario: str | Scenario = inserted_scenario
+        self.scenario: Scenario = inserted_scenario
         self.remainder: Scenario | None = remainder
         self._model: ModelSpace = model_state.copy()
         self.coverage_drought: int = drought
@@ -49,7 +50,7 @@ class TraceSnapShot:
 
 class TraceState:
     def __init__(self, scenario_indexes: list[int]):
-        self.c_pool = {index: 0 for index in scenario_indexes}
+        self.c_pool: dict[int, int] = {index: 0 for index in scenario_indexes}
         if len(self.c_pool) != len(scenario_indexes):
             raise ValueError("Scenarios must be uniquely identifiable")
         self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
@@ -125,7 +126,7 @@ class TraceState:
         else:
             return self.highest_part(index) != 0
 
-    def get_remainder(self, index: int):
+    def get_remainder(self, index: int) -> Scenario | None:
         """
         When pushing a partial scenario, the remainder can be passed along for safe keeping.
         This method retrieves the remainder for the last part that was pushed.

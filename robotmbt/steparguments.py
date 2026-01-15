@@ -31,8 +31,8 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 from keyword import iskeyword
+from typing import Any, Literal
 import builtins
-from typing import Any
 
 
 class StepArguments(list):
@@ -65,10 +65,13 @@ class StepArgument:
     NAMED = 'NAMED'
     FREE_NAMED = 'FREE_NAMED'
 
-    def __init__(self, arg_name: str, value: Any, kind: str | None = None, is_default: bool = False):
+    def __init__(self, arg_name: str, value: Any,
+                 kind: Literal['EMBEDDED', 'POSITIONAL', 'VAR_POS', 'NAMED', 'FREE_NAMED'] | None = None,
+                 is_default: bool = False):
         self.name: str = arg_name
         self.org_value: Any = value
-        self.kind: str | None = kind  # one of the values from the kind list
+        # one of the values from the kind list
+        self.kind: Literal['EMBEDDED', 'POSITIONAL', 'VAR_POS', 'NAMED', 'FREE_NAMED'] | None = kind
         self._value: Any = None
         self._codestr: str | None = None
         self.value: Any = value

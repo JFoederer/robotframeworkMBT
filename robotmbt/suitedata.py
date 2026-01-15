@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-from typing import Any
+from typing import Any, Literal
 
 from robot.running.arguments.argumentvalidator import ArgumentValidator
 import robot.utils.notset
@@ -41,7 +41,7 @@ from .substitutionmap import SubstitutionMap
 
 
 class Suite:
-    def __init__(self, name: str, parent: Any = None):
+    def __init__(self, name: str, parent=None):
         self.name: str = name
         self.filename: str = ''
         self.parent: Suite | None = parent
@@ -73,7 +73,7 @@ class Scenario:
         # Parent scenario is kept for easy searching, processing and referencing
         # after steps and scenarios have been potentially moved around
         self.parent: Suite | None = parent
-        self.setup: Step | None = None     # Can be a single step or None
+        self.setup: Step | None = None  # Can be a single step or None
         self.teardown: Step | None = None  # Can be a single step or None
         self.steps: list[Step] = []
         self.src_id: int | None = None
@@ -117,7 +117,7 @@ class Scenario:
 
 class Step:
     def __init__(self, steptext: str, *args, parent: Suite | Scenario, assign: tuple[str] = (),
-                 prev_gherkin_kw: str | None = None):
+                 prev_gherkin_kw: Literal['given', 'when', 'then', 'none'] | None = None):
         # org_step is the first keyword cell of the Robot line, including step_kw,
         # excluding positional args, excluding variable assignment.
         self.org_step: str = steptext
@@ -125,16 +125,15 @@ class Step:
         # from the Robot text ('posA' , 'posB', 'named1=namedA')
         self.org_pn_args = args
         self.parent: Suite | Scenario = parent  # Parent scenario for easy searching and processing.
-
         # For when a keyword's return value is assigned to a variable.
         # Taken directly from Robot.
         self.assign: tuple[str] = assign
         # gherkin_kw is one of 'given', 'when', 'then', or None for non-bdd keywords.
         self.gherkin_kw: str | None = self.step_kw if \
             str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
-        self.signature: str | None = None        # Robot keyword with its embedded arguments in ${...} notation.
+        self.signature: str | None = None  # Robot keyword with its embedded arguments in ${...} notation.
         self.args: StepArguments = StepArguments()  # embedded arguments list of StepArgument objects.
-        self.detached: bool = False        # Decouples StepArguments from the step text (refinement use case)
+        self.detached: bool = False  # Decouples StepArguments from the step text (refinement use case)
         # model_info contains modelling information as a dictionary. The standard format is
         # dict(IN=[], OUT=[]) and can optionally contain an error field.
         # IN and OUT are lists of Python evaluatable expressions.
@@ -178,7 +177,7 @@ class Step:
         return self.args.fill_in_args(s)
 
     @property
-    def posnom_args_str(self) -> tuple[Any]:
+    def posnom_args_str(self) -> tuple[str, ...]:
         """A tuple with all arguments in Robot accepted text format ('posA' , 'posB', 'named1=namedA')"""
         if self.detached or not self.args.modified:
             return self.org_pn_args
@@ -201,11 +200,11 @@ class Step:
         return tuple(result)
 
     @property
-    def gherkin_kw(self) -> str | None:
+    def gherkin_kw(self) -> Literal['given', 'when', 'then', 'none'] | None:
         return self._gherkin_kw
 
     @gherkin_kw.setter
-    def gherkin_kw(self, value: str | None):
+    def gherkin_kw(self, value: Literal['given', 'when', 'then', 'none'] | None):
         self._gherkin_kw = value.lower() if value else None
 
     @property
@@ -225,7 +224,8 @@ class Step:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
                 self.args = StepArguments([StepArgument(*match, kind=StepArgument.EMBEDDED) for match in
-                                           zip(robot_kw.embedded.args, robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
+                                           zip(robot_kw.embedded.args,
+                                               robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)

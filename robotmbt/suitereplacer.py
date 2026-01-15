@@ -1,7 +1,4 @@
 # -*- coding: utf-8 -*-
-from typing import Any
-
-import robot.model
 
 # BSD 3-Clause License
 #
@@ -33,18 +30,20 @@ import robot.model
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import robot.model
 from .suitedata import Suite, Scenario, Step
 from .suiteprocessors import SuiteProcessors
 import robot.running.model as rmodel
 from robot.api import logger
 from robot.api.deco import keyword
+from typing import Any, Literal
 from robot.libraries.BuiltIn import BuiltIn
 Robot = BuiltIn()
 
 
 class SuiteReplacer:
-    ROBOT_LIBRARY_SCOPE: str = 'GLOBAL'
-    ROBOT_LISTENER_API_VERSION: int = 3
+    ROBOT_LIBRARY_SCOPE: Literal['GLOBAL'] = 'GLOBAL'
+    ROBOT_LISTENER_API_VERSION: Literal[3] = 3
 
     def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
         self.ROBOT_LIBRARY_LISTENER = self

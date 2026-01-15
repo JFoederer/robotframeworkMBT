@@ -132,7 +132,7 @@ class ModelSpace:
 
         return result
 
-    def __handle_attribute_error(self, err):
+    def __handle_attribute_error(self, err: AttributeError):
         if isinstance(err.obj, str) and err.obj in self.values:
             # This situation occurs when using e.g. 'foo.bar' in the model before calling 'new foo'.
             # The NameError on foo is handled by adding its alias, which results in an AttributeError
@@ -140,7 +140,7 @@ class ModelSpace:
             raise ModellingError(f"{err.obj} used before definition")
         raise ModellingError(f"{err.name} used before assignment")
 
-    def __add_alias(self, missing_name: str, step_args):
+    def __add_alias(self, missing_name: str, step_args: StepArguments):
         if missing_name == 'scenario':
             raise ModellingError("Accessing scenario scope while there is no scenario active.\n"
                                  "If you intended this to be a literal, please use quotes ('scenario' or \"scenario\").")
