@@ -16,7 +16,7 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               Both low-level scenarios are equally valid, the only difference is that the data
 ...               choice is included either once or twice.
 Suite Setup       Treat this test suite Model-based    seed=kece-zwu-eihho-yli-rbixx
-Suite Teardown    Should be equal    ${trace}    APSSTQTQPXY
+Suite Teardown    Should be equal    ${trace}    APPSRTTPPXY
 Library           robotmbt
 
 *** Test Cases ***

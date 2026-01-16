@@ -30,6 +30,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import random
+
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 
@@ -42,14 +44,6 @@ class TraceSnapShot:
         self.remainder: Scenario | None = remainder
         self._model: ModelSpace = model_state.copy()
         self.coverage_drought: int = drought
-
-    def copy(self):
-        cp = TraceState(self.c_pool.keys())
-        cp.c_pool.update(self.c_pool)
-        cp._tried = [triedlist[:] for triedlist in self._tried]
-        cp._snapshots = self._snapshots[:]
-        cp._open_refinements = self._open_refinements[:]
-        return cp
 
     @property
     def model(self) -> ModelSpace:
@@ -88,22 +82,31 @@ class TraceState:
     def active_refinements(self):
         return self._open_refinements[:]
 
+    def copy(self):
+        cp = TraceState(self.c_pool.keys())
+        cp.c_pool.update(self.c_pool)
+        cp._tried = [triedlist[:] for triedlist in self._tried]
+        cp._snapshots = self._snapshots[:]
+        cp._open_refinements = self._open_refinements[:]
+        return cp
+
     def coverage_reached(self):
         return all(self.c_pool.values())
 
     def get_trace(self) -> list[Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self, retry: bool = False):
-        for i in self.c_pool:
-            if i not in self._tried[-1] and not self.is_refinement_active(i) and self.count(i) == 0:
-                return i
-        if not retry:
+    def next_candidate(self, retry: bool=False, randomise=False):
+        untried_candidates = [i for i in self.c_pool if i not in self._tried[-1]
+                              and not self.is_refinement_active(i)]
+        uncovered_candidates = [i for i in untried_candidates if self.count(i) == 0]
+
+        if uncovered_candidates:
+            return random.choice(uncovered_candidates) if randomise else uncovered_candidates[0]
+        elif not retry or not untried_candidates:
             return None
-        for i in self.c_pool:
-            if i not in self._tried[-1] and not self.is_refinement_active(i):
-                return i
-        return None
+        else:
+            return random.choice(untried_candidates) if randomise else untried_candidates[0]
 
     def count(self, index: int) -> int:
         """

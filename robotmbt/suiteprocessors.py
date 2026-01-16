@@ -98,11 +98,12 @@ class SuiteProcessors:
         self._prio_order = self._pre_explore_paths()[0]
 
         # a short trace without the need for repeating scenarios is preferred
-        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False, visualiser=visualiser)
+        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False, randomise=False,
+                                                      visualiser=visualiser)
         if not tracestate.coverage_reached():
             logger.debug("Direct trace not available. Allowing repetition of scenarios")
-            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, visualiser=visualiser)
-
+            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
+                                                          visualiser=visualiser)
         if graph:
             self._write_visualisation(visualiser, graph)
         if export_graph_data:
@@ -136,7 +137,7 @@ class SuiteProcessors:
             logger.debug(f"Exploring with prio order {scenarios}")
             tracestate = TraceState(scenarios)
             count = 0
-            candidate_id = tracestate.next_candidate(retry=False)
+            candidate_id = tracestate.next_candidate(retry=False, randomise=False)
             while candidate_id is not None:
                 count += 1
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
@@ -199,10 +200,11 @@ class SuiteProcessors:
             total_coverage = {k: total_coverage[k]+v for k, v in ts.c_pool.items()}
         return [id for id in total_coverage if total_coverage[id] == 0]
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, visualiser: Visualiser = None) -> TraceState:
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
+                                    visualiser: Visualiser = None) -> TraceState:
         tracestate = TraceState(self._prio_order)
         while not tracestate.coverage_reached():
-            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
+            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
                     break
