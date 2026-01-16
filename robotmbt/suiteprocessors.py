@@ -90,11 +90,11 @@ class SuiteProcessors:
         self._prio_order = self._pre_explore_paths()[0]
 
         # a short trace without the need for repeating scenarios is preferred
-        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
+        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False, randomise=False)
 
         if not tracestate.coverage_reached():
             logger.debug("Direct trace not available. Allowing repetition of scenarios")
-            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True)
+            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True)
             if not tracestate.coverage_reached():
                 raise Exception("Unable to compose a consistent suite")
 
@@ -117,7 +117,7 @@ class SuiteProcessors:
             logger.debug(f"Exploring with prio order {scenarios}")
             tracestate = TraceState(scenarios)
             count = 0
-            candidate_id = tracestate.next_candidate(retry=False)
+            candidate_id = tracestate.next_candidate(retry=False, randomise=False)
             while candidate_id is not None:
                 count += 1
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
@@ -180,10 +180,10 @@ class SuiteProcessors:
             total_coverage = {k: total_coverage[k]+v for k, v in ts.c_pool.items()}
         return [id for id in total_coverage if total_coverage[id] == 0]
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios, randomise=False):
         tracestate = TraceState(self._prio_order)
         while not tracestate.coverage_reached():
-            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
+            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
                     break
