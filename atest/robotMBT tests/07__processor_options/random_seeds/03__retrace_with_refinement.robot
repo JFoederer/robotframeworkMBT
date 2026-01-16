@@ -9,7 +9,7 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               traces possible of varying length.
 Suite Setup       Run keywords    Set suite variable    ${trace}    ${empty}
 ...                        AND    Treat this test suite Model-based    seed=xou-pumj-ihj-oibiyc-surer
-Suite Teardown    Should be equal    ${trace}    B1A5BY3B4BX6B2
+Suite Teardown    Should be equal    ${trace}    B3AY2A5A6B4BX1
 Library           robotmbt
 
 *** Test Cases ***

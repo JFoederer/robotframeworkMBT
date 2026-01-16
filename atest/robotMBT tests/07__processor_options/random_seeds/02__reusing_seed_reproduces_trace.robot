@@ -5,7 +5,7 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               indicated by the number string.
 Suite Setup       Run keywords    Set suite variable    ${trace}    ${empty}
 ...                        AND    Treat this test suite Model-based    seed=aqmou-eelcuu-sniu-ugsyek-jyhoor
-Suite Teardown    Should be equal    ${trace}    6930142758
+Suite Teardown    Should be equal    ${trace}    6879523014
 Library           robotmbt
 
 *** Test Cases ***
