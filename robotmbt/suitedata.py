@@ -38,7 +38,7 @@ from robot.running.arguments.argumentvalidator import ArgumentValidator
 from robot.running.keywordimplementation import KeywordImplementation
 import robot.utils.notset
 
-from .steparguments import StepArgument, StepArguments
+from .steparguments import StepArgument, StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 
 
@@ -187,14 +187,14 @@ class Step:
         for arg in self.args:
             if arg.is_default:
                 continue
-            if arg.kind == arg.POSITIONAL:
+            if arg.kind == ArgKind.POSITIONAL:
                 result.append(arg.value)
-            elif arg.kind == arg.VAR_POS:
+            elif arg.kind == ArgKind.VAR_POS:
                 for vararg in arg.value:
                     result.append(vararg)
-            elif arg.kind == arg.NAMED:
+            elif arg.kind == ArgKind.NAMED:
                 result.append(f"{arg.name}={arg.value}")
-            elif arg.kind == arg.FREE_NAMED:
+            elif arg.kind == ArgKind.FREE_NAMED:
                 for name, value in arg.value.items():
                     result.append(f"{name}={value}")
             else:
@@ -225,7 +225,7 @@ class Step:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
-                self.args = StepArguments([StepArgument(*match, kind=StepArgument.EMBEDDED) for match in
+                self.args = StepArguments([StepArgument(*match, kind=ArgKind.EMBEDDED) for match in
                                            zip(robot_kw.embedded.args,
                                                robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
@@ -245,19 +245,19 @@ class Step:
         for arg in robot_argspec:
             if not p_args or (arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED):
                 break
-            result.append(StepArgument(argument_names.pop(0), p_args.pop(0), kind=StepArgument.POSITIONAL))
+            result.append(StepArgument(argument_names.pop(0), p_args.pop(0), kind=ArgKind.POSITIONAL))
             robot_args.pop(0)
         if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
-            result.append(StepArgument(argument_names.pop(0), p_args, kind=StepArgument.VAR_POS))
+            result.append(StepArgument(argument_names.pop(0), p_args, kind=ArgKind.VAR_POS))
         free = {}
         for name, value in n_args:
             if name in argument_names:
-                result.append(StepArgument(name, value, kind=StepArgument.NAMED))
+                result.append(StepArgument(name, value, kind=ArgKind.NAMED))
                 argument_names.remove(name)
             else:
                 free[name] = value
         if free:
-            result.append(StepArgument(argument_names.pop(-1), free, kind=StepArgument.FREE_NAMED))
+            result.append(StepArgument(argument_names.pop(-1), free, kind=ArgKind.FREE_NAMED))
         for unmentioned_arg in argument_names:
             arg = next(arg for arg in robot_args if arg.name == unmentioned_arg)
             default_value = arg.default
@@ -271,7 +271,7 @@ class Step:
                     # but use different names in the method signature. Robot Framework implementation is incomplete for this
                     # aspect and differs between library and user keywords.
                     assert False, f"No default argument expected to be needed for '{unmentioned_arg}' here"
-            result.append(StepArgument(unmentioned_arg, default_value, kind=StepArgument.NAMED, is_default=True))
+            result.append(StepArgument(unmentioned_arg, default_value, kind=ArgKind.NAMED, is_default=True))
         return result
 
     @staticmethod

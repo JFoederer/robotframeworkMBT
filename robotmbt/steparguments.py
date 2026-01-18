@@ -30,8 +30,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from enum import Enum, auto
 from keyword import iskeyword
-from typing import Any, Literal
+from typing import Any
 import builtins
 
 
@@ -57,21 +58,20 @@ class StepArguments(list):
         return any([arg.modified for arg in self])
 
 
-class StepArgument:
-    # kind list
-    EMBEDDED = 'EMBEDDED'
-    POSITIONAL = 'POSITIONAL'
-    VAR_POS = 'VAR_POS'
-    NAMED = 'NAMED'
-    FREE_NAMED = 'FREE_NAMED'
+class ArgKind(Enum):
+    EMBEDDED = auto()
+    POSITIONAL = auto()
+    VAR_POS = auto()
+    NAMED = auto()
+    FREE_NAMED = auto()
+    UNKNOWN = auto()
 
-    def __init__(self, arg_name: str, value: Any,
-                 kind: Literal['EMBEDDED', 'POSITIONAL', 'VAR_POS', 'NAMED', 'FREE_NAMED'] | None = None,
-                 is_default: bool = False):
+
+class StepArgument:
+    def __init__(self, arg_name: str, value: Any, kind: ArgKind = ArgKind.UNKNOWN, is_default: bool = False):
         self.name: str = arg_name
         self.org_value: Any = value
-        # one of the values from the kind list
-        self.kind: Literal['EMBEDDED', 'POSITIONAL', 'VAR_POS', 'NAMED', 'FREE_NAMED'] | None = kind
+        self.kind: ArgKind = kind
         self._value: Any = None
         self._codestr: str | None = None
         self.value: Any = value
