@@ -31,9 +31,9 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import robot.model
+import robot.running.model as rmodel
 from .suitedata import Suite, Scenario, Step
 from .suiteprocessors import SuiteProcessors
-import robot.running.model as rmodel
 from robot.api import logger
 from robot.api.deco import keyword
 from typing import Any, Literal
@@ -51,7 +51,7 @@ class SuiteReplacer:
         self.robot_suite: robot.model.TestSuite | None = None
         self.processor_lib_name: str | None = processor_lib
         self.processor_name: str = processor
-        self._processor_lib: SuiteProcessors | None = None
+        self._processor_lib: SuiteProcessors | None | object = None
         self._processor_method: Any = None
         self.processor_options: dict[str, Any] = {}
 
