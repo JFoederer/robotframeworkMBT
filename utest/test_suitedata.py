@@ -285,10 +285,10 @@ class TestScenarios(unittest.TestCase):
     def test_exteranally_determined_attributes_are_copied_along(self):
         self.scenario.src_id = 7
 
-        class Dummy:
+        class SubstitutionMap:
             def copy(self):
                 return 'dummy'
-        self.scenario.data_choices = Dummy()
+        self.scenario.data_choices = SubstitutionMap()
         dup = self.scenario.copy()
         self.assertEqual(dup.src_id, self.scenario.src_id)
         self.assertEqual(dup.data_choices, 'dummy')

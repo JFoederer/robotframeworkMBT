@@ -40,4 +40,4 @@ class robotmbt(SuiteReplacer):
     """
 
 
-__version__ = VERSION
+__version__: str = VERSION

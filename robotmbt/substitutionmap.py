@@ -31,6 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import random
+from typing import Any
 
 
 class SubstitutionMap:
@@ -56,14 +57,14 @@ class SubstitutionMap:
         new.solution = self.solution.copy()
         return new
 
-    def substitute(self, example_value, constraint):
+    def substitute(self, example_value: str, constraint: list[Any]):
         self.solution = {}
         if example_value in self.substitutions:
             self.substitutions[example_value].add_constraint(constraint)
         else:
             self.substitutions[example_value] = Constraint(constraint)
 
-    def solve(self):
+    def solve(self) -> dict[str, str]:
         self.solution = {}
         solution = dict()
         substitutions = self.copy().substitutions
@@ -139,7 +140,7 @@ class Constraint:
         if not len(self.optionset):
             raise ValueError('No options left after adding constraint')
 
-    def remove_option(self, option):
+    def remove_option(self, option: str):
         try:
             self.optionset.remove(option)
             self.removed_stack.append(option)
