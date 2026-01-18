@@ -31,9 +31,11 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import copy
-from typing import Any, Literal
+from typing import Literal
 
+from robot.running.arguments.argumentspec import ArgumentSpec
 from robot.running.arguments.argumentvalidator import ArgumentValidator
+from robot.running.keywordimplementation import KeywordImplementation
 import robot.utils.notset
 
 from .steparguments import StepArgument, StepArguments
@@ -77,7 +79,7 @@ class Scenario:
         self.teardown: Step | None = None  # Can be a single step or None
         self.steps: list[Step] = []
         self.src_id: int | None = None
-        self.data_choices: dict | SubstitutionMap = {}
+        self.data_choices: SubstitutionMap = SubstitutionMap()
 
     @property
     def longname(self) -> str:
@@ -136,7 +138,7 @@ class Step:
         self.detached: bool = False  # Decouples StepArguments from the step text (refinement use case)
         # model_info contains modelling information as a dictionary. The standard format is
         # dict(IN=[], OUT=[]) and can optionally contain an error field.
-        # IN and OUT are lists of Python evaluatable expressions.
+        # The values of IN and OUT are lists of Python evaluatable expressions.
         # The `new vocab` form can be used to create new domain objects.
         # The `vocab.attribute` form can then be used to express relations
         # between properties from the domain vocabulaire.
@@ -217,7 +219,7 @@ class Step:
         """The keyword without its Gherkin keyword. I.e., as it is known in Robot framework."""
         return self.keyword.replace(self.step_kw, '', 1).strip() if self.step_kw else self.keyword
 
-    def add_robot_dependent_data(self, robot_kw):
+    def add_robot_dependent_data(self, robot_kw: KeywordImplementation):
         """robot_kw must be Robot Framework's keyword object from Robot's runner context"""
         try:
             if robot_kw.error:
@@ -232,7 +234,7 @@ class Step:
         except Exception as ex:
             self.model_info['error'] = str(ex)
 
-    def __handle_non_embedded_arguments(self, robot_argspec) -> list[StepArgument]:
+    def __handle_non_embedded_arguments(self, robot_argspec: ArgumentSpec) -> list[StepArgument]:
         result = []
         p_args = [a for a in self.org_pn_args if '=' not in a or r'\=' in a]
         n_args = [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a]
