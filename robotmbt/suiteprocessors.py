@@ -130,8 +130,8 @@ class SuiteProcessors:
                 logger.warn(f'Could not initialise visualiser due to error!\n{e}')
 
         elif graph != '' and not VISUALISE:
-            logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed.'
-                        'Refer to the README on how to install these dependencies.')
+            logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed. '
+                        'Refer to the README on how to install these dependencies. ')
 
         # a short trace without the need for repeating scenarios is preferred
         tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)

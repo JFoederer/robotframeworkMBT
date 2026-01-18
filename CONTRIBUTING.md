@@ -131,6 +131,8 @@ To create a new graph type, create an instance of AbstractGraph, instantiating t
 
 It is recommended to create a new file for each graph type under `/robotmbt/visualise/graphs/`.
 
+NOTE: when manually altering the networkx field, ensure its ids remain as a serializable and hashable type when the constructor finishes.
+
 A simple example is given below. In this graph type, nodes represent scenarios encountered in exploration, and edges show the flow between these scenarios.
 
 ```python
