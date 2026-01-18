@@ -35,18 +35,15 @@ import robot.running.model as rmodel
 from .suitedata import Suite, Scenario, Step
 from .suiteprocessors import SuiteProcessors
 from robot.api import logger
-from robot.api.deco import keyword
+from robot.api.deco import library, keyword
 from typing import Any, Literal
 from robot.libraries.BuiltIn import BuiltIn
 Robot = BuiltIn()
 
 
+@library(scope="GLOBAL", listener='SELF')
 class SuiteReplacer:
-    ROBOT_LIBRARY_SCOPE: Literal['GLOBAL'] = 'GLOBAL'
-    ROBOT_LISTENER_API_VERSION: Literal[3] = 3
-
     def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
-        self.ROBOT_LIBRARY_LISTENER = self
         self.current_suite: robot.model.TestSuite | None = None
         self.robot_suite: robot.model.TestSuite | None = None
         self.processor_lib_name: str | None = processor_lib
