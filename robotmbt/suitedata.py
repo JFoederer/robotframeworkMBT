@@ -119,19 +119,19 @@ class Scenario:
 
 class Step:
     def __init__(self, steptext: str, *args, parent: Suite | Scenario, assign: tuple[str] = (),
-                 prev_gherkin_kw: Literal['given', 'when', 'then', 'none'] | None = None):
+                 prev_gherkin_kw: Literal['given', 'when', 'then'] | None = None):
         # org_step is the first keyword cell of the Robot line, including step_kw,
         # excluding positional args, excluding variable assignment.
         self.org_step: str = steptext
         # org_pn_args are the positional and named arguments as parsed
         # from the Robot text ('posA' , 'posB', 'named1=namedA')
-        self.org_pn_args = args
+        self.org_pn_args: tuple[str, ...] = args
         self.parent: Suite | Scenario = parent  # Parent scenario for easy searching and processing.
         # For when a keyword's return value is assigned to a variable.
         # Taken directly from Robot.
         self.assign: tuple[str] = assign
         # gherkin_kw is one of 'given', 'when', 'then', or None for non-bdd keywords.
-        self.gherkin_kw: str | None = self.step_kw if \
+        self.gherkin_kw = self.step_kw if \
             str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
         self.signature: str | None = None  # Robot keyword with its embedded arguments in ${...} notation.
         self.args: StepArguments = StepArguments()  # embedded arguments list of StepArgument objects.
@@ -202,11 +202,12 @@ class Step:
         return tuple(result)
 
     @property
-    def gherkin_kw(self) -> Literal['given', 'when', 'then', 'none'] | None:
+    def gherkin_kw(self) -> Literal['given', 'when', 'then'] | None:
         return self._gherkin_kw
 
     @gherkin_kw.setter
-    def gherkin_kw(self, value: Literal['given', 'when', 'then', 'none'] | None):
+    def gherkin_kw(self, value: str | None):
+        """if value is type str, it must be a case insensitive variant of given, when, then"""
         self._gherkin_kw = value.lower() if value else None
 
     @property
