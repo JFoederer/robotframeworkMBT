@@ -2,7 +2,7 @@ from bokeh.core.enums import PlaceType, LegendLocationType
 from bokeh.core.property.vectorization import value
 from bokeh.embed import file_html
 from bokeh.models import ColumnDataSource, Rect, Text, ResetTool, SaveTool, WheelZoomTool, PanTool, Plot, Range1d, \
-    Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend
+    Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend, BoxZoomTool
 
 from grandalf.graphs import Vertex as GVertex, Edge as GEdge, Graph as GGraph
 from grandalf.layouts import SugiyamaLayout
@@ -240,9 +240,11 @@ class NetworkVisualiser:
         self.plot.add_layout(Title(text=suite_name, align="center"), "above")
 
         # Add the different tools
+        wheel_zoom = WheelZoomTool()
         self.plot.add_tools(ResetTool(), SaveTool(),
-                            WheelZoomTool(), PanTool(),
-                            FullscreenTool())
+                            wheel_zoom, PanTool(),
+                            FullscreenTool(), BoxZoomTool())
+        self.plot.toolbar.active_scroll = wheel_zoom
 
         # Specify the default range - these values represent the aspect ratio of the actual view in the window
         self.plot.x_range = Range1d(-INNER_WINDOW_WIDTH / 2, INNER_WINDOW_WIDTH / 2)
