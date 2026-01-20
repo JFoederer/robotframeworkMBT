@@ -117,14 +117,14 @@ class SuiteProcessors:
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                         "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
-        init_seed = self._init_randomiser(seed)
+        self._init_randomiser(seed)
         self.shuffled = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         self.visualiser = None
         if graph != '' and VISUALISE:
             try:
-                self.visualiser = Visualiser(graph, suite_name, init_seed, to_json)
+                self.visualiser = Visualiser(graph, suite_name, to_json)
             except Exception as e:
                 self.visualiser = None
                 logger.warn(f'Could not initialise visualiser due to error!\n{e}')
@@ -245,23 +245,20 @@ class SuiteProcessors:
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
     @staticmethod
-    def _init_randomiser(seed: Any) -> str:
+    def _init_randomiser(seed: Any):
         if isinstance(seed, str):
             seed = seed.strip()
 
         if str(seed).lower() == 'none':
             logger.info(
-                f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
-            return ""
+                "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
-            return new_seed
         else:
             logger.info(f"seed={seed} (as provided)")
             random.seed(seed)
-            return seed
 
     @staticmethod
     def _generate_seed() -> str:
