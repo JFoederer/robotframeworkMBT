@@ -49,7 +49,7 @@ class ModelGenerator:
 
     @keyword(name="Generate Network Graph")
     def generate_networkgraph(self, graph: AbstractGraph) -> NetworkVisualiser:
-        return NetworkVisualiser(graph=graph, suite_name="", seed="")
+        return NetworkVisualiser(graph=graph, suite_name="")
 
     @keyword(name='Export Graph')  # type:ignore
     def export_graph(self, suite: str, trace_info: TraceInfo) -> str:

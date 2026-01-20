@@ -25,7 +25,7 @@ class Visualiser:
         # just calls __init__, but without having underscores etc.
         return cls(graph_type)
 
-    def __init__(self, graph_type: str, suite_name: str = "", seed: str = "", export: bool = False,
+    def __init__(self, graph_type: str, suite_name: str = "", export: bool = False,
                  trace_info: TraceInfo = None):
         if graph_type != 'scenario' and graph_type != 'state' and graph_type != 'scenario-state' \
                 and graph_type != 'scenario-delta-value' and graph_type != 'reduced-sdv' \
@@ -33,13 +33,12 @@ class Visualiser:
             raise ValueError(f"Unknown graph type: {graph_type}!")
 
         self.graph_type: str = graph_type
-        if trace_info == None:
+        if trace_info is None:
             self.trace_info: TraceInfo = TraceInfo()
         else:
             self.trace_info = trace_info
         self.suite_name = suite_name
         self.export = export
-        self.seed = seed
 
     def update_trace(self, trace: TraceState):
         """
@@ -93,6 +92,6 @@ class Visualiser:
 
         graph: AbstractGraph = self._get_graph()
 
-        html_bokeh = networkvisualiser.NetworkVisualiser(graph, self.suite_name, self.seed).generate_html()
+        html_bokeh = networkvisualiser.NetworkVisualiser(graph, self.suite_name).generate_html()
 
         return f'<iframe srcdoc="{html.escape(html_bokeh)}" width="{networkvisualiser.OUTER_WINDOW_WIDTH}px" height="{networkvisualiser.OUTER_WINDOW_HEIGHT}px"></iframe>'

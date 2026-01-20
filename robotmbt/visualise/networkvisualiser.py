@@ -69,7 +69,7 @@ class NetworkVisualiser:
     A container for a Bokeh graph, which can be created from any abstract graph.
     """
 
-    def __init__(self, graph: AbstractGraph, suite_name: str, seed: str):
+    def __init__(self, graph: AbstractGraph, suite_name: str):
         # Extract what we need from the graph
         self.networkx: DiGraph = graph.networkx
         self.final_trace = graph.get_final_trace()
@@ -98,7 +98,7 @@ class NetworkVisualiser:
         self._add_legend(graph)
 
         # Add our features to the graph (e.g. tools)
-        self._add_features(suite_name, seed)
+        self._add_features(suite_name)
 
     def generate_html(self):
         """
@@ -231,12 +231,10 @@ class NetworkVisualiser:
 
         return ns, es
 
-    def _add_features(self, suite_name: str, seed: str):
+    def _add_features(self, suite_name: str):
         """
         Add our features to the graph such as tools, titles, and JavaScript callbacks.
         """
-        if seed != "":
-            self.plot.add_layout(Title(text="seed=" + seed, align="center", text_color="#999999"), "above")
         self.plot.add_layout(Title(text=suite_name, align="center"), "above")
 
         # Add the different tools
@@ -248,9 +246,9 @@ class NetworkVisualiser:
 
         # Specify the default range - these values represent the aspect ratio of the actual view in the window
         self.plot.x_range = Range1d(-INNER_WINDOW_WIDTH / 2, INNER_WINDOW_WIDTH / 2)
-        self.plot.y_range = Range1d(-INNER_WINDOW_HEIGHT + (0 if seed == '' else 20), 0)
+        self.plot.y_range = Range1d(-INNER_WINDOW_HEIGHT, 0)
         self.plot.x_range.tags = [{"initial_span": INNER_WINDOW_WIDTH}]
-        self.plot.y_range.tags = [{"initial_span": INNER_WINDOW_HEIGHT - (0 if seed == '' else 20)}]
+        self.plot.y_range.tags = [{"initial_span": INNER_WINDOW_HEIGHT}]
 
         # A JS callback to scale text and arrows, and change aspect ratio.
         resize_cb = CustomJS(args=dict(xr=self.plot.x_range, yr=self.plot.y_range, plot=self.plot, arrows=self.arrows),
