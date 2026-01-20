@@ -45,11 +45,11 @@ try:
     from .visualise.visualiser import Visualiser
     from .visualise.models import TraceInfo
 
-    VISUALISE = True
+    visualisation_deps_present = True
 except ImportError:
     Visualiser = None
     TraceInfo = None
-    VISUALISE = False
+    visualisation_deps_present = False
 
 
 class SuiteProcessors:
@@ -105,7 +105,7 @@ class SuiteProcessors:
 
         return self.out_suite
 
-    def _load_graph(self, graph:str, suite_name: str, from_json: str):
+    def _load_graph(self, graph: str, suite_name: str, from_json: str):
         traceinfo = TraceInfo()
         traceinfo = traceinfo.import_graph(from_json)
         self.visualiser = Visualiser(graph, suite_name, trace_info=traceinfo)
@@ -115,21 +115,21 @@ class SuiteProcessors:
             scenario.src_id = id
         self.scenarios = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
-                        "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
+                     "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
         self.shuffled = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         self.visualiser = None
-        if graph != '' and VISUALISE:
+        if graph != '' and visualisation_deps_present:
             try:
                 self.visualiser = Visualiser(graph, suite_name, to_json)
             except Exception as e:
                 self.visualiser = None
                 logger.warn(f'Could not initialise visualiser due to error!\n{e}')
 
-        elif graph != '' and not VISUALISE:
+        elif graph != '' and not visualisation_deps_present:
             logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed. '
                         'Refer to the README on how to install these dependencies. ')
 
@@ -181,7 +181,6 @@ class SuiteProcessors:
                         self._report_tracestate_to_user(tracestate)
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
         return tracestate
-
 
     def __update_visualisation(self, tracestate: TraceState):
         if self.visualiser is not None:

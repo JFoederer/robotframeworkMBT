@@ -5,6 +5,14 @@ Library           Collections
 
 
 *** Keywords ***
+Check requirements
+    [Documentation]    *model info*
+    ...    :IN: None
+    ...    :OUT: None
+    ${result} =    Requirements Present
+    Run Keyword If    ${result} == ${False}
+    ...    Skip    Visualisation requirements not installed. Please read the README for information on how to do this.    
+
 test suite ${suite} has trace info ${trace}
     [Documentation]     *model info*
     ...     :IN: new trace_info | trace_info.current_trace=0 | trace_info.all_traces=0 | 
