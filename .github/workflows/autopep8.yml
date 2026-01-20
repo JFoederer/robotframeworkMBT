@@ -1,4 +1,4 @@
-name: autopep8 Check
+name: autopep8 check
 
 on: [pull_request]
 

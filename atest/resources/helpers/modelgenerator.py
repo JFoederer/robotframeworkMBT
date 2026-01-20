@@ -1,14 +1,34 @@
-import jsonpickle  # type: ignore
 from robot.api.deco import keyword  # type:ignore
-from robotmbt.visualise.models import TraceInfo, ScenarioInfo, StateInfo
-from robotmbt.visualise.visualiser import Visualiser
-from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 import os
-import networkx as nx
-from robotmbt.visualise.networkvisualiser import NetworkVisualiser, Node
+
+visualisation_deps_present = True
+try:
+    import jsonpickle  # type: ignore
+    import networkx as nx
+    from robotmbt.visualise.models import TraceInfo, ScenarioInfo, StateInfo
+    from robotmbt.visualise.visualiser import Visualiser
+    from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
+    from robotmbt.visualise.networkvisualiser import NetworkVisualiser, Node
+
+except ImportError:
+    visualisation_deps_present = False
+
+    jsonpickle = None
+    nx = None
+    TraceInfo = None
+    ScenarioInfo = None
+    StateInfo = None
+    Visualiser = None
+    AbstractGraph = None
+    NetworkVisualiser = None
+    Node = None
 
 
 class ModelGenerator:
+    @keyword(name='Requirements Present')  # type: ignore
+    def check_requirements(self) -> bool:
+        return visualisation_deps_present
+
     @keyword(name='Generate Trace Information')  # type:ignore
     def generate_trace_information(self) -> TraceInfo:
         return TraceInfo()
@@ -112,9 +132,9 @@ class ModelGenerator:
         if node_key1 is None or node_key2 is None:
             return False
         return graph.networkx.has_edge(node_key1, node_key2)
-    
+
     @keyword(name="Get NodeID")  # type:ignore
-    def get_nodeid(self, graph: AbstractGraph, node_title:str) -> str | None:
+    def get_nodeid(self, graph: AbstractGraph, node_title: str) -> str | None:
         return self.graph_contains_vertex_with_text(graph, node_title, text=None)
 
     @keyword(name="Get Vertex Y Position")  # type:ignore
