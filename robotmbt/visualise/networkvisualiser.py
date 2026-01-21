@@ -203,8 +203,14 @@ class NetworkVisualiser:
 
         # Feed the info to grandalf and get the layout.
         g = GGraph(vertices, edges)
-
         sugiyama = SugiyamaLayout(g.C[0])
+     
+        # Set specific margins as these values worked best in user-testing
+        sugiyama.xspace = 10
+        sugiyama.yspace = 15
+        sugiyama.dw = 2
+        sugiyama.dh = 2
+        
         sugiyama.init_all(roots=[start], inverted_edges=flips)
         sugiyama.draw()
 
