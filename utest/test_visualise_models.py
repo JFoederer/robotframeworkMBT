@@ -29,6 +29,47 @@ if VISUALISE:
             self.assertEqual(si.name, 'test')
             self.assertEqual(si.src_id, 0)
 
+        def test_split_name_empty_string(self):
+            result = ScenarioInfo._split_name("")
+            self.assertEqual(result, "")
+            self.assertNotIn('\n', result)
+
+        def test_split_name_single_short_word(self):
+            result = ScenarioInfo._split_name("Hello")
+            self.assertEqual(result, "Hello")
+            self.assertNotIn('\n', result)
+
+        def test_split_name_single_exact_length_word(self):
+            exact_20 = "abcdefghijklmnopqrst"
+            result = ScenarioInfo._split_name(exact_20)
+            self.assertEqual(result, exact_20)
+            self.assertNotIn('\n', result)
+
+        def test_split_name_single_long_word(self):
+            name = "ThisIsAReallyLongNameWithoutAnySpacesAtAll"
+            result = ScenarioInfo._split_name(name)
+            self.assertEqual(result, name)
+            self.assertNotIn('\n', result)
+
+        def test_split_name_two_words_short(self):
+            result = ScenarioInfo._split_name("Hello World")
+            self.assertEqual(result, "Hello World")
+            self.assertNotIn('\n', result)
+
+        def test_split_name_two_words_exceeds_limit(self):
+            name = "Supercalifragilistic Hello"
+            result = ScenarioInfo._split_name(name)
+
+            self.assertEqual(result.replace('\n', ' '), name)
+            self.assertIn('\n', result)
+
+        def test_split_name_multiple_words_need_split(self):
+            name = "This is a very long scenario name that should be split"
+            result = ScenarioInfo._split_name(name)
+
+            self.assertEqual(result.replace('\n', ' '), name)
+            self.assertIn('\n', result)
+
         """
         Class: StateInfo
         """
