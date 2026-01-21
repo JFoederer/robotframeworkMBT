@@ -102,6 +102,10 @@ class StateInfo:
         return cls(space)
 
     def difference(self, new_state) -> set[tuple[str, str]]:
+        """
+        new_state: the new StateInfo to be compared to the self.
+        returns: a set of tuples with properties and their assignment.
+        """
         old: dict[str, dict | str] = self.properties.copy()
         new: dict[str, dict | str] = new_state.properties.copy()
         temp = StateInfo._dict_deep_diff(old, new)
