@@ -83,7 +83,7 @@ class TraceState:
     def coverage_reached(self):
         return all(self.c_pool.values())
 
-    def get_trace(self) -> list[str | Scenario]:
+    def get_trace(self) -> list[Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
     def next_candidate(self, retry: bool = False):
@@ -139,7 +139,7 @@ class TraceState:
         """Trying a scenario excludes it from further cadidacy on this level"""
         self._tried[-1].append(i_scenario)
 
-    def confirm_full_scenario(self, index: int, scenario: Scenario | str, model: ModelSpace):
+    def confirm_full_scenario(self, index: int, scenario: Scenario, model: ModelSpace):
         c_drought = 0 if self.c_pool[index] == 0 else self.coverage_drought + 1
         self.c_pool[index] += 1
         if self.is_refinement_active(index):
@@ -151,7 +151,7 @@ class TraceState:
             self._tried.append([])
         self._snapshots.append(TraceSnapShot(id, scenario, model, drought=c_drought))
 
-    def push_partial_scenario(self, index: int, scenario: Scenario | str, model: ModelSpace, remainder=None):
+    def push_partial_scenario(self, index: int, scenario: Scenario, model: ModelSpace, remainder=None):
         if self.is_refinement_active(index):
             id = f"{index}.{self.highest_part(index) + 1}"
         else:
