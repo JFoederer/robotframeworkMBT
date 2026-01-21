@@ -2,7 +2,7 @@ from bokeh.core.enums import PlaceType, LegendLocationType
 from bokeh.core.property.vectorization import value
 from bokeh.embed import file_html
 from bokeh.models import ColumnDataSource, Rect, Text, ResetTool, SaveTool, WheelZoomTool, PanTool, Plot, Range1d, \
-    Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend, BoxZoomTool
+    Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend, ZoomInTool, ZoomOutTool
 
 from grandalf.graphs import Vertex as GVertex, Edge as GEdge, Graph as GGraph
 from grandalf.layouts import SugiyamaLayout
@@ -241,7 +241,7 @@ class NetworkVisualiser:
         wheel_zoom = WheelZoomTool()
         self.plot.add_tools(ResetTool(), SaveTool(),
                             wheel_zoom, PanTool(),
-                            FullscreenTool(), BoxZoomTool())
+                            FullscreenTool(), ZoomInTool(factor=0.4), ZoomOutTool(factor=0.4))
         self.plot.toolbar.active_scroll = wheel_zoom
 
         # Specify the default range - these values represent the aspect ratio of the actual view in the window
