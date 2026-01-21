@@ -7,7 +7,7 @@ Documentation     This suite demonstrates step refinement in its simplest form. 
 ...               the _WHEN_ step. For this to be successful, the _WHEN_ step from the
 ...               high-level scenario must match the _GIVEN_ step of the refinement
 ...               scenario.
-Suite Setup       Treat this test suite Model-based  graph=scenario
+Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_composed.resource
 Library           robotmbt
 
