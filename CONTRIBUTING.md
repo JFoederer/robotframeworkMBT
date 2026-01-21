@@ -171,21 +171,14 @@ class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
 ```
 
 Once you have created a new Graph class, you can direct the visualizer to use it when your type is selected. 
-Edit `/robotmbt/visualise/visualiser.py` to not reject your graph type in `__init__` and construct your graph in `generate_visualisation` like the others. For our example:
-```python
-def __init__(self, graph_type: str, suite_name: str = "", seed: str = "", export: bool = False, trace_info: TraceInfo = None):
-        if graph_type != 'scenario' and [...]:
-            raise ValueError(f"Unknown graph type: {graph_type}!")
-
-        [...]
-```
+Edit `/robotmbt/visualise/visualiser.py` to construct your graph in `_get_graph` like the others. For our example:
 
 ```python
-def generate_visualisation(self) -> str:
+def _get_graph(self)  -> AbstractGraph | None:
     [...]
 
-    if self.graph_type == 'scenario':
-        graph: AbstractGraph = ScenarioGraph(self.trace_info)
+    case 'scenario':
+        return ScenarioGraph(self.trace_info)
 
     [...]
 ```

@@ -5,7 +5,7 @@ Documentation     This test suite demonstrates direct one-on-one linking of scen
 ...               reverse order, this test suite would fail in a regular Robot Framework
 ...               test run. It passes when the model figures out the dependency between
 ...               the test cases and swaps their order.
-Suite Setup       Treat this test suite Model-based  graph=scenario
+Suite Setup       Treat this test suite Model-based
 Resource          ../../resources/birthday_cards_flat.resource
 Library           robotmbt
 

@@ -177,7 +177,6 @@ class TraceInfo:
         self.all_traces: list[list[tuple[ScenarioInfo, StateInfo]]] = []
         self.previous_length: int = 0
         self.pushed: bool = False
-        self.path = "json/"
 
     def update_trace(self, scenario: ScenarioInfo | None, state: StateInfo, length: int):
         if length > self.previous_length:
@@ -251,7 +250,7 @@ class TraceInfo:
             logger.warn(
                 f'TraceInfo got out of sync after {after}\nExpected state: {prev_state}\nActual state: {state}')
 
-    def export_graph(self, suite_name: str, atest: bool = False) -> str | None:
+    def export_graph(self, suite_name: str, dir: str = '', atest: bool = False) -> str | None:
         encoded_instance = jsonpickle.encode(self)
         name = suite_name.lower().replace(' ', '_')
         if atest:
@@ -261,17 +260,24 @@ class TraceInfo:
             as temporary file, a different method, is problematic on Windows 
             https://stackoverflow.com/a/57015383
             '''
-            fd, path = tempfile.mkstemp()
+            fd, dir = tempfile.mkstemp()
             with os.fdopen(fd, "w") as f:
                 f.write(encoded_instance)
-            return path
+            return dir
 
-        with open(f"{self.path}{name}.json", "w") as f:
+        if dir[-1] != '/':
+            dir += '/'
+
+        # create folders if they do not exist
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        with open(f"{dir}{name}.json", "w") as f:
             f.write(encoded_instance)
         return None
 
-    def import_graph(self, file_name: str):
-        with open(f"{self.path}{file_name}.json", "r") as f:
+    def import_graph(self, file_path: str):
+        with open(f"{file_path}", "r") as f:
             string = f.read()
             self = jsonpickle.decode(string)
 

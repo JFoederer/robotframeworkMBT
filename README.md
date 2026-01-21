@@ -217,17 +217,17 @@ Once the test suite has run, a graph will be included in the test's log, under t
 It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
 
 ```
-Treat this test suite Model-based  graph=[type]  to_json=true
+Treat this test suite Model-based  graph=[type]  export_graph_data=[directory]
 ```
 
 A JSON file named after the test suite will be created containing said information.
 
 #### JSON importing
 
-It is possible to skip running the exploration step and produce a graph (e.g. of another type) from previously exported data. This can be achieved by pointing the following argument to such a JSON file (just its name suffices, without the extension):
+It is possible to skip running the exploration step and produce a graph (e.g. of another type) from previously exported data.
 
 ```
-Treat this test suite Model-based  graph=[type]  from_json=[file_name]
+Treat this test suite Model-based  graph=[type]  import_graph_data=[directory+file_name.json]
 ```
 
 A graph will be created from the imported data.

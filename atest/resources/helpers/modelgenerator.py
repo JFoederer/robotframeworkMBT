@@ -73,7 +73,7 @@ class ModelGenerator:
 
     @keyword(name='Export Graph')  # type:ignore
     def export_graph(self, suite: str, trace_info: TraceInfo) -> str:
-        return trace_info.export_graph(suite, True)
+        return trace_info.export_graph(suite, atest=True)
 
     @keyword(name='Import Graph')  # type:ignore
     def import_graph(self, filepath: str) -> TraceInfo:
