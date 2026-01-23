@@ -18,10 +18,10 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         self.networkx: nx.DiGraph = nx.DiGraph()
 
         # Keep track of node IDs
-        self.ids: dict[str, NodeInfo] = {}
+        self.ids: dict[str, tuple[NodeInfo, str]] = {}
 
         # Add the start node
-        self.networkx.add_node('start', label='start')
+        self.networkx.add_node('start', label='start', description='')
         self.start_node = 'start'
 
         # Add nodes and edges for all traces
@@ -29,11 +29,13 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
             for i in range(len(trace)):
                 if i > 0:
                     from_node = self._get_or_create_id(
-                        self.select_node_info(trace, i - 1))
+                        self.select_node_info(trace, i - 1),
+                        self.create_node_description(trace, i - 1))
                 else:
                     from_node = 'start'
                 to_node = self._get_or_create_id(
-                    self.select_node_info(trace, i))
+                    self.select_node_info(trace, i),
+                    self.create_node_description(trace, i))
                 self._add_node(from_node)
                 self._add_node(to_node)
                 self._add_edge(from_node, to_node,
@@ -44,11 +46,13 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         for i in range(len(info.current_trace)):
             if i > 0:
                 from_node = self._get_or_create_id(
-                    self.select_node_info(info.current_trace, i - 1))
+                    self.select_node_info(info.current_trace, i - 1),
+                    self.create_node_description(info.current_trace, i - 1))
             else:
                 from_node = 'start'
             to_node = self._get_or_create_id(
-                self.select_node_info(info.current_trace, i))
+                self.select_node_info(info.current_trace, i),
+                self.create_node_description(info.current_trace, i))
             self.final_trace.append(to_node)
             self._add_node(from_node)
             self._add_node(to_node)
@@ -62,16 +66,16 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         """
         return self.final_trace
 
-    def _get_or_create_id(self, info: NodeInfo) -> str:
+    def _get_or_create_id(self, info: NodeInfo, description: str) -> str:
         """
         Get the ID for a state that has been added before, or create and store a new one.
         """
         for i in self.ids.keys():
-            if self.ids[i] == info:
+            if self.ids[i][0] == info:
                 return i
 
         new_id = f"node{len(self.ids)}"
-        self.ids[new_id] = info
+        self.ids[new_id] = info, description
         return new_id
 
     def _add_node(self, node: str):
@@ -80,7 +84,7 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         """
         if node not in self.networkx.nodes:
             self.networkx.add_node(
-                node, label=self.create_node_label(self.ids[node]))
+                node, label=self.create_node_label(self.ids[node][0]), description=self.ids[node][1])
 
     def _add_edge(self, from_node: str, to_node: str, label: str):
         """
@@ -103,7 +107,7 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
 
     @staticmethod
     @abstractmethod
-    def select_node_info(pair: list[tuple[ScenarioInfo, StateInfo]], index: int) -> NodeInfo:
+    def select_node_info(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> NodeInfo:
         """
         Select the info to use to compare nodes and generate their labels for a specific graph type.
         """
@@ -114,6 +118,14 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
     def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> EdgeInfo:
         """
         Select the info to use to generate the label for each edge for a specific graph type.
+        """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def create_node_description(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> str:
+        """
+        Create the description to be shown in a tooltip for a node given the full trace and its index.
         """
         pass
 
@@ -163,4 +175,9 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
         """
         Get the information to include in the legend for edges that do not appear in the final trace.
         """
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def get_tooltip_name() -> str:
         pass

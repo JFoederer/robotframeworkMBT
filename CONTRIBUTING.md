@@ -121,30 +121,37 @@ Extending the functionality of the visualizer with new graph types can result in
 
 To create a new graph type, create an instance of AbstractGraph, instantiating the following methods:
 - select_node_info: select the information you want to use to identify different nodes from all ScenarioInfo/StateInfo pairs that make up the different exploration steps. This info is also used to label nodes. Its return type has to match the first type argument passed to AbstractGraph.
-- select_edge_info: ditto but for edges, which is also used for labeling. Its type has to match the second type used to instantiate AbstractGraph.
+- select_edge_info: ditto but for edges, which is also used for labeling. Its return type has to match the second type argument passed to AbstractGraph.
+- create_node_description: create a description for a node to be shown in a tooltip (if enabled).
 - create_node_label: turn the selected information into a label for a node.
 - create_edge_label: ditto but for edges.
 - get_legend_info_final_trace_node: return the text you want to appear in the legend for nodes that appear in the final trace.
 - get_legend_info_other_node: ditto but for nodes that have been backtracked.
 - get_legend_info_final_trace_edge: ditto but for edges that appear in the final trace.
 - get_legend_info_other_edge: ditto but for edges that have backtracked.
+- get_tooltip_name: the title of a tooltip that appears when hovering over nodes. Setting to an empty string disables the tooltip.
 
 Please create a new file for each graph type under `/robotmbt/visualise/graphs/`.
 
 NOTE: when manually altering the networkx field, ensure its ids remain as a serializable and hashable type when the constructor finishes.
 
 As an example, we show the implementation of the scenario graph below. In this graph type, nodes represent scenarios encountered in exploration, and edges show the flow between these scenarios.
+It does not enable tooltips.
 
 ```python
 class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
     @staticmethod
-    def select_node_info(pairs: list[tuple[ScenarioInfo, StateInfo]], index: int) -> ScenarioInfo:
-        return pairs[index][0]
+    def select_node_info(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> ScenarioInfo:
+        return trace[index][0]
 
     @staticmethod
     def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> None:
         return None
- 
+
+    @staticmethod
+    def create_node_description(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> str:
+        return ''
+
     @staticmethod
     def create_node_label(info: ScenarioInfo) -> str:
         return info.name
@@ -168,6 +175,10 @@ class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
     @staticmethod
     def get_legend_info_other_edge() -> str:
         return "Execution Flow (backtracked)"
+
+    @staticmethod
+    def get_tooltip_name() -> str:
+        return ""
 ```
 
 Once you have created a new Graph class, you can direct the visualizer to use it when your type is selected. 

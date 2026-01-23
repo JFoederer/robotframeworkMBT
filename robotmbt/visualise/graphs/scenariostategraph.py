@@ -10,12 +10,16 @@ class ScenarioStateGraph(AbstractGraph[tuple[ScenarioInfo, StateInfo], None]):
     """
 
     @staticmethod
-    def select_node_info(pairs: list[tuple[ScenarioInfo, StateInfo]], index: int) -> tuple[ScenarioInfo, StateInfo]:
-        return pairs[index]
+    def select_node_info(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> tuple[ScenarioInfo, StateInfo]:
+        return trace[index]
 
     @staticmethod
     def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> None:
         return None
+
+    @staticmethod
+    def create_node_description(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> str:
+        return ''
 
     @staticmethod
     def create_node_label(info: tuple[ScenarioInfo, StateInfo]) -> str:
@@ -40,3 +44,7 @@ class ScenarioStateGraph(AbstractGraph[tuple[ScenarioInfo, StateInfo], None]):
     @staticmethod
     def get_legend_info_other_edge() -> str:
         return "Execution Flow (backtracked)"
+
+    @staticmethod
+    def get_tooltip_name() -> str:
+        return ""
