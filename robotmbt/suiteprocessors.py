@@ -41,6 +41,7 @@ from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario
 from .tracestate import TraceState
 
+
 try:
     from .visualise.visualiser import Visualiser
     from .visualise.models import TraceInfo
@@ -54,7 +55,7 @@ except ImportError:
 
 class SuiteProcessors:
     @staticmethod
-    def echo(in_suite):
+    def echo(in_suite: Suite) -> Suite:
         return in_suite
 
     def flatten(self, in_suite: Suite) -> Suite:
@@ -87,8 +88,8 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: Any = 'new', graph: str = '',
-                           export_graph_data: str = '', import_graph_data: str = '') -> Suite:
+    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
+                           graph: str = '', export_graph_data: str = '', import_graph_data: str = '') -> Suite:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -110,19 +111,19 @@ class SuiteProcessors:
         traceinfo = traceinfo.import_graph(from_json)
         self.visualiser = Visualiser(graph, suite_name, trace_info=traceinfo)
 
-    def _run_test_suite(self, seed: Any, graph: str, suite_name: str, export_dir: str):
+    def _run_test_suite(self, seed: str | int | bytes | bytearray, graph: str, suite_name: str, export_dir: str):
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
-        self.scenarios = self.flat_suite.scenarios[:]
+        self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        self.shuffled = [s.src_id for s in self.scenarios]
+        self.shuffled: list[int] = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         self.visualiser = None
-        if visualisation_deps_present:
+        if visualisation_deps_present and (graph or export_dir):
             try:
                 self.visualiser = Visualiser(graph, suite_name, export_dir)
             except Exception as e:
@@ -143,6 +144,7 @@ class SuiteProcessors:
                 raise Exception("Unable to compose a consistent suite")
 
         self.out_suite.scenarios = tracestate.get_trace()
+        self._report_tracestate_wrapup(tracestate)
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool) -> TraceState:
         tracestate = TraceState(self.shuffled)
@@ -192,7 +194,8 @@ class SuiteProcessors:
     def __write_visualisation(self):
         if self.visualiser is not None:
             try:
-                logger.info(self.visualiser.generate_visualisation(), html=True)
+                text, html = self.visualiser.generate_visualisation()
+                logger.info(text, html=html)
             except Exception as e:
                 logger.warn(f'Could not generate visualisation due to error!\n{e}')
 
@@ -218,7 +221,7 @@ class SuiteProcessors:
         rep_count = tracestate.count(index)
         if rep_count:
             candidate = candidate.copy()
-            candidate.name = f"{candidate.name} (rep {rep_count + 1})"
+            candidate.name = f"{candidate.name} (rep {rep_count+1})"
         return candidate
 
     @staticmethod
@@ -244,7 +247,7 @@ class SuiteProcessors:
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
     @staticmethod
-    def _init_randomiser(seed: Any):
+    def _init_randomiser(seed: str | int | bytes | bytearray):
         if isinstance(seed, str):
             seed = seed.strip()
 

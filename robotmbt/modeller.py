@@ -36,7 +36,7 @@ from robot.api import logger
 from robot.utils import is_list_like
 
 from .modelspace import ModelSpace
-from .steparguments import StepArgument, StepArguments
+from .steparguments import StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
@@ -172,7 +172,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
                 modded_arg, constraint = _parse_modifier_expression(expr, step.args)
                 if step.args[modded_arg].is_default:
                     continue
-                if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
+                if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
                     org_example = step.args[modded_arg].org_value
                     if step.gherkin_kw == 'then':
                         constraint = None  # No new constraints are processed for then-steps
@@ -193,7 +193,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
                     else:
                         options = None
                     subs.substitute(org_example, options)
-                elif step.args[modded_arg].kind == StepArgument.VAR_POS:
+                elif step.args[modded_arg].kind == ArgKind.VAR_POS:
                     if step.args[modded_arg].value:
                         modded_varargs = model.process_expression(constraint, step.args)
                         if not is_list_like(modded_varargs):
@@ -202,7 +202,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
                         # change the number of arguments in the list, making it impossible to decide which values to
                         # match and which to drop and/or duplicate.
                         step.args[modded_arg].value = modded_varargs
-                elif step.args[modded_arg].kind == StepArgument.FREE_NAMED:
+                elif step.args[modded_arg].kind == ArgKind.FREE_NAMED:
                     if step.args[modded_arg].value:
                         modded_free_args = model.process_expression(constraint, step.args)
                         if not isinstance(modded_free_args, dict):
@@ -234,7 +234,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
                 if step.args[modded_arg].is_default:
                     continue
                 org_example = step.args[modded_arg].org_value
-                if step.args[modded_arg].kind in [StepArgument.EMBEDDED, StepArgument.POSITIONAL, StepArgument.NAMED]:
+                if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
                     step.args[modded_arg].value = subs.solution[org_example]
     return scenario
 

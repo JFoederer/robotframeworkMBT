@@ -120,7 +120,7 @@ Researchers have suggested that longer lines are better suited for cases when th
 Extending the functionality of the visualizer with new graph types can result in better insights into created tests. The visualizer makes use of an abstract graph class that makes it easy to create new graph types.
 
 To create a new graph type, create an instance of AbstractGraph, instantiating the following methods:
-- select_node_info: select the information you want to use to identify different nodes from all ScenarioInfo/StateInfo pairs that make up the different exploration steps. This info is also used to label nodes. Its return type has to match the first type used to instantiate AbstractGraph.
+- select_node_info: select the information you want to use to identify different nodes from all ScenarioInfo/StateInfo pairs that make up the different exploration steps. This info is also used to label nodes. Its return type has to match the first type argument passed to AbstractGraph.
 - select_edge_info: ditto but for edges, which is also used for labeling. Its type has to match the second type used to instantiate AbstractGraph.
 - create_node_label: turn the selected information into a label for a node.
 - create_edge_label: ditto but for edges.
@@ -129,11 +129,11 @@ To create a new graph type, create an instance of AbstractGraph, instantiating t
 - get_legend_info_final_trace_edge: ditto but for edges that appear in the final trace.
 - get_legend_info_other_edge: ditto but for edges that have backtracked.
 
-It is recommended to create a new file for each graph type under `/robotmbt/visualise/graphs/`.
+Please create a new file for each graph type under `/robotmbt/visualise/graphs/`.
 
 NOTE: when manually altering the networkx field, ensure its ids remain as a serializable and hashable type when the constructor finishes.
 
-A simple example is given below. In this graph type, nodes represent scenarios encountered in exploration, and edges show the flow between these scenarios.
+As an example, we show the implementation of the scenario graph below. In this graph type, nodes represent scenarios encountered in exploration, and edges show the flow between these scenarios.
 
 ```python
 class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
@@ -171,17 +171,61 @@ class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
 ```
 
 Once you have created a new Graph class, you can direct the visualizer to use it when your type is selected. 
-Edit `/robotmbt/visualise/visualiser.py` to construct your graph in `_get_graph` like the others. For our example:
+Simply add your class to the `GRAPHS` dictionary in `robotmbt/visualise/visualiser.py` like the others. For our example:
 
 ```python
-def _get_graph(self)  -> AbstractGraph | None:
+GRAPHS = {
     [...]
-
-    case 'scenario':
-        return ScenarioGraph(self.trace_info)
-
+    'scenario': ScenarioGraph,
     [...]
+}
 ```
 
 Now, when selecting your graph type (in our example `Treat this test suite Model-based  graph=scenario`), your graph will get constructed!
 
+
+## Development Tips
+### Python virtual environment
+Installing the proper virtual environment can be done with the default `python -m venv ./.venv` command built into python. However, if you have another version of python on your system, this might break dependencies.
+
+#### Pipenv+Pyenv (verified on Windows and Linux)
+For the optimal experience (at least on Linux), we suggest installing the following packages:
+- [`pyenv`](https://github.com/pyenv/pyenv) (Linux/Mac) or [`pyenv-win`](https://github.com/pyenv-win/pyenv-win) (Windows)
+- [`pipenv`](https://github.com/pypa/pipenv) 
+
+Then, you can install a python virtual environment with:
+
+```bash
+pipenv --python <python_version>
+```
+..where the python version can be found in the `pyproject.toml`. For example, for 3.10: `pipenv --python 3.10`.
+
+You might need to manually make the folder `.venv` by doing `mkdir .venv`.
+
+You can verify if the installation went correctly with:
+```bash
+pipenv check
+```
+This should return `Passed!`
+
+Errors related to minor versions (for example `3.10.0rc2` != `3.10.0`) can be ignored.
+
+Now activate the virtual environment by running 
+```bash 
+pipenv shell
+```
+
+..and you should have a virtual env! If you run
+```bash
+python --version
+```
+..while in your virtual environment, it should show the `<python_version>` from before.
+
+
+### Installing dependencies
+***NOTE: making sure that you are in the virtual environment***. 
+
+It is recommended that you also include the optional dependencies for visualisation, e.g.:
+```bash
+pip install ".[visualization]"
+```

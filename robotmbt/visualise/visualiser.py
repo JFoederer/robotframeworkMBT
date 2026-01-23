@@ -11,6 +11,15 @@ from robotmbt.visualise.graphs.scenariostategraph import ScenarioStateGraph
 from robotmbt.visualise.models import TraceInfo, StateInfo, ScenarioInfo
 import html
 
+GRAPHS = {
+    'scenario': ScenarioGraph,
+    'state': StateGraph,
+    'scenario-state': ScenarioStateGraph,
+    'delta-value': DeltaValueGraph,
+    'scenario-delta-value': ScenarioDeltaValueGraph,
+    'reduced-sdv': ReducedSDVGraph,
+}
+
 
 class Visualiser:
     """
@@ -25,14 +34,17 @@ class Visualiser:
         # just calls __init__, but without having underscores etc.
         return cls(graph_type)
 
-    def __init__(self, graph_type: str, suite_name: str = "", export: str = '',
-                 trace_info: TraceInfo = None):            
+    def __init__(self, graph_type: str, suite_name: str = "", export: str = '', trace_info: TraceInfo = None):
+        if not export and not graph_type in GRAPHS.keys():
+            raise ValueError(f"Unknown graph type: {graph_type}")
 
         self.graph_type: str = graph_type
+
         if trace_info is None:
             self.trace_info: TraceInfo = TraceInfo()
         else:
             self.trace_info = trace_info
+
         self.suite_name = suite_name
         self.export = export
 
@@ -67,32 +79,25 @@ class Visualiser:
             self.trace_info.update_trace(ScenarioInfo(scenario), StateInfo(model), trace_len)
 
     def _get_graph(self) -> AbstractGraph | None:
-        match self.graph_type:
-            case 'scenario':
-                return ScenarioGraph(self.trace_info)
-            case 'state':
-                return StateGraph(self.trace_info)
-            case 'scenario-state':
-                return ScenarioStateGraph(self.trace_info)
-            case 'delta-value':
-                return DeltaValueGraph(self.trace_info)
-            case 'scenario-delta-value':
-                return ScenarioDeltaValueGraph(self.trace_info)
-            case 'recuded-sdv':
-                return ReducedSDVGraph(self.trace_info)
-            
-        return None
+        if self.graph_type not in GRAPHS.keys():
+            return None
 
-    def generate_visualisation(self) -> str:
+        return GRAPHS[self.graph_type](self.trace_info)
+
+    def generate_visualisation(self) -> tuple[str, bool]:
+        """
+        Finalize the visualisation. Exports the graph to JSON if requested, and generates HTML if requested.
+        The boolean signals whether the output is in HTML format or not.
+        """
         if self.export:
             self.trace_info.export_graph(self.suite_name, self.export)
 
         graph: AbstractGraph = self._get_graph()
-        if graph is None:
-            if not self.export:
-                raise ValueError(f"Unknown graph type: {self.graph_type}")
-            return
+        if graph is None and self.export:
+            return f"Successfully exported to {self.export}!", False
+        elif graph is None:
+            raise ValueError(f"Unknown graph type: {self.graph_type}")
 
         html_bokeh = networkvisualiser.NetworkVisualiser(graph, self.suite_name).generate_html()
 
-        return f'<iframe srcdoc="{html.escape(html_bokeh)}" width="{networkvisualiser.OUTER_WINDOW_WIDTH}px" height="{networkvisualiser.OUTER_WINDOW_HEIGHT}px"></iframe>'
+        return f'<iframe srcdoc="{html.escape(html_bokeh)}" width="{networkvisualiser.OUTER_WINDOW_WIDTH}px" height="{networkvisualiser.OUTER_WINDOW_HEIGHT}px"></iframe>', True
