@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-from robotmbt.steparguments import StepArgument, StepArguments
+from robotmbt.steparguments import StepArgument, StepArguments, ArgKind
 
 
 class TestStepArgument(unittest.TestCase):
@@ -94,7 +94,7 @@ class TestStepArgument(unittest.TestCase):
         self.assertFalse(arg2.is_default)
 
     def test_copies_are_the_same(self):
-        arg1 = StepArgument('foo', 7, kind=StepArgument.NAMED, is_default=True)
+        arg1 = StepArgument('foo', 7, kind=ArgKind.NAMED, is_default=True)
         arg2 = arg1.copy()
         self.assertEqual(arg1.arg, arg2.arg)
         self.assertEqual(arg1.value, arg2.value)
@@ -107,7 +107,7 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg2.arg, '${foo}')
         self.assertEqual(arg2.value, 8)
         self.assertEqual(arg2.org_value, 7)
-        self.assertEqual(arg2.kind, StepArgument.NAMED)
+        self.assertEqual(arg2.kind, ArgKind.NAMED)
         self.assertEqual(arg2.is_default, False)
 
     def test_original_value_is_kept_when_copying(self):
@@ -118,11 +118,11 @@ class TestStepArgument(unittest.TestCase):
         self.assertEqual(arg2.value, 8)
 
     def test_copies_are_independent(self):
-        arg1 = StepArgument('foo', 7, StepArgument.POSITIONAL)
+        arg1 = StepArgument('foo', 7, ArgKind.POSITIONAL)
         arg1.value = 8
         arg2 = arg1.copy()
         arg2.value = 13
-        arg2.kind = StepArgument.NAMED
+        arg2.kind = ArgKind.NAMED
         self.assertEqual(arg2.value, 13)
         self.assertEqual(arg1.value, 8)
         self.assertEqual(arg1.org_value, arg2.org_value)

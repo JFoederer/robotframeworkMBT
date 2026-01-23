@@ -204,13 +204,13 @@ class NetworkVisualiser:
         # Feed the info to grandalf and get the layout.
         g = GGraph(vertices, edges)
         sugiyama = SugiyamaLayout(g.C[0])
-     
+
         # Set specific margins as these values worked best in user-testing
         sugiyama.xspace = 10
         sugiyama.yspace = 15
         sugiyama.dw = 2
         sugiyama.dh = 2
-        
+
         sugiyama.init_all(roots=[start], inverted_edges=flips)
         sugiyama.draw()
 
@@ -561,6 +561,7 @@ def _add_node_to_sources(node: Node, final_trace: list[str], node_source: Column
     node_label_source.data['x'].append(node.x - node.width / 2 + HORIZONTAL_PADDING_WITHIN_NODES)
     node_label_source.data['y'].append(node.y)
     node_label_source.data['label'].append(node.label)
+
 
 def _calculate_dimensions(label: str) -> tuple[float, float]:
     """

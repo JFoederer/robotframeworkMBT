@@ -40,7 +40,7 @@ if __name__ == '__main__':
         # Adding the robotframeworkMBT folder to the python path forces the development
         # version to be used instead of the one installed on your system. You will also
         # need to add this path to your IDE options when running from there.
-        exit_code: int = robot.run_cli(['--outputdir', OUTPUT_ROOT,  # type: ignore
+        exit_code: int = robot.run_cli(['--outputdir', OUTPUT_ROOT,
                                         '--pythonpath', THIS_DIR]
                                        + sys.argv[1:], exit=False)
         if utest:

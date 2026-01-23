@@ -30,9 +30,10 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from enum import Enum, auto
 from keyword import iskeyword
-import builtins
 from typing import Any
+import builtins
 
 
 class StepArguments(list):
@@ -57,24 +58,26 @@ class StepArguments(list):
         return any([arg.modified for arg in self])
 
 
-class StepArgument:
-    # kind list
-    EMBEDDED = 'EMBEDDED'
-    POSITIONAL = 'POSITIONAL'
-    VAR_POS = 'VAR_POS'
-    NAMED = 'NAMED'
-    FREE_NAMED = 'FREE_NAMED'
+class ArgKind(Enum):
+    EMBEDDED = auto()
+    POSITIONAL = auto()
+    VAR_POS = auto()
+    NAMED = auto()
+    FREE_NAMED = auto()
+    UNKNOWN = auto()
 
-    def __init__(self, arg_name: str, value: Any, kind: str | None = None, is_default: bool = False):
+
+class StepArgument:
+    def __init__(self, arg_name: str, value: Any, kind: ArgKind = ArgKind.UNKNOWN, is_default: bool = False):
         self.name: str = arg_name
         self.org_value: Any = value
-        self.kind: str | None = kind  # one of the values from the kind list
+        self.kind: ArgKind = kind
         self._value: Any = None
         self._codestr: str | None = None
-        self.value: Any = value
+        self.value = value
         # is_default indicates that the argument was not filled in from the scenario. This
         # argment's value is taken from the keyword's default as provided by Robot.
-        self.is_default: bool = is_default  
+        self.is_default: bool = is_default
 
     @property
     def arg(self) -> str:
@@ -86,7 +89,7 @@ class StepArgument:
 
     @value.setter
     def value(self, value: Any):
-        self._value = value
+        self._value: Any = value
         self._codestr = self.make_codestring(value)
         self.is_default = False
 
@@ -99,7 +102,6 @@ class StepArgument:
         return self._codestr
 
     def copy(self):
-        # -> Self
         cp = StepArgument(self.arg.strip('${}'), self.value, self.kind, self.is_default)
         cp.org_value = self.org_value
         return cp
