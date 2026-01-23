@@ -113,11 +113,11 @@ class SubstitutionMap:
 
 
 class Constraint:
-    def __init__(self, constraint):
+    def __init__(self, constraint: list[Any]):
         try:
             # Keep the items in optionset unique. Refrain from using Python sets
             # due to non-deterministic behaviour when using random seeding.
-            self.optionset = list(dict.fromkeys(constraint))
+            self.optionset: list[Any] = list(dict.fromkeys(constraint))
         except:
             self.optionset = None
         if not self.optionset or isinstance(constraint, str):
@@ -133,7 +133,7 @@ class Constraint:
     def copy(self):
         return Constraint(self.optionset)
 
-    def add_constraint(self, constraint):
+    def add_constraint(self, constraint: list[Any] | None):
         if constraint is None:
             return
         self.optionset = [opt for opt in self.optionset if opt in constraint]

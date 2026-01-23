@@ -43,7 +43,7 @@ from .tracestate import TraceState
 
 
 class SuiteProcessors:
-    def echo(self, in_suite):
+    def echo(self, in_suite: Suite) -> Suite:
         return in_suite
 
     def flatten(self, in_suite: Suite) -> Suite:
@@ -74,7 +74,7 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new'):
+    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new') -> Suite:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -83,12 +83,12 @@ class SuiteProcessors:
 
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
-        self.scenarios = self.flat_suite.scenarios[:]
+        self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        self.shuffled = [s.src_id for s in self.scenarios]
+        self.shuffled: list[int] = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         # a short trace without the need for repeating scenarios is preferred

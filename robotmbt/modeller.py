@@ -39,7 +39,7 @@ from .modelspace import ModelSpace
 from .steparguments import StepArgument, StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
-from .tracestate import TraceState
+from .tracestate import TraceState, TraceSnapShot
 
 
 def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
@@ -239,7 +239,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     return scenario
 
 
-def _parse_modifier_expression(expression: str, args: tuple[str]) -> tuple[str, str]:
+def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str]:
     if expression.startswith('${'):
         for var in args:
             if expression.casefold().startswith(var.arg.casefold()):
@@ -251,7 +251,7 @@ def _parse_modifier_expression(expression: str, args: tuple[str]) -> tuple[str, 
     raise ValueError(f"Invalid argument substitution: {expression}")
 
 
-def rewind(tracestate: TraceState, drought_recovery: bool = False) -> Scenario:
+def rewind(tracestate: TraceState, drought_recovery: bool = False) -> TraceSnapShot | None:
     if tracestate[-1].remainder and tracestate.highest_part(tracestate[-1].remainder.src_id) > 1:
         # When rewinding an 'in between' part, rewind both the part and the refinement
         tracestate.rewind()

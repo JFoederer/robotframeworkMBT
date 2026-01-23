@@ -74,7 +74,7 @@ class StepArgument:
         self.kind: ArgKind = kind
         self._value: Any = None
         self._codestr: str | None = None
-        self.value: Any = value
+        self.value = value
         # is_default indicates that the argument was not filled in from the scenario. This
         # argment's value is taken from the keyword's default as provided by Robot.
         self.is_default: bool = is_default
@@ -89,7 +89,7 @@ class StepArgument:
 
     @value.setter
     def value(self, value: Any):
-        self._value = value
+        self._value: Any = value
         self._codestr = self.make_codestring(value)
         self.is_default = False
 

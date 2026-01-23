@@ -44,7 +44,7 @@ class TraceSnapShot:
         self.coverage_drought: int = drought
 
     @property
-    def model(self):
+    def model(self) -> ModelSpace:
         return self._model.copy()
 
 
