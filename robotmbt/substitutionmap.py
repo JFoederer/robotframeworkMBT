@@ -70,14 +70,12 @@ class SubstitutionMap:
         substitutions = self.copy().substitutions
         unsolved_subs = list(substitutions)
         subs_stack = []
-
         while unsolved_subs:
             unsolved_subs.sort(key=lambda i: len(substitutions[i].optionset))
             example_value = unsolved_subs[0]
             solution[example_value] = random.choice(substitutions[example_value].optionset)
             subs_stack.append(example_value)
             others_list = []
-
             try:
                 # exclude the choice from all others
                 for other in [e for e in substitutions if e != example_value]:
@@ -110,7 +108,6 @@ class SubstitutionMap:
                     except ValueError:
                         # next level must also be rolled back
                         example_value = last_item
-
         self.solution = solution
         return solution
 

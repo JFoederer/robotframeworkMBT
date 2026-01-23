@@ -117,12 +117,10 @@ class SuiteReplacer:
             step_info = Step(in_suite.setup.name, *in_suite.setup.args, parent=out_suite)
             step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.setup = step_info
-
         if in_suite.teardown and parent is not None:
             step_info = Step(in_suite.teardown.name, *in_suite.teardown.args, parent=out_suite)
             step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
             out_suite.teardown = step_info
-
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
@@ -131,32 +129,26 @@ class SuiteReplacer:
                 step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.setup = step_info
-
             if tc.teardown:
                 step_info = Step(tc.teardown.name, *tc.teardown.args, parent=scenario)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                 scenario.teardown = step_info
             last_gwt = None
-
             for step_def in tc.body:
                 if isinstance(step_def, rmodel.Keyword):
                     step_info = Step(step_def.name, *step_def.args, parent=scenario, assign=step_def.assign,
                                      prev_gherkin_kw=last_gwt)
                     step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
                     scenario.steps.append(step_info)
-
                     if step_info.gherkin_kw:
                         last_gwt = step_info.gherkin_kw
-
                 elif isinstance(step_def, rmodel.Var):
                     scenario.steps.append(Step('VAR', step_def.name, *step_def.value, parent=scenario))
                 else:
                     unsupported_step = Step(str(step_def), parent=scenario)
                     unsupported_step.model_info['error'] = f"Robot construct not supported"
                     scenario.steps.append(unsupported_step)
-
             out_suite.scenarios.append(scenario)
-
         return out_suite
 
     def __clearTestSuite(self, suite: robot.model.TestSuite):

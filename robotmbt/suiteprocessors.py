@@ -73,7 +73,6 @@ class SuiteProcessors:
             if scenario.teardown:
                 scenario.steps.append(scenario.teardown)
                 scenario.teardown = None
-
         out_suite.scenarios = []
         for suite in in_suite.suites:
             subsuite = self.flatten(suite)
@@ -83,7 +82,6 @@ class SuiteProcessors:
                 if subsuite.teardown:
                     scenario.steps.append(subsuite.teardown)
             out_suite.scenarios.extend(subsuite.scenarios)
-
         out_suite.scenarios.extend(outer_scenarios)
         out_suite.suites = []
         return out_suite
@@ -245,7 +243,6 @@ class SuiteProcessors:
     def _init_randomiser(seed: str | int | bytes | bytearray):
         if isinstance(seed, str):
             seed = seed.strip()
-
         if str(seed).lower() == 'none':
             logger.info(
                 "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
@@ -274,12 +271,9 @@ class SuiteProcessors:
                     new_choice = consonants if prior_choice is vowels else vowels
                 else:
                     new_choice = random.choice([vowels, consonants])
-
                 prior_choice = last_choice
                 last_choice = new_choice
                 string += random.choice(new_choice)
-
             words.append(string)
-
         seed = '-'.join(words)
         return seed

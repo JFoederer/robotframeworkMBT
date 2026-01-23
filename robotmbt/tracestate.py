@@ -90,13 +90,11 @@ class TraceState:
         for i in self.c_pool:
             if i not in self._tried[-1] and not self.is_refinement_active(i) and self.count(i) == 0:
                 return i
-
         if not retry:
             return None
         for i in self.c_pool:
             if i not in self._tried[-1] and not self.is_refinement_active(i):
                 return i
-
         return None
 
     def count(self, index: int) -> int:

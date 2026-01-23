@@ -296,7 +296,6 @@ class Step:
         if "" in lines:
             lines = lines[:lines.index("")]
         format_msg = "*model info* expected format: :<attr>: <expr>|<expr>"
-
         while lines:
             line = lines.pop(0)
             if not line.startswith(":"):
