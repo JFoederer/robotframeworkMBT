@@ -80,7 +80,7 @@ class ModelGenerator:
         with open(filepath, 'r') as f:
             string = f.read()
             decoded_instance: TraceInfo = jsonpickle.decode(string)  # type: ignore
-        visualiser = Visualiser('state', trace_info=decoded_instance)
+        visualiser = Visualiser('scenario', trace_info=decoded_instance)
         return visualiser.trace_info
 
     @keyword(name='Check File Exists')  # type:ignore

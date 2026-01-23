@@ -1,23 +1,15 @@
 from robotmbt.modelspace import ModelSpace
 from robotmbt.tracestate import TraceState
 from robotmbt.visualise import networkvisualiser
-from robotmbt.visualise.graphs.deltavaluegraph import DeltaValueGraph
-from robotmbt.visualise.graphs.reducedSDVgraph import ReducedSDVGraph
 from robotmbt.visualise.graphs.scenariodeltavaluegraph import ScenarioDeltaValueGraph
 from robotmbt.visualise.graphs.abstractgraph import AbstractGraph
 from robotmbt.visualise.graphs.scenariograph import ScenarioGraph
-from robotmbt.visualise.graphs.stategraph import StateGraph
-from robotmbt.visualise.graphs.scenariostategraph import ScenarioStateGraph
 from robotmbt.visualise.models import TraceInfo, StateInfo, ScenarioInfo
 import html
 
 GRAPHS = {
     'scenario': ScenarioGraph,
-    'state': StateGraph,
-    'scenario-state': ScenarioStateGraph,
-    'delta-value': DeltaValueGraph,
     'scenario-delta-value': ScenarioDeltaValueGraph,
-    'reduced-sdv': ReducedSDVGraph,
 }
 
 
