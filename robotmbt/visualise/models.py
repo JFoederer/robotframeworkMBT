@@ -211,33 +211,6 @@ class TraceInfo:
             self.current_trace.pop()
         self.pushed = False
 
-    def encountered_scenarios(self) -> set[ScenarioInfo]:
-        res = set()
-
-        for trace in self.all_traces:
-            for (scenario, state) in trace:
-                res.add(scenario)
-
-        return res
-
-    def encountered_states(self) -> set[StateInfo]:
-        res = set()
-
-        for trace in self.all_traces:
-            for (scenario, state) in trace:
-                res.add(state)
-
-        return res
-
-    def encountered_scenario_state_pairs(self) -> set[tuple[ScenarioInfo, StateInfo]]:
-        res = set()
-
-        for trace in self.all_traces:
-            for (scenario, state) in trace:
-                res.add((scenario, state))
-
-        return res
-
     def __repr__(self) -> str:
         return f"TraceInfo(traces=[{[f'[{[self.stringify_pair(pair) for pair in trace]}]' for trace in self.all_traces]}], current=[{[self.stringify_pair(pair) for pair in self.current_trace]}])"
 
