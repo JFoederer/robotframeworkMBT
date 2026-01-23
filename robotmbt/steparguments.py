@@ -30,7 +30,9 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+from enum import Enum, auto
 from keyword import iskeyword
+from typing import Any
 import builtins
 
 
@@ -38,7 +40,7 @@ class StepArguments(list):
     def __init__(self, iterable=[]):
         super().__init__(item.copy() for item in iterable)
 
-    def fill_in_args(self, text, as_code=False):
+    def fill_in_args(self, text: str, as_code: bool = False):
         result = text
         for arg in self:
             sub = arg.codestring if as_code else str(arg.value)
@@ -52,49 +54,51 @@ class StepArguments(list):
         return super()[key]
 
     @property
-    def modified(self):
+    def modified(self) -> bool:
         return any([arg.modified for arg in self])
 
 
-class StepArgument:
-    # kind list
-    EMBEDDED = 'EMBEDDED'
-    POSITIONAL = 'POSITIONAL'
-    VAR_POS = 'VAR_POS'
-    NAMED = 'NAMED'
-    FREE_NAMED = 'FREE_NAMED'
+class ArgKind(Enum):
+    EMBEDDED = auto()
+    POSITIONAL = auto()
+    VAR_POS = auto()
+    NAMED = auto()
+    FREE_NAMED = auto()
+    UNKNOWN = auto()
 
-    def __init__(self, arg_name, value, kind=None, is_default=False):
-        self.name = arg_name
-        self.org_value = value
-        self.kind = kind  # one of the values from the kind list
-        self._value = None
-        self._codestr = None
+
+class StepArgument:
+    def __init__(self, arg_name: str, value: Any, kind: ArgKind = ArgKind.UNKNOWN, is_default: bool = False):
+        self.name: str = arg_name
+        self.org_value: Any = value
+        self.kind: ArgKind = kind
+        self._value: Any = None
+        self._codestr: str | None = None
         self.value = value
         # is_default indicates that the argument was not filled in from the scenario. This
         # argment's value is taken from the keyword's default as provided by Robot.
-        self.is_default = is_default
+        self.is_default: bool = is_default
 
     @property
-    def arg(self):
+    def arg(self) -> str:
         return "${%s}" % self.name
 
     @property
-    def value(self):
+    def value(self) -> Any:
         return self._value
 
     @value.setter
-    def value(self, value):
-        self._value = value
+    def value(self, value: Any):
+        self._value: Any = value
         self._codestr = self.make_codestring(value)
         self.is_default = False
 
     @property
-    def modified(self):
+    def modified(self) -> bool:
         return self.org_value != self.value
 
     @property
-    def codestring(self):
+    def codestring(self) -> str | None:
         return self._codestr
 
     def copy(self):
@@ -106,7 +110,7 @@ class StepArgument:
         return f"{self.name}={self.value}"
 
     @staticmethod
-    def make_codestring(text):
+    def make_codestring(text: Any) -> str:
         codestr = str(text)
         if codestr.title() in ['None', 'True', 'False']:
             return codestr.title()
@@ -117,7 +121,7 @@ class StepArgument:
         return codestr
 
     @staticmethod
-    def make_identifier(s):
+    def make_identifier(s: Any) -> str:
         _s = str(s).replace(' ', '_')
         if _s.isidentifier():
             return f"{_s}_" if iskeyword(_s) or _s in dir(builtins) else _s

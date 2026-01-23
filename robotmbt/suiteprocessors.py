@@ -32,20 +32,21 @@
 
 import copy
 import random
+from typing import Any
 
 from robot.api import logger
 
 from . import modeller
 from .modelspace import ModelSpace
-from .suitedata import Suite
+from .suitedata import Suite, Scenario
 from .tracestate import TraceState
 
 
 class SuiteProcessors:
-    def echo(self, in_suite):
+    def echo(self, in_suite: Suite) -> Suite:
         return in_suite
 
-    def flatten(self, in_suite):
+    def flatten(self, in_suite: Suite) -> Suite:
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
         have any sub-suites, only scenarios. The scenarios do not have a setup. Any setup
@@ -73,7 +74,7 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite, *, seed='new'):
+    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new') -> Suite:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -82,12 +83,12 @@ class SuiteProcessors:
 
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
-        self.scenarios = self.flat_suite.scenarios[:]
+        self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        self.shuffled = [s.src_id for s in self.scenarios]
+        self.shuffled: list[int] = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         # a short trace without the need for repeating scenarios is preferred
@@ -103,7 +104,7 @@ class SuiteProcessors:
         self._report_tracestate_wrapup(tracestate)
         return self.out_suite
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios):
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool) -> TraceState:
         tracestate = TraceState(self.shuffled)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
@@ -136,19 +137,19 @@ class SuiteProcessors:
         return tracestate
 
     @staticmethod
-    def __last_candidate_changed_nothing(tracestate):
+    def __last_candidate_changed_nothing(tracestate: TraceState) -> bool:
         if len(tracestate) < 2:
             return False
         if tracestate[-1].id != tracestate[-2].id:
             return False
         return tracestate[-1].model == tracestate[-2].model
 
-    def _select_scenario_variant(self, candidate_id, tracestate):
+    def _select_scenario_variant(self, candidate_id: int, tracestate: TraceState) -> Scenario:
         candidate = self._scenario_with_repeat_counter(candidate_id, tracestate)
         candidate = modeller.generate_scenario_variant(candidate, tracestate.model or ModelSpace())
         return candidate
 
-    def _scenario_with_repeat_counter(self, index, tracestate):
+    def _scenario_with_repeat_counter(self, index: int, tracestate: TraceState) -> Scenario:
         """
         Fetches the scenario by index and, if this scenario is already
         used in the trace, adds a repetition counter to its name.
@@ -161,7 +162,7 @@ class SuiteProcessors:
         return candidate
 
     @staticmethod
-    def _fail_on_step_errors(suite):
+    def _fail_on_step_errors(suite: Suite):
         error_list = suite.steps_with_errors()
         if error_list:
             err_msg = "Steps with errors in their model info found:\n"
@@ -170,19 +171,19 @@ class SuiteProcessors:
             raise Exception(err_msg)
 
     @staticmethod
-    def _report_tracestate_to_user(tracestate):
+    def _report_tracestate_to_user(tracestate: TraceState):
         user_trace = f"[{', '.join(tracestate.id_trace)}]"
         logger.debug(f"Trace: {user_trace} Reject: {list(tracestate.tried)}")
 
     @staticmethod
-    def _report_tracestate_wrapup(tracestate):
+    def _report_tracestate_wrapup(tracestate: TraceState):
         logger.info("Trace composed:")
         for progression in tracestate:
             logger.info(progression.scenario.name)
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
     @staticmethod
-    def _init_randomiser(seed):
+    def _init_randomiser(seed: str | int | bytes | bytearray):
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':
@@ -197,7 +198,7 @@ class SuiteProcessors:
             random.seed(seed)
 
     @staticmethod
-    def _generate_seed():
+    def _generate_seed() -> str:
         """Creates a random string of 5 words between 3 and 6 letters long"""
         vowels = ['a', 'e', 'i', 'o', 'u', 'y']
         consonants = ['b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l',
