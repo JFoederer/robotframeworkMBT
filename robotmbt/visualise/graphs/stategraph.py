@@ -17,6 +17,10 @@ class StateGraph(AbstractGraph[StateInfo, ScenarioInfo]):
         return pair[0]
 
     @staticmethod
+    def create_node_description(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> str:
+        return ''
+
+    @staticmethod
     def create_node_label(info: StateInfo) -> str:
         return str(info)
 
@@ -39,3 +43,7 @@ class StateGraph(AbstractGraph[StateInfo, ScenarioInfo]):
     @staticmethod
     def get_legend_info_other_edge() -> str:
         return "Executed Scenario (backtracked)"
+
+    @staticmethod
+    def get_tooltip_name() -> str:
+        return ""

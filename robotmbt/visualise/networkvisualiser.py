@@ -2,7 +2,7 @@ from bokeh.core.enums import PlaceType, LegendLocationType
 from bokeh.core.property.vectorization import value
 from bokeh.embed import file_html
 from bokeh.models import ColumnDataSource, Rect, Text, ResetTool, SaveTool, WheelZoomTool, PanTool, Plot, Range1d, \
-    Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend, ZoomInTool, ZoomOutTool
+    Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend, ZoomInTool, ZoomOutTool, HoverTool
 
 from grandalf.graphs import Vertex as GVertex, Edge as GEdge, Graph as GGraph
 from grandalf.layouts import SugiyamaLayout
@@ -43,13 +43,14 @@ class Node:
     Contains the information we need to add a node to the graph.
     """
 
-    def __init__(self, node_id: str, label: str, x: int, y: int, width: float, height: float):
+    def __init__(self, node_id: str, label: str, x: int, y: int, width: float, height: float, description: str):
         self.node_id = node_id
         self.label = label
         self.x = x
         self.y = y
         self.width = width
         self.height = height
+        self.description = description
 
 
 class Edge:
@@ -88,6 +89,22 @@ class NetworkVisualiser:
         # Keep track of arrows in the graph for scaling
         self.arrows = []
 
+        # Create the hover tool to show tooltips
+        tooltip_name = graph.get_tooltip_name()
+        if tooltip_name:
+            self.hover = HoverTool()
+            tooltips = f"""
+                <div>
+                    <h>{tooltip_name}</h>
+                    <div>
+                        <span>@description{{safe}}</span>
+                    </div>
+                </div>
+                """
+            self.hover.tooltips = tooltips
+        else:
+            self.hover = None
+
         # Add the nodes to the graph
         self._add_nodes(nodes)
 
@@ -112,7 +129,7 @@ class NetworkVisualiser:
         """
         # The ColumnDataSources to store our nodes and edges in Bokeh's format
         node_source: ColumnDataSource = ColumnDataSource(
-            {'id': [], 'x': [], 'y': [], 'w': [], 'h': [], 'color': []})
+            {'id': [], 'x': [], 'y': [], 'w': [], 'h': [], 'color': [], 'description': []})
         node_label_source: ColumnDataSource = ColumnDataSource(
             {'id': [], 'x': [], 'y': [], 'label': []})
 
@@ -122,7 +139,10 @@ class NetworkVisualiser:
 
         # Add the glyphs for nodes and their labels
         node_glyph = Rect(x='x', y='y', width='w', height='h', fill_color='color')
-        self.plot.add_glyph(node_source, node_glyph)
+        node_glyph_renderer = self.plot.add_glyph(node_source, node_glyph)
+
+        if self.hover is not None:
+            self.hover.renderers = [node_glyph_renderer]
 
         node_label_glyph = Text(x='x', y='y', text='label', text_align='left', text_baseline='middle',
                                 text_font_size=f'{MAJOR_FONT_SIZE}pt', text_font=value("Courier New"))
@@ -221,7 +241,8 @@ class NetworkVisualiser:
             label = self.networkx.nodes[node_id]['label']
             (x, y) = v.view.xy
             (w, h) = _calculate_dimensions(label)
-            ns.append(Node(node_id, label, x, -y, w, h))
+            description = self.networkx.nodes[node_id]['description']
+            ns.append(Node(node_id, label, x, -y, w, h, description))
 
         es = []
         for e in g.C[0].sE:
@@ -249,6 +270,9 @@ class NetworkVisualiser:
                             wheel_zoom, PanTool(),
                             FullscreenTool(), ZoomInTool(factor=0.4), ZoomOutTool(factor=0.4))
         self.plot.toolbar.active_scroll = wheel_zoom
+
+        if self.hover:
+            self.plot.add_tools(self.hover)
 
         # Specify the default range - these values represent the aspect ratio of the actual view in the window
         self.plot.x_range = Range1d(-INNER_WINDOW_WIDTH / 2, INNER_WINDOW_WIDTH / 2)
@@ -556,6 +580,7 @@ def _add_node_to_sources(node: Node, final_trace: list[str], node_source: Column
     node_source.data['h'].append(node.height)
     node_source.data['color'].append(
         FINAL_TRACE_NODE_COLOR if node.node_id in final_trace else OTHER_NODE_COLOR)
+    node_source.data['description'].append(node.description)
 
     node_label_source.data['id'].append(node.node_id)
     node_label_source.data['x'].append(node.x - node.width / 2 + HORIZONTAL_PADDING_WITHIN_NODES)
