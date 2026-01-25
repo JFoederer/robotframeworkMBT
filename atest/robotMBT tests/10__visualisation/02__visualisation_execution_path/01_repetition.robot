@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation     
 Suite Setup       Enter test suite
-Resource          ../../resources/visualisation.resource
+Resource          ../../../resources/visualisation.resource
 Library           robotmbt
 
 *** Keywords ***

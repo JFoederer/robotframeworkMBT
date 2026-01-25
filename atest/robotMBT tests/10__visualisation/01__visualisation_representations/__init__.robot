@@ -1,7 +1,7 @@
 *** Settings ***
 Documentation     Test correctness all graph representations
 Suite Setup       Enter test suite
-Resource          ../../resources/visualisation.resource
+Resource          ../../../resources/visualisation.resource
 Library           robotmbt    processor=flatten
 
 
