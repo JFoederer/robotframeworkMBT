@@ -128,8 +128,11 @@ class SuiteProcessors:
                 self.visualiser = None
                 logger.warn(f'Could not initialise visualiser due to error!\n{e}')
 
-        elif (not graph or not export_dir) and not visualisation_deps_present:
+        elif graph and not visualisation_deps_present:
             logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed. '
+                        'Refer to the README on how to install these dependencies. ')
+        elif export_dir and not visualisation_deps_present:
+            logger.warn(f'Visualization export to {export_dir} requested, but required dependencies are not installed. '
                         'Refer to the README on how to install these dependencies. ')
 
         # a short trace without the need for repeating scenarios is preferred
