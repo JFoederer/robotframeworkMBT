@@ -179,6 +179,15 @@ class TraceInfo:
         self.pushed: bool = False
 
     def update_trace(self, scenario: ScenarioInfo | None, state: StateInfo, length: int):
+        """
+        Updates TraceInfo instance with the information that a scenario has run resulting in the given state as the nth
+        scenario of the trace, where n is the value of the length parameter. If length is greater than the previous
+        length of the trace to be updated, adds the given scenario/state to the trace. If length is smaller than the
+        previous length of the trace, roll back the trace until the step indicated by length.
+        scenario: the scenario that has run.
+        state: the state after scenario has run.
+        length: the step in the trace the scenario occurred in.
+        """
         if length > self.previous_length:
             # New state - push
             self._push(scenario, state, length - self.previous_length)
@@ -210,6 +219,43 @@ class TraceInfo:
         for _ in range(n):
             self.current_trace.pop()
         self.pushed = False
+
+    def encountered_scenarios(self) -> set[ScenarioInfo]:
+        """
+        returns: a set of all scenarios encountered in the current trace.
+        """
+        res = set()
+
+        for trace in self.all_traces:
+            for (scenario, state) in trace:
+                res.add(scenario)
+
+        return res
+
+    def encountered_states(self) -> set[StateInfo]:
+        """
+        returns: a set of all state encountered in the current trace.
+        """
+        res = set()
+
+        for trace in self.all_traces:
+            for (scenario, state) in trace:
+                res.add(state)
+
+        return res
+
+    def encountered_scenario_state_pairs(self) -> set[tuple[ScenarioInfo, StateInfo]]:
+        """
+        returns: a set of all pairs of scenario and state in the current trace. A pair is formed by a scenario and the
+          state after the scenario was run.
+        """
+        res = set()
+
+        for trace in self.all_traces:
+            for (scenario, state) in trace:
+                res.add((scenario, state))
+
+        return res
 
     def __repr__(self) -> str:
         return f"TraceInfo(traces=[{[f'[{[self.stringify_pair(pair) for pair in trace]}]' for trace in self.all_traces]}], current=[{[self.stringify_pair(pair) for pair in self.current_trace]}])"
@@ -250,10 +296,20 @@ class TraceInfo:
         return None
 
     def import_graph(self, file_path: str):
-        with open(f"{file_path}", "r") as f:
+        """
+        Imports a JSON encoding of a graph and reconstructs the graph from it. The reconstructed graph overrides the
+        current graph instance this method is called on.
+        file_path: the relative path to the graph JSON.
+        """
+        with open(file_path, "r") as f:
             string = f.read()
             self = jsonpickle.decode(string)
 
     @staticmethod
     def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
+        """
+        Takes a pair of a scenario and a state and returns a string describing both.
+        pair: a tuple consisting of a scenario and a state.
+        returns: formatted string based on the given scenario and state.
+        """
         return f"Scenario={pair[0].name}, State={pair[1]}"
