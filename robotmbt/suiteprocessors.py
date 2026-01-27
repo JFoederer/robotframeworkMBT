@@ -105,6 +105,11 @@ class SuiteProcessors:
         return self.out_suite
 
     def _load_graph(self, graph: str, suite_name: str, file_path: str):
+        """
+        Imports a JSON encoding of a graph and reconstructs the graph from it. The reconstructed graph overrides the
+        current graph instance this method is called on.
+        file_path: the relative path to the graph JSON.
+        """
         with open(f"{file_path}", "r") as f:
             string = f.read()
             traceinfo = jsonpickle.decode(string)
@@ -129,8 +134,11 @@ class SuiteProcessors:
                 self.visualiser = None
                 logger.warn(f'Could not initialise visualiser due to error!\n{e}')
 
-        elif (not graph or not export_dir) and not visualisation_deps_present:
+        elif graph and not visualisation_deps_present:
             logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed. '
+                        'Refer to the README on how to install these dependencies. ')
+        elif export_dir and not visualisation_deps_present:
+            logger.warn(f'Visualization export to {export_dir} requested, but required dependencies are not installed. '
                         'Refer to the README on how to install these dependencies. ')
 
         # a short trace without the need for repeating scenarios is preferred
@@ -159,9 +167,11 @@ class SuiteProcessors:
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if not candidate:  # No valid variant available in the current state
                     tracestate.reject_scenario(candidate_id)
+                    self.__update_visualisation(tracestate)
                     continue
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
+                self.__update_visualisation(tracestate)
                 self._report_tracestate_to_user(tracestate)
                 if len(tracestate) > previous_len:
                     logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
@@ -176,6 +186,7 @@ class SuiteProcessors:
                         self._report_tracestate_to_user(tracestate)
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
             self.__update_visualisation(tracestate)
+        self.__update_visualisation(tracestate)
         return tracestate
 
     def __update_visualisation(self, tracestate: TraceState):

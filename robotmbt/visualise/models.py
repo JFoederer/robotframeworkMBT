@@ -179,6 +179,15 @@ class TraceInfo:
         self.pushed: bool = False
 
     def update_trace(self, scenario: ScenarioInfo | None, state: StateInfo, length: int):
+        """
+        Updates TraceInfo instance with the information that a scenario has run resulting in the given state as the nth
+        scenario of the trace, where n is the value of the length parameter. If length is greater than the previous
+        length of the trace to be updated, adds the given scenario/state to the trace. If length is smaller than the
+        previous length of the trace, roll back the trace until the step indicated by length.
+        scenario: the scenario that has run.
+        state: the state after scenario has run.
+        length: the step in the trace the scenario occurred in.
+        """
         if length > self.previous_length:
             # New state - push
             self._push(scenario, state, length - self.previous_length)
@@ -251,4 +260,9 @@ class TraceInfo:
 
     @staticmethod
     def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
+        """
+        Takes a pair of a scenario and a state and returns a string describing both.
+        pair: a tuple consisting of a scenario and a state.
+        returns: formatted string based on the given scenario and state.
+        """
         return f"Scenario={pair[0].name}, State={pair[1]}"

@@ -3,7 +3,7 @@ Documentation     Export and import a test suite from and to JSON
 ...               and check that the imported suite equals the 
 ...               exported suite.
 Suite Setup       Enter test suite
-Resource          ../../resources/visualisation.resource
+Resource          ../../../resources/visualisation.resource
 Library           robotmbt
 
 *** Keywords ***
