@@ -1,5 +1,6 @@
 from robot.api.deco import keyword  # type:ignore
 import os
+from robotmbt.suiteprocessors import SuiteProcessors
 
 visualisation_deps_present = True
 try:
@@ -77,11 +78,9 @@ class ModelGenerator:
 
     @keyword(name='Import Graph')  # type:ignore
     def import_graph(self, filepath: str) -> TraceInfo:
-        with open(filepath, 'r') as f:
-            string = f.read()
-            decoded_instance: TraceInfo = jsonpickle.decode(string)  # type: ignore
-        visualiser = Visualiser('scenario', trace_info=decoded_instance)
-        return visualiser.trace_info
+        suiteprocessor = SuiteProcessors()
+        suiteprocessor._load_graph('scenario', 'atest', filepath)
+        return suiteprocessor.visualiser.trace_info
 
     @keyword(name='Check File Exists')  # type:ignore
     def check_file_exists(self, filepath: str) -> bool:
