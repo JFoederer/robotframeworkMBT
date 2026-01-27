@@ -249,11 +249,6 @@ class TraceInfo:
             f.write(encoded_instance)
         return None
 
-    def import_graph(self, file_path: str):
-        with open(f"{file_path}", "r") as f:
-            string = f.read()
-            self = jsonpickle.decode(string)
-
     @staticmethod
     def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
         return f"Scenario={pair[0].name}, State={pair[1]}"

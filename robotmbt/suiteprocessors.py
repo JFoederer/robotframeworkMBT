@@ -45,7 +45,7 @@ from .tracestate import TraceState
 try:
     from .visualise.visualiser import Visualiser
     from .visualise.models import TraceInfo
-
+    import jsonpickle
     visualisation_deps_present = True
 except ImportError:
     Visualiser = None
@@ -104,9 +104,10 @@ class SuiteProcessors:
 
         return self.out_suite
 
-    def _load_graph(self, graph: str, suite_name: str, from_json: str):
-        traceinfo = TraceInfo()
-        traceinfo = traceinfo.import_graph(from_json)
+    def _load_graph(self, graph: str, suite_name: str, file_path: str):
+        with open(f"{file_path}", "r") as f:
+            string = f.read()
+            traceinfo = jsonpickle.decode(string)
         self.visualiser = Visualiser(graph, suite_name, trace_info=traceinfo)
 
     def _run_test_suite(self, seed: str | int | bytes | bytearray, graph: str, suite_name: str, export_dir: str):
