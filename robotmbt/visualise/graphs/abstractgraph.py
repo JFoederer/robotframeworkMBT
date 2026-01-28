@@ -138,76 +138,49 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
     @staticmethod
     @abstractmethod
     def select_node_info(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> NodeInfo:
-        """
-        Select the info to use to compare nodes and generate their labels for a specific graph type.
-        """
-        pass
+        """Select the info to use to compare nodes and generate their labels for a specific graph type."""
 
     @staticmethod
     @abstractmethod
     def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> EdgeInfo:
-        """
-        Select the info to use to generate the label for each edge for a specific graph type.
-        """
-        pass
+        """Select the info to use to generate the label for each edge for a specific graph type."""
 
     @staticmethod
     @abstractmethod
     def create_node_description(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> str:
-        """
-        Create the description to be shown in a tooltip for a node given the full trace and its index.
-        """
-        pass
+        """Create the description to be shown in a tooltip for a node given the full trace and its index."""
 
     @staticmethod
     @abstractmethod
     def create_node_label(info: NodeInfo) -> str:
-        """
-        Create the label for a node given its chosen information.
-        """
-        pass
+        """Create the label for a node given its chosen information."""
 
     @staticmethod
     @abstractmethod
     def create_edge_label(info: EdgeInfo) -> str:
-        """
-        Create the label for an edge given its chosen information.
-        """
-        pass
+        """Create the label for an edge given its chosen information."""
 
     @staticmethod
     @abstractmethod
     def get_legend_info_final_trace_node() -> str:
-        """
-        Get the information to include in the legend for nodes that appear in the final trace.
-        """
-        pass
+        """Get the information to include in the legend for nodes that appear in the final trace."""
 
     @staticmethod
     @abstractmethod
     def get_legend_info_other_node() -> str:
-        """
-        Get the information to include in the legend for nodes that do not appear in the final trace.
-        """
-        pass
+        """Get the information to include in the legend for nodes that do not appear in the final trace."""
 
     @staticmethod
     @abstractmethod
     def get_legend_info_final_trace_edge() -> str:
-        """
-        Get the information to include in the legend for edges that appear in the final trace.
-        """
-        pass
+        """Get the information to include in the legend for edges that appear in the final trace."""
 
     @staticmethod
     @abstractmethod
     def get_legend_info_other_edge() -> str:
-        """
-        Get the information to include in the legend for edges that do not appear in the final trace.
-        """
-        pass
+        """Get the information to include in the legend for edges that do not appear in the final trace."""
 
     @staticmethod
     @abstractmethod
     def get_tooltip_name() -> str:
-        pass
+        """Get the text that will be displayed in the tooltip."""
