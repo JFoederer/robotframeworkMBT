@@ -32,7 +32,6 @@
 
 import copy
 import random
-from typing import Any
 
 from robot.api import logger
 
