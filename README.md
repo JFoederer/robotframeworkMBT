@@ -182,9 +182,11 @@ It is not possible to add new options to an existing example value. Any constrai
 It is possible for a step to keep the same options. The special `.*` notation lets you keep the available options as-is. Preceding steps must then supply the possible options. Some steps can, or must, deal with multiple independent sets of options that must not be mixed, because the expected results should differ. Suppose you have a set of valid and invalid passwords. You might be reluctant to include the superset of these as options to an authentication step. Instead, you can use `:MOD: ${password}= .*` as the modifier for that step. Like in the when-step for this scenario:
 
 ```robotframework
-Given 'secret' is too weak a password
-When user tries to update their password to 'secret'
-then the password is rejected
+*** Test Cases ***
+Reject password
+    Given 'secret' is too weak a password
+    When user tries to update their password to 'secret'
+    then the password is rejected
 ```
 
 In a then-step, modifiers behave slightly different. In then-steps no new option constraints are accepted for an argument. Its value must already have been determined during the given- and when-steps. In other words, regardless of the actual modifier, the expression behaves as if it were `.*`. The exception to this is when a then-step signals the first use of a new example value. In that case the argument value from the original scenario text is used.
@@ -222,7 +224,7 @@ Once the test suite has run, a graph will be included in the test's log, under t
 
 It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
 
-```
+```robotframework
 Treat this test suite Model-based  export_graph_data=<directory>
 ```
 
