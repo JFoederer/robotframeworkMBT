@@ -110,7 +110,7 @@ class SuiteProcessors:
         current graph instance this method is called on.
         file_path: the relative path to the graph JSON.
         """
-        with open(f"{file_path}", "r") as f:
+        with open(file_path, "r") as f:
             string = f.read()
             traceinfo = jsonpickle.decode(string)
         self.visualiser = Visualiser(graph, suite_name, trace_info=traceinfo)
