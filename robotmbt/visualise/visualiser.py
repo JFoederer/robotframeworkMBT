@@ -60,7 +60,7 @@ class Visualiser:
                 scenario = snap.scenario
                 model = snap.model
                 if model is None:
-                    model = ModelSpace
+                    model = ModelSpace()
                 self.trace_info.update_trace(ScenarioInfo(scenario), StateInfo(model), prev + i + 1)
 
         # Snapshots have been removed
