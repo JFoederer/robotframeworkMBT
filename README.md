@@ -36,7 +36,7 @@ The recommended installation method is using [pip](http://pip-installer.org)
 
 After installation include `robotmbt` as library in your robot file to get access to the new functionality. To run your test suite model-based, use the __Treat this test suite model-based__ keyword as suite setup. Check the _How to model_ section to learn how to make your scenarios suitable for running model-based.
 
-```
+```robotframework
 *** Settings ***
 Library        robotmbt
 Suite Setup    Treat this test suite model-based
@@ -50,7 +50,8 @@ Modelling can be done directly from [Robot framework](https://robotframework.org
 
 Consider these two scenarios:
 
-```
+```robotframework
+*** Test Cases ***
 Buying a postcard
     When you buy a new postcard
     then you have a blank postcard
@@ -63,7 +64,8 @@ Preparing for a birthday party
 
 Mapping the dependencies between scenarios is done by annotating the steps with modelling info. Modelling info is added to the documentation of the step as shown below. Regular documentation can still be added, as long as `*model info*` starts on a new line and a white line is included after the last `:OUT:` expression.
 
-```
+```robotframework
+*** Keywords ***
 you buy a new postcard
     [Documentation]    *model info*
     ...    :IN: None
@@ -117,7 +119,8 @@ All example scenarios naturally contain data. This information is embedded in th
 
 #### Step argument modifiers
 
-```
+```robotframework
+*** Test Cases ***
 Personalising a birthday card
     Given there is a birthday card
     when Johan writes their name on the birthday card
@@ -126,7 +129,8 @@ Personalising a birthday card
 
 The above scenario uses the name `Johan` to create a concrete example. But now suppose that from a testing perspective `Johan` and `Frederique` are part of the same equivalence class. Then the step `Frederique writes their name on the birthday card` would yield an equally valid scenario. This can be achieved by adding a modifier (`:MOD:`) to the model info of the step. The format of a modifier is a Robot argument to which you assign a list of options. The modifier updates the argument value to a randomly chosen value from the specified options.
 
-```
+```robotframework
+*** Keywords ***
 ${person} writes their name on the birthday card
     [Documentation]    *model info*
     ...    :MOD: ${person}= [Johan, Frederique]
@@ -138,7 +142,8 @@ ${person} writes their name on the birthday card
 
 When constructing examples, they often express relations between multiple actors, where each actor can appear in multiple steps. This makes it important to know how modifiers behave when there are multiple modifiers in a scenario.
 
-```
+```robotframework
+*** Test Cases ***
 Addressing a birthday card
    Given Tannaz is having their birthday
    and Johan has a birthday card
@@ -148,7 +153,8 @@ Addressing a birthday card
 
 Have a look at the when-step above. We will assume the model already contains a domain term with two properties: `birthday.celebrant = Tannaz` and `birthday.guests = [Johan, Frederique]`.
 
-```
+```robotframework
+*** Keywords ***
 ${sender} writes the address of ${receiver} on the birthday card
     [Documentation]    *model info*
     ...    :MOD: ${sender}= birthday.guests
@@ -175,7 +181,7 @@ It is not possible to add new options to an existing example value. Any constrai
 
 It is possible for a step to keep the same options. The special `.*` notation lets you keep the available options as-is. Preceding steps must then supply the possible options. Some steps can, or must, deal with multiple independent sets of options that must not be mixed, because the expected results should differ. Suppose you have a set of valid and invalid passwords. You might be reluctant to include the superset of these as options to an authentication step. Instead, you can use `:MOD: ${password}= .*` as the modifier for that step. Like in the when-step for this scenario:
 
-```
+```robotframework
 Given 'secret' is too weak a password
 When user tries to update their password to 'secret'
 then the password is rejected
@@ -193,7 +199,7 @@ For now, variable data considers strict equivalence classes only. This means tha
 
 By default, trace generation is random. The random seed used for the trace is logged by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
 
-```
+```robotframework
 Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 ```
 
@@ -210,12 +216,11 @@ Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/Robot
 
 By default, no graphs are generated for test-runs. For development purposes, having a visual representation of the test-suite you are working on can be very useful. To have robotmbt generate a graph, ensure you have installed the optional dependencies (`pip install .[visualization]`) and pass the type as an argument:
 
-```
-Treat this test suite Model-based  graph=[type]
+```robotframework
+Treat this test suite Model-based  graph=<type>
 ```
 
-Here, `[type]` can be any of the supported graph types. Currently, the types included are:
-- `scenario-delta-value`
+Here, `<type>` can be any of the supported graph types, which can be seen in `robotmbt/visualise/visualiser.py`.
 
 Once the test suite has run, a graph will be included in the test's log, under the suite's `Treat this test suite Model-based` setup header.
 
@@ -224,7 +229,7 @@ Once the test suite has run, a graph will be included in the test's log, under t
 It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
 
 ```
-Treat this test suite Model-based  export_graph_data=[directory]
+Treat this test suite Model-based  export_graph_data=<directory>
 ```
 
 A JSON file named after the test suite will be created containing said information.
@@ -233,8 +238,8 @@ A JSON file named after the test suite will be created containing said informati
 
 It is possible to skip running the exploration step and produce a graph (e.g. of another type) from previously exported data.
 
-```
-Treat this test suite Model-based  graph=[type]  import_graph_data=[directory+file_name.json]
+```robotframework
+Treat this test suite Model-based  graph=<type>  import_graph_data=<directory and file_name>.json
 ```
 
 A graph will be created from the imported data.
