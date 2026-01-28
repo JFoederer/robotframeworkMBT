@@ -183,4 +183,4 @@ class AbstractGraph(ABC, Generic[NodeInfo, EdgeInfo]):
     @staticmethod
     @abstractmethod
     def get_tooltip_name() -> str:
-        """Get the text that will be displayed in the tooltip."""
+        """Get the name/title of the tooltip."""
