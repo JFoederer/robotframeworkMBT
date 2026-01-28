@@ -33,7 +33,6 @@ When reporting a defect, be precise and concise in your description. Write in wa
 Note that all information in the issue tracker is public. *Do not include any confidential information there*.
 
 Be sure to add information about:
-
 - The applicable version(s) of RobotMBT (use `pip list` and check for `robotframework-mbt`)
 - Your Robot Framework version (use `pip list` and check for `robotframework`)
 - Your Python version (check using `python --version`)
@@ -114,3 +113,117 @@ Researchers have suggested that longer lines are better suited for cases when th
   - Information that is useful for analysing failed tests is logged at debug-level.
 
 - Be careful not to make assumptions in what you log: Recheck log statements if your changes affect the context in which the code is run, and only report about what you know to be true.
+
+### Creating new graphs
+
+Extending the functionality of the visualizer with new graph types can result in better insights into created tests. The visualizer makes use of an abstract graph class that makes it easy to create new graph types.
+
+To create a new graph type, create an instance of `robotmbt/visualise/graphs/AbstractGraph`, instantiating the abstract methods. Please place the graph under `robotmbt/visualise/graphs/`.
+
+**NOTE**: when manually altering the `networkx` field, ensure its IDs remain as a serializable and hashable type when the constructor finishes.
+
+As an example, we show the implementation of the scenario graph below. In this graph type, nodes represent scenarios encountered in exploration, and edges show the flow between these scenarios.
+It does not enable tooltips.
+
+```python
+class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
+    @staticmethod
+    def select_node_info(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> ScenarioInfo:
+        return trace[index][0]
+
+    @staticmethod
+    def select_edge_info(pair: tuple[ScenarioInfo, StateInfo]) -> None:
+        return None
+
+    @staticmethod
+    def create_node_description(trace: list[tuple[ScenarioInfo, StateInfo]], index: int) -> str:
+        return ''
+
+    @staticmethod
+    def create_node_label(info: ScenarioInfo) -> str:
+        return info.name
+
+    @staticmethod
+    def create_edge_label(info: None) -> str:
+        return ''
+
+    @staticmethod
+    def get_legend_info_final_trace_node() -> str:
+        return "Executed Scenario (in final trace)"
+
+    @staticmethod
+    def get_legend_info_other_node() -> str:
+        return "Executed Scenario (backtracked)"
+
+    @staticmethod
+    def get_legend_info_final_trace_edge() -> str:
+        return "Execution Flow (final trace)"
+
+    @staticmethod
+    def get_legend_info_other_edge() -> str:
+        return "Execution Flow (backtracked)"
+
+    @staticmethod
+    def get_tooltip_name() -> str:
+        return ""
+```
+
+Once you have created a new Graph class, you can direct the visualizer to use it when your type is selected. 
+Simply add your class to the `GRAPHS` dictionary in `robotmbt/visualise/visualiser.py` like the others. For our example:
+
+```python
+GRAPHS = {
+    ...
+    'scenario': ScenarioGraph,
+    ...
+}
+```
+
+Now, when selecting your graph type (in our example `Treat this test suite Model-based  graph=scenario`), your graph will get constructed!
+
+
+## Development Tips
+### Python virtual environment
+Installing the proper virtual environment can be done with the default `python -m venv ./.venv` command built into python. However, if you have another version of python on your system, this might break dependencies.
+
+#### Pipenv+Pyenv (verified on Windows and Linux)
+For the optimal experience (at least on Linux), we suggest installing the following packages:
+- [`pyenv`](https://github.com/pyenv/pyenv) (Linux/Mac) or [`pyenv-win`](https://github.com/pyenv-win/pyenv-win) (Windows)
+- [`pipenv`](https://github.com/pypa/pipenv) 
+
+Then, you can install a python virtual environment with:
+
+```bash
+pipenv --python <python_version>
+```
+..where the python version can be found in the `pyproject.toml`. For example, for 3.10: `pipenv --python 3.10`.
+
+You might need to manually make the folder `.venv` by doing `mkdir .venv`.
+
+You can verify if the installation went correctly with:
+```bash
+pipenv check
+```
+This should return `Passed!`
+
+Errors related to minor versions (for example `3.10.0rc2` != `3.10.0`) can be ignored.
+
+Now activate the virtual environment by running 
+```bash 
+pipenv shell
+```
+
+..and you should have a virtual env! If you run
+```bash
+python --version
+```
+..while in your virtual environment, it should show the `<python_version>` from before.
+
+
+### Installing dependencies
+***NOTE: making sure that you are in the virtual environment***. 
+
+It is recommended that you also include the optional dependencies for visualisation, e.g.:
+```bash
+pip install ".[visualization]"
+```

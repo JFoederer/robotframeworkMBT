@@ -40,7 +40,7 @@ class StepArguments(list):
     def __init__(self, iterable=[]):
         super().__init__(item.copy() for item in iterable)
 
-    def fill_in_args(self, text: str, as_code: bool = False):
+    def fill_in_args(self, text: str, as_code: bool = False) -> str:
         result = text
         for arg in self:
             sub = arg.codestring if as_code else str(arg.value)
