@@ -205,9 +205,6 @@ If you want to set configuration options for use in multiple test suites without
 
 Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#dictionary-variable) (`&{ }`) can be used to group related options and pass them as one set.
 
-## Contributing
-
-If you have feedback, ideas, or want to get involved in coding, then check out the [Contribution guidelines](https://github.com/JFoederer/robotframeworkMBT/blob/main/CONTRIBUTING.md).
 
 ### Graphs
 
@@ -227,7 +224,7 @@ Once the test suite has run, a graph will be included in the test's log, under t
 It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
 
 ```
-Treat this test suite Model-based  graph=[type]  export_graph_data=[directory]
+Treat this test suite Model-based  export_graph_data=[directory]
 ```
 
 A JSON file named after the test suite will be created containing said information.
