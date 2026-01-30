@@ -116,7 +116,7 @@ class StepArgument:
             return codestr.title()
         try:
             float(codestr)
-        except:
+        except (TypeError, ValueError, OverflowError, ZeroDivisionError):
             codestr = StepArgument.make_identifier(codestr)
         return codestr
 
