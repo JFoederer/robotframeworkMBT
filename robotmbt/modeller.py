@@ -34,7 +34,7 @@ from typing import Any
 
 from robot.api import logger
 from robot.utils import is_list_like
-from robot.errors import ExecutionFailed  # Raised by Robot in case of keyword timeout
+from robot.errors import TimeoutExceeded  # Raised by Robot in case of keyword timeout
 
 from .modelspace import ModelSpace
 from .steparguments import StepArgument, StepArguments, ArgKind
@@ -81,7 +81,7 @@ def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, S
                     else:
                         return None, None, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
                                                 f"{scenario.name}, due to step '{step}': [{expr}] is False")
-            except ExecutionFailed:
+            except TimeoutExceeded:
                 raise
             except Exception as err:
                 return None, None, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
@@ -132,7 +132,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
         try:
             if tracestate.model.process_expression(expr, refinement_tail.steps[1].args) is False:
                 break
-        except ExecutionFailed:
+        except TimeoutExceeded:
             raise
         except Exception:
             break
@@ -216,7 +216,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
                         step.args[modded_arg].value = modded_free_args
                 else:
                     raise AssertionError(f"Unknown argument kind for {modded_arg}")
-    except ExecutionFailed:
+    except TimeoutExceeded:
         raise
     except Exception as err:
         logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"

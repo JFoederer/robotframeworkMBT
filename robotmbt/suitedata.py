@@ -33,7 +33,7 @@
 import copy
 from typing import Literal
 
-from robot.errors import ExecutionFailed  # Raised by Robot in case of keyword timeout
+from robot.errors import TimeoutExceeded  # Raised by Robot in case of keyword timeout
 from robot.running.arguments.argumentspec import ArgumentSpec
 from robot.running.arguments.argumentvalidator import ArgumentValidator
 from robot.running.keywordimplementation import KeywordImplementation
@@ -233,7 +233,7 @@ class Step:
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
             self.signature = robot_kw.name
             self.model_info = self.__parse_model_info(robot_kw._doc)
-        except ExecutionFailed:
+        except TimeoutExceeded:
             raise
         except Exception as ex:
             self.model_info['error'] = str(ex)
