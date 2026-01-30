@@ -36,7 +36,7 @@ from .suitedata import Suite, Scenario, Step
 from .suiteprocessors import SuiteProcessors
 from robot.api import logger
 from robot.api.deco import library, keyword
-from typing import Any, Literal
+from typing import Any
 from robot.libraries.BuiltIn import BuiltIn
 Robot = BuiltIn()
 

@@ -1,0 +1,298 @@
+# BSD 3-Clause License
+#
+# Copyright (c) 2026, T.B. Dubbeling,  J. Foederer, T.S. Kas, D.R. Osinga, D.F. Serra e Silva, J.C. Willegers
+# All rights reserved.
+#
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+#
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer.
+#
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+#
+# 3. Neither the name of the copyright holder nor the names of its
+#    contributors may be used to endorse or promote products derived from
+#    this software without specific prior written permission.
+#
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+# AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+# IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+# FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+# DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+# SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+# CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+# OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+# OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+from typing import Any
+
+from robot.api import logger
+
+from robotmbt.modelspace import ModelSpace
+from robotmbt.suitedata import Scenario
+
+import jsonpickle
+import tempfile
+import os
+
+DESIRED_NAME_LINE_LENGTH = 20
+
+
+class ScenarioInfo:
+    """
+    This contains all information we need from scenarios, abstracting away from the actual Scenario class:
+    - name
+    - src_id
+    """
+
+    def __init__(self, scenario: Scenario | str):
+        if isinstance(scenario, Scenario):
+            # default case
+            self.name = self._split_name(scenario.name)
+            self.src_id = scenario.src_id
+        else:
+            # unit tests
+            self.name = scenario
+            self.src_id = scenario
+
+    def __str__(self):
+        return f"Scenario {self.src_id}: {self.name}"
+
+    def __eq__(self, other):
+        return self.src_id == other.src_id
+
+    @staticmethod
+    def _split_name(name: str) -> str:
+        """
+        Split a name into separate lines where each line is as close to the desired line length as possible.
+        """
+        # Split into words
+        words = name.split(" ")
+
+        # If any word is longer than the desired length, use that as the desired length instead
+        # (otherwise, we will always get a line (much) longer than the desired length, while the other lines will
+        # be constrained by the desired length)
+        desired_length = DESIRED_NAME_LINE_LENGTH
+        for i in words:
+            if len(i) > desired_length:
+                desired_length = len(i)
+
+        res = ""
+        line = words[0]
+        for i in words[1:]:
+            # If the previous line was fully appended, simply take the current word as the new line
+            if line == '\n':
+                line += i
+                continue
+
+            app_len = len(line + ' ' + i)
+
+            # If the word fully fits into the line, simply append it
+            if app_len < desired_length:
+                line = line + ' ' + i
+                continue
+
+            app_diff = abs(desired_length - app_len)
+            curr_diff = abs(desired_length - len(line))
+
+            # If the current line is closer to the desired length, use that
+            if curr_diff < app_diff:
+                res += line
+                line = '\n' + i
+            # If the current line with the new word is closer to the desired length, use that
+            else:
+                res += line + ' ' + i
+                line = '\n'
+
+        # Append the final line if it wasn't empty
+        if line != '\n':
+            res += line
+
+        return res
+
+
+class StateInfo:
+    """
+    This contains all information we need from states, abstracting away from the actual ModelSpace class:
+    - domain
+    - properties
+    """
+
+    @classmethod
+    def _create_state_with_prop(cls, name: str, attrs: list[tuple[str, Any]]):
+        space = ModelSpace()
+        prop = ModelSpace()
+        for (key, val) in attrs:
+            prop.__setattr__(key, val)
+        space.props[name] = prop
+        return cls(space)
+
+    def difference(self, new_state) -> set[tuple[str, str]]:
+        """
+        new_state: the new StateInfo to be compared to the self.
+        returns: a set of tuples with properties and their assignment.
+        """
+        old: dict[str, dict | str] = self.properties.copy()
+        new: dict[str, dict | str] = new_state.properties.copy()
+        temp = StateInfo._dict_deep_diff(old, new)
+        for key in temp.keys():
+            res = ""
+            for k, v in sorted(temp[key].items()):
+                res += f"\n\t{k}={v}"
+            temp[key] = res
+        return set(temp.items())  # type inference goes wacky here
+
+    @staticmethod
+    def _dict_deep_diff(old_state: dict[str, any], new_state: dict[str, any]) -> dict[str, any]:
+        res = {}
+        for key in new_state.keys():
+            if key not in old_state:
+                res[key] = new_state[key]
+            elif isinstance(old_state[key], dict):
+                diff = StateInfo._dict_deep_diff(old_state[key], new_state[key])
+                if len(diff) != 0:
+                    res[key] = diff
+            elif old_state[key] != new_state[key]:
+                res[key] = new_state[key]
+        return res
+
+    def __init__(self, state: ModelSpace):
+        self.domain = state.ref_id
+
+        # Extract all attributes/properties stored in the model space and store them in the temp dict
+        # Similar in workings to ModelSpace's get_status_text
+        temp = {}
+        for p in state.props:
+            temp[p] = {}
+            if p == 'scenario':
+                temp['scenario'] = dict(state.props['scenario'])
+            else:
+                for attr in dir(state.props[p]):
+                    temp[p][attr] = getattr(state.props[p], attr)
+
+        # Filter empty entries
+        self.properties = {}
+        for p in temp.keys():
+            if len(temp[p]) > 0:
+                self.properties[p] = temp[p].copy()
+
+    def __eq__(self, other):
+        return self.domain == other.domain and self.properties == other.properties
+
+    def __str__(self):
+        res = ""
+        for p in self.properties:
+            if res != "":
+                res += "\n\n"
+            res += f"{p}:"
+            for k, v in self.properties[p].items():
+                res += f"\n\t{k}={v}"
+        return res
+
+
+class TraceInfo:
+    """
+    This keeps track of all information we need from all steps in trace exploration:
+    - current_trace: the trace currently being built up, a list of scenario/state pairs in order of execution
+    - all_traces: all valid traces encountered in trace exploration, up until the point they could not go any further
+    - previous_length: used to identify backtracking
+    """
+
+    def __init__(self):
+        self.current_trace: list[tuple[ScenarioInfo, StateInfo]] = []
+        self.all_traces: list[list[tuple[ScenarioInfo, StateInfo]]] = []
+        self.previous_length: int = 0
+        self.pushed: bool = False
+
+    def update_trace(self, scenario: ScenarioInfo | None, state: StateInfo, length: int):
+        """
+        Updates TraceInfo instance with the information that a scenario has run resulting in the given state as the nth
+        scenario of the trace, where n is the value of the length parameter. If length is greater than the previous
+        length of the trace to be updated, adds the given scenario/state to the trace. If length is smaller than the
+        previous length of the trace, roll back the trace until the step indicated by length.
+        scenario: the scenario that has run.
+        state: the state after scenario has run.
+        length: the step in the trace the scenario occurred in.
+        """
+        if length > self.previous_length:
+            # New state - push
+            self._push(scenario, state, length - self.previous_length)
+            self.previous_length = length
+        elif length < self.previous_length:
+            # Backtrack - pop
+            self._pop(self.previous_length - length)
+            self.previous_length = length
+
+            # Sanity check
+            if len(self.current_trace) > 0:
+                self._sanity_check(scenario, state, 'popping')
+        else:
+            # No change - sanity check
+            if len(self.current_trace) > 0:
+                self._sanity_check(scenario, state, 'nothing')
+
+    def _push(self, scenario: ScenarioInfo, state: StateInfo, n: int):
+        if n > 1:
+            logger.warn(
+                f"Pushing multiple scenario/state pairs at once to trace info ({n})! Some info might be lost!")
+        for _ in range(n):
+            self.current_trace.append((scenario, state))
+        self.pushed = True
+
+    def _pop(self, n: int):
+        if self.pushed:
+            self.all_traces.append(self.current_trace.copy())
+        for _ in range(n):
+            self.current_trace.pop()
+        self.pushed = False
+
+    def __repr__(self) -> str:
+        return f"TraceInfo(traces=[{[f'[{[self.stringify_pair(pair) for pair in trace]}]' for trace in self.all_traces]}], current=[{[self.stringify_pair(pair) for pair in self.current_trace]}])"
+
+    def _sanity_check(self, scen: ScenarioInfo, state: StateInfo, after: str):
+        (prev_scen, prev_state) = self.current_trace[-1]
+        if prev_scen != scen:
+            logger.warn(
+                f'TraceInfo got out of sync after {after}\nExpected scenario: {prev_scen}\nActual scenario: {scen}')
+        if prev_state != state:
+            logger.warn(
+                f'TraceInfo got out of sync after {after}\nExpected state: {prev_state}\nActual state: {state}')
+
+    def export_graph(self, suite_name: str, dir: str = '', atest: bool = False) -> str | None:
+        encoded_instance = jsonpickle.encode(self)
+        name = suite_name.lower().replace(' ', '_')
+        if atest:
+            '''
+            temporary file to not accidentally overwrite an existing file
+            mkstemp() is not ideal but given Python's limitations this is the easiest solution
+            as temporary file, a different method, is problematic on Windows 
+            https://stackoverflow.com/a/57015383
+            '''
+            fd, dir = tempfile.mkstemp()
+            with os.fdopen(fd, "w") as f:
+                f.write(encoded_instance)
+            return dir
+
+        if dir[-1] != '/':
+            dir += '/'
+
+        # create folders if they do not exist
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+
+        with open(f"{dir}{name}.json", "w") as f:
+            f.write(encoded_instance)
+        return None
+
+    @staticmethod
+    def stringify_pair(pair: tuple[ScenarioInfo, StateInfo]) -> str:
+        """
+        Takes a pair of a scenario and a state and returns a string describing both.
+        pair: a tuple consisting of a scenario and a state.
+        returns: formatted string based on the given scenario and state.
+        """
+        return f"Scenario={pair[0].name}, State={pair[1]}"

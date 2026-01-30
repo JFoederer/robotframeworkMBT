@@ -32,7 +32,6 @@
 
 import copy
 import random
-from typing import Any
 
 from robot.api import logger
 
@@ -42,8 +41,20 @@ from .suitedata import Suite, Scenario
 from .tracestate import TraceState
 
 
+try:
+    from .visualise.visualiser import Visualiser
+    from .visualise.models import TraceInfo
+    import jsonpickle
+    visualisation_deps_present = True
+except ImportError:
+    Visualiser = None
+    TraceInfo = None
+    visualisation_deps_present = False
+
+
 class SuiteProcessors:
-    def echo(self, in_suite: Suite) -> Suite:
+    @staticmethod
+    def echo(in_suite: Suite) -> Suite:
         return in_suite
 
     def flatten(self, in_suite: Suite) -> Suite:
@@ -74,13 +85,36 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new') -> Suite:
+    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
+                           graph: str = '', export_graph_data: str = '', import_graph_data: str = '') -> Suite:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
 
+        if import_graph_data != '':
+            self._load_graph(graph, in_suite.name, import_graph_data)
+
+        else:
+            self._run_test_suite(seed, graph, in_suite.name, export_graph_data)
+
+        self.__write_visualisation()
+
+        return self.out_suite
+
+    def _load_graph(self, graph: str, suite_name: str, file_path: str):
+        """
+        Imports a JSON encoding of a graph and reconstructs the graph from it. The reconstructed graph overrides the
+        current graph instance this method is called on.
+        file_path: the relative path to the graph JSON.
+        """
+        with open(file_path, "r") as f:
+            string = f.read()
+            traceinfo = jsonpickle.decode(string)
+        self.visualiser = Visualiser(graph, suite_name, trace_info=traceinfo)
+
+    def _run_test_suite(self, seed: str | int | bytes | bytearray, graph: str, suite_name: str, export_dir: str):
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
         self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
@@ -90,6 +124,21 @@ class SuiteProcessors:
         self._init_randomiser(seed)
         self.shuffled: list[int] = [s.src_id for s in self.scenarios]
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
+
+        self.visualiser = None
+        if visualisation_deps_present and (graph or export_dir):
+            try:
+                self.visualiser = Visualiser(graph, suite_name, export_dir)
+            except Exception as e:
+                self.visualiser = None
+                logger.warn(f'Could not initialise visualiser due to error!\n{e}')
+
+        elif graph and not visualisation_deps_present:
+            logger.warn(f'Visualisation {graph} requested, but required dependencies are not installed. '
+                        'Refer to the README on how to install these dependencies. ')
+        elif export_dir and not visualisation_deps_present:
+            logger.warn(f'Visualization export to {export_dir} requested, but required dependencies are not installed. '
+                        'Refer to the README on how to install these dependencies. ')
 
         # a short trace without the need for repeating scenarios is preferred
         tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
@@ -102,7 +151,6 @@ class SuiteProcessors:
 
         self.out_suite.scenarios = tracestate.get_trace()
         self._report_tracestate_wrapup(tracestate)
-        return self.out_suite
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool) -> TraceState:
         tracestate = TraceState(self.shuffled)
@@ -118,9 +166,11 @@ class SuiteProcessors:
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if not candidate:  # No valid variant available in the current state
                     tracestate.reject_scenario(candidate_id)
+                    self.__update_visualisation(tracestate)
                     continue
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
+                self.__update_visualisation(tracestate)
                 self._report_tracestate_to_user(tracestate)
                 if len(tracestate) > previous_len:
                     logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
@@ -134,7 +184,24 @@ class SuiteProcessors:
                         modeller.rewind(tracestate, drought_recovery=True)
                         self._report_tracestate_to_user(tracestate)
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
+            self.__update_visualisation(tracestate)
+        self.__update_visualisation(tracestate)
         return tracestate
+
+    def __update_visualisation(self, tracestate: TraceState):
+        if self.visualiser is not None:
+            try:
+                self.visualiser.update_trace(tracestate)
+            except Exception as e:
+                logger.warn(f'Could not update visualisation due to error!\n{e}')
+
+    def __write_visualisation(self):
+        if self.visualiser is not None:
+            try:
+                text, html = self.visualiser.generate_visualisation()
+                logger.info(text, html=html)
+            except Exception as e:
+                logger.warn(f'Could not generate visualisation due to error!\n{e}')
 
     @staticmethod
     def __last_candidate_changed_nothing(tracestate: TraceState) -> bool:
@@ -164,6 +231,7 @@ class SuiteProcessors:
     @staticmethod
     def _fail_on_step_errors(suite: Suite):
         error_list = suite.steps_with_errors()
+
         if error_list:
             err_msg = "Steps with errors in their model info found:\n"
             err_msg += '\n'.join([f"{s.keyword} [{s.model_info['error']}] used in {s.parent.name}"
@@ -188,7 +256,7 @@ class SuiteProcessors:
             seed = seed.strip()
         if str(seed).lower() == 'none':
             logger.info(
-                f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
+                "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
