@@ -257,12 +257,12 @@ class NetworkVisualiser:
 
         # Set specific margins as these values worked best in user-testing
         # Space between nodes
-        sugiyama.xspace = 10    
+        sugiyama.xspace = 10
         sugiyama.yspace = 15
         # Default width for nodes with no set width   (in this case only for edge routing)
-        sugiyama.dw = 2       
-        # Default height for nodes with no set height (in this case only for edge routing)  
-        sugiyama.dh = 2         
+        sugiyama.dw = 2
+        # Default height for nodes with no set height (in this case only for edge routing)
+        sugiyama.dh = 2
 
         sugiyama.init_all(roots=[start], inverted_edges=flips)
         sugiyama.draw()
