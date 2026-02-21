@@ -141,7 +141,7 @@ class StateInfo:
         return set(temp.items())  # type inference goes wacky here
 
     @staticmethod
-    def _dict_deep_diff(old_state: dict[str, any], new_state: dict[str, any]) -> dict[str, any]:
+    def _dict_deep_diff(old_state: dict[str, Any], new_state: dict[str, Any]) -> dict[str, Any]:
         res = {}
         for key in new_state.keys():
             if key not in old_state:
