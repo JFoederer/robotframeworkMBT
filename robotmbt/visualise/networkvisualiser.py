@@ -34,6 +34,7 @@ from bokeh.embed import file_html
 from bokeh.models import ColumnDataSource, Rect, Text, ResetTool, SaveTool, WheelZoomTool, PanTool, Plot, Range1d, \
     Title, FullscreenTool, CustomJS, Segment, Arrow, NormalHead, Bezier, Legend, ZoomInTool, ZoomOutTool, HoverTool
 
+# grandalf used under EPL license
 from grandalf.graphs import Vertex as GVertex, Edge as GEdge, Graph as GGraph
 from grandalf.layouts import SugiyamaLayout
 
