@@ -117,10 +117,10 @@ class SuiteReplacer:
     def show_graph(self, json_file_path: str, graph_style: str = 'scenario'):
         """
         If your previously ran `Treat this test suite Model-based` with the option to export
-        graph data to file, then this keyword can be used directly draw a graph from the
+        graph data to file, then this keyword can be used to directly draw a graph from the
         exported file, without the need to rerun the test suite. It is possible to select a
-        different graph style than was used during the test run. If no graph style is selected
-        then  the scenario graph style is used.
+        different graph style than was used during the test run. If no graph style is selected,
+        then the scenario graph style is used.
         """
         SuiteProcessors().draw_graph_from_export_file(json_file_path, graph_style)
 

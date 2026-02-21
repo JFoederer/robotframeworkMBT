@@ -207,38 +207,40 @@ Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 
 Using `seed=new` will force generation of a new reusable seed and is identical to omitting the seed argument. To completely bypass seed generation and use the system's random source, use `seed=None`. This has even more variation but does not produce a reusable seed.
 
-
 ### Graphs
 
-By default, no graphs are generated for test-runs. For development purposes, having a visual representation of the test-suite you are working on can be very useful. To have robotmbt generate a graph, ensure you have installed the optional dependencies (`pip install robotframework-mbt[visualisation]`) and pass the type as an argument:
+A graph can be included in the log file to visualise how scenarios are linked. This helps in understanding a test suite's structure and reveals alternative paths that did not make it into the final trace.
+
+To enable graph generation, some extra dependencies must be installed: `pip install robotframework-mbt[visualisation]`
+
+Generate the graph by setting the graph style for the model-based suite. The graph will be included in the Robot log file as part of the keyword's logging.
 
 ```robotframework
-Treat this test suite Model-based  graph=<type>
+Treat this test suite Model-based  graph=scenario
 ```
 
-Here, `<type>` can be any of the supported graph types, which can be seen in `robotmbt/visualise/visualiser.py`.
+Available graph styles:
 
-Once the test suite has run, a graph will be included in the test's log, under the suite's `Treat this test suite Model-based` setup header.
+* scenario
+  * Compact view: Each scenario is shown as one node.
+* scenario-delta-value
+  * Expanded view: Scenarios can become multiple nodes if they affect system state in different ways.
 
-#### JSON exporting
+#### Exporting and importing graph data
 
-It is possible to extract the exploration data after the library has found a covering trace. To enable this feature, set the following argument to true:
+Graph data can be stored by setting an output directory using argument `export_graph_data`. This createss a json file, named after the test suite, in the selected folder. Any accessable path can be used. For your convenience, Robot Framework offers an [automatic variable](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#automatic-variables) `${OUTPUT_DIR}` that points to this run's output directory. The `export_graph_data` argument can be used independent of the `graph` argument.
 
 ```robotframework
-Treat this test suite Model-based  export_graph_data=<directory>
+Treat this test suite Model-based  export_graph_data=${OUTPUT_DIR}
 ```
 
-A JSON file named after the test suite will be created containing said information.
-
-#### JSON importing
-
-It is possible to skip running the exploration step and produce a graph (e.g. of another type) from previously exported data.
+To recreate a graph from previously exported graph data, use:
 
 ```robotframework
-Treat this test suite Model-based  graph=<type>  import_graph_data=<directory and file_name>.json
+Show model graph from exported file    json_file_path=<file_path>    graph_style=scenario
 ```
 
-A graph will be created from the imported data.
+This will draw a graph from the exported file, without the need to rerun the test suite. It is possible to select a different graph style than was used during the test run. If no graph style is selected, then the scenario graph style is used.
 
 ### Option management
 
