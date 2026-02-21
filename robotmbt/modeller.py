@@ -37,7 +37,7 @@ from robot.utils import is_list_like
 from robot.errors import TimeoutExceeded  # Raised by Robot in case of keyword timeout
 
 from .modelspace import ModelSpace
-from .steparguments import StepArguments, ArgKind
+from .steparguments import StepArgument, StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
@@ -67,7 +67,7 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
         tracestate.push_partial_scenario(inserted.src_id, inserted, model, remainder)
 
 
-def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario | None, Scenario | None, dict[str, Any]]:
+def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, Scenario, dict[str, Any]]:
     for step in scenario.steps:
         if 'error' in step.model_info:
             return None, None, dict(fail_masg=f"Error in scenario {scenario.name} "
@@ -167,7 +167,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
         tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, model, remainder)
 
 
-def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario | None:
+def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario:
     scenario = scenario.copy()
     # collect set of constraints
     subs = SubstitutionMap()
