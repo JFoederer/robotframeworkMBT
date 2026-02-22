@@ -70,19 +70,19 @@ class ScenarioDeltaValueGraph(AbstractGraph[tuple[ScenarioInfo, set[tuple[str, s
 
     @staticmethod
     def get_legend_info_final_trace_node() -> str:
-        return "Executed Scenario w/ Changes in Execution State (in final trace)"
+        return "Scenario + effect on model (part of trace)"
 
     @staticmethod
     def get_legend_info_other_node() -> str:
-        return "Executed Scenario w/ Changes in Execution State (backtracked)"
+        return "Scenario + effect on model (not in trace)"
 
     @staticmethod
     def get_legend_info_final_trace_edge() -> str:
-        return "Execution Flow (final trace)"
+        return "path included in trace"
 
     @staticmethod
     def get_legend_info_other_edge() -> str:
-        return "Execution Flow (backtracked)"
+        return "not selected for trace"
 
     @staticmethod
     def get_tooltip_name() -> str:

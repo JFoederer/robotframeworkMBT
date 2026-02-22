@@ -33,19 +33,19 @@ class ScenarioGraph(AbstractGraph[ScenarioInfo, None]):
 
     @staticmethod
     def get_legend_info_final_trace_node() -> str:
-        return "Executed Scenario (in final trace)"
+        return "Scenario (part of trace)"
 
     @staticmethod
     def get_legend_info_other_node() -> str:
-        return "Executed Scenario (backtracked)"
+        return "Scenario (not in trace)"
 
     @staticmethod
     def get_legend_info_final_trace_edge() -> str:
-        return "Execution Flow (final trace)"
+        return "path included in trace"
 
     @staticmethod
     def get_legend_info_other_edge() -> str:
-        return "Execution Flow (backtracked)"
+        return "not selected for trace"
 
     @staticmethod
     def get_tooltip_name() -> str:
