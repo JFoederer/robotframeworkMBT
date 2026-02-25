@@ -36,7 +36,7 @@ The recommended installation method is using [pip](http://pip-installer.org)
 
 After installation include `robotmbt` as library in your robot file to get access to the new functionality. To run your test suite model-based, use the __Treat this test suite model-based__ keyword as suite setup. Check the _How to model_ section to learn how to make your scenarios suitable for running model-based.
 
-```
+```robotframework
 *** Settings ***
 Library        robotmbt
 Suite Setup    Treat this test suite model-based
@@ -50,7 +50,8 @@ Modelling can be done directly from [Robot framework](https://robotframework.org
 
 Consider these two scenarios:
 
-```
+```robotframework
+*** Test Cases ***
 Buying a postcard
     When you buy a new postcard
     then you have a blank postcard
@@ -63,7 +64,8 @@ Preparing for a birthday party
 
 Mapping the dependencies between scenarios is done by annotating the steps with modelling info. Modelling info is added to the documentation of the step as shown below. Regular documentation can still be added, as long as `*model info*` starts on a new line and a white line is included after the last `:OUT:` expression.
 
-```
+```robotframework
+*** Keywords ***
 you buy a new postcard
     [Documentation]    *model info*
     ...    :IN: None
@@ -117,7 +119,8 @@ All example scenarios naturally contain data. This information is embedded in th
 
 #### Step argument modifiers
 
-```
+```robotframework
+*** Test Cases ***
 Personalising a birthday card
     Given there is a birthday card
     when Johan writes their name on the birthday card
@@ -126,7 +129,8 @@ Personalising a birthday card
 
 The above scenario uses the name `Johan` to create a concrete example. But now suppose that from a testing perspective `Johan` and `Frederique` are part of the same equivalence class. Then the step `Frederique writes their name on the birthday card` would yield an equally valid scenario. This can be achieved by adding a modifier (`:MOD:`) to the model info of the step. The format of a modifier is a Robot argument to which you assign a list of options. The modifier updates the argument value to a randomly chosen value from the specified options.
 
-```
+```robotframework
+*** Keywords ***
 ${person} writes their name on the birthday card
     [Documentation]    *model info*
     ...    :MOD: ${person}= [Johan, Frederique]
@@ -138,7 +142,8 @@ ${person} writes their name on the birthday card
 
 When constructing examples, they often express relations between multiple actors, where each actor can appear in multiple steps. This makes it important to know how modifiers behave when there are multiple modifiers in a scenario.
 
-```
+```robotframework
+*** Test Cases ***
 Addressing a birthday card
    Given Tannaz is having their birthday
    and Johan has a birthday card
@@ -148,7 +153,8 @@ Addressing a birthday card
 
 Have a look at the when-step above. We will assume the model already contains a domain term with two properties: `birthday.celebrant = Tannaz` and `birthday.guests = [Johan, Frederique]`.
 
-```
+```robotframework
+*** Keywords ***
 ${sender} writes the address of ${receiver} on the birthday card
     [Documentation]    *model info*
     ...    :MOD: ${sender}= birthday.guests
@@ -175,10 +181,12 @@ It is not possible to add new options to an existing example value. Any constrai
 
 It is possible for a step to keep the same options. The special `.*` notation lets you keep the available options as-is. Preceding steps must then supply the possible options. Some steps can, or must, deal with multiple independent sets of options that must not be mixed, because the expected results should differ. Suppose you have a set of valid and invalid passwords. You might be reluctant to include the superset of these as options to an authentication step. Instead, you can use `:MOD: ${password}= .*` as the modifier for that step. Like in the when-step for this scenario:
 
-```
-Given 'secret' is too weak a password
-When user tries to update their password to 'secret'
-then the password is rejected
+```robotframework
+*** Test Cases ***
+Reject password
+    Given 'secret' is too weak a password
+    When user tries to update their password to 'secret'
+    then the password is rejected
 ```
 
 In a then-step, modifiers behave slightly different. In then-steps no new option constraints are accepted for an argument. Its value must already have been determined during the given- and when-steps. In other words, regardless of the actual modifier, the expression behaves as if it were `.*`. The exception to this is when a then-step signals the first use of a new example value. In that case the argument value from the original scenario text is used.
@@ -193,11 +201,46 @@ For now, variable data considers strict equivalence classes only. This means tha
 
 By default, trace generation is random. The random seed used for the trace is logged by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
 
-```
+```robotframework
 Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 ```
 
 Using `seed=new` will force generation of a new reusable seed and is identical to omitting the seed argument. To completely bypass seed generation and use the system's random source, use `seed=None`. This has even more variation but does not produce a reusable seed.
+
+### Graphs
+
+A graph can be included in the log file to visualise how scenarios are linked. This helps in understanding a test suite's structure and reveals alternative paths that did not make it into the final trace.
+
+To enable graph generation, some extra dependencies must be installed: `pip install robotframework-mbt[visualisation]`
+
+Generate the graph by setting the graph style for the model-based suite. The graph will be included in the Robot log file as part of the keyword's logging.
+
+```robotframework
+Treat this test suite Model-based  graph=scenario
+```
+
+Available graph styles:
+
+* scenario
+  * Compact view: Each scenario is shown as one node.
+* scenario-delta-value
+  * Expanded view: Scenarios can become multiple nodes if they affect system state in different ways.
+
+#### Exporting and importing graph data
+
+Graph data can be stored by setting an output directory using argument `export_graph_data`. This createss a json file, named after the test suite, in the selected folder. Any accessable path can be used. For your convenience, Robot Framework offers an [automatic variable](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#automatic-variables) `${OUTPUT_DIR}` that points to this run's output directory. The `export_graph_data` argument can be used independent of the `graph` argument.
+
+```robotframework
+Treat this test suite Model-based  export_graph_data=${OUTPUT_DIR}
+```
+
+To recreate a graph from previously exported graph data, use:
+
+```robotframework
+Show model graph from exported file    json_file_path=<file_path>    graph_style=scenario
+```
+
+This will draw a graph from the exported file, without the need to rerun the test suite. It is possible to select a different graph style than was used during the test run. If no graph style is selected, then the scenario graph style is used.
 
 ### Option management
 

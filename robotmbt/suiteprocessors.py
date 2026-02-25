@@ -32,18 +32,24 @@
 
 import copy
 import random
-from typing import Any
 
 from robot.api import logger
+from robot.errors import TimeoutExceeded
 
 from . import modeller
 from .modelspace import ModelSpace
 from .suitedata import Suite, Scenario
 from .tracestate import TraceState
 
+try:
+    from .visualise.visualiser import Visualiser
+except ImportError:
+    Visualiser = None
+
 
 class SuiteProcessors:
-    def echo(self, in_suite: Suite) -> Suite:
+    @staticmethod
+    def echo(in_suite: Suite) -> Suite:
         return in_suite
 
     def flatten(self, in_suite: Suite) -> Suite:
@@ -74,13 +80,14 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
-    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new') -> Suite:
+    def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
+                           graph: str = '', export_graph_data: str = '') -> Suite:
+        visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
         self.flat_suite = self.flatten(in_suite)
-
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
         self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
@@ -92,19 +99,30 @@ class SuiteProcessors:
         random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
 
         # a short trace without the need for repeating scenarios is preferred
-        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False)
-
+        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False, visualiser=visualiser)
         if not tracestate.coverage_reached():
             logger.debug("Direct trace not available. Allowing repetition of scenarios")
-            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True)
-            if not tracestate.coverage_reached():
-                raise Exception("Unable to compose a consistent suite")
+            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, visualiser=visualiser)
 
-        self.out_suite.scenarios = tracestate.get_trace()
+        if graph:
+            self._write_visualisation(visualiser, graph)
+        if export_graph_data:
+            self._export_graph_data(visualiser, export_graph_data)
+        if not tracestate.coverage_reached():
+            raise Exception("Unable to compose a consistent suite")
+
         self._report_tracestate_wrapup(tracestate)
+        self.out_suite.scenarios = tracestate.get_trace()
         return self.out_suite
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool) -> TraceState:
+    def draw_graph_from_export_file(self, file_path: str, graph_style: str):
+        if visualiser := self._init_visualiser():
+            visualiser.load_from_file(file_path)
+            logger.info(visualiser.generate_visualisation(graph_style), html=True)
+        else:
+            logger.info(f'Visualisation disabled due to initialisation failure.')
+
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, visualiser: Visualiser = None) -> TraceState:
         tracestate = TraceState(self.shuffled)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
@@ -118,9 +136,11 @@ class SuiteProcessors:
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if not candidate:  # No valid variant available in the current state
                     tracestate.reject_scenario(candidate_id)
+                    self._update_visualisation(visualiser, tracestate)
                     continue
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
+                self._update_visualisation(visualiser, tracestate)
                 self._report_tracestate_to_user(tracestate)
                 if len(tracestate) > previous_len:
                     logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
@@ -134,6 +154,8 @@ class SuiteProcessors:
                         modeller.rewind(tracestate, drought_recovery=True)
                         self._report_tracestate_to_user(tracestate)
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
+            self._update_visualisation(visualiser, tracestate)
+        self._update_visualisation(visualiser, tracestate)
         return tracestate
 
     @staticmethod
@@ -164,6 +186,7 @@ class SuiteProcessors:
     @staticmethod
     def _fail_on_step_errors(suite: Suite):
         error_list = suite.steps_with_errors()
+
         if error_list:
             err_msg = "Steps with errors in their model info found:\n"
             err_msg += '\n'.join([f"{s.keyword} [{s.model_info['error']}] used in {s.parent.name}"
@@ -183,12 +206,12 @@ class SuiteProcessors:
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
     @staticmethod
-    def _init_randomiser(seed: str | int | bytes | bytearray):
+    def _init_randomiser(seed: str | int | bytes | bytearray | None):
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':
             logger.info(
-                f"Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
+                "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
@@ -220,3 +243,47 @@ class SuiteProcessors:
             words.append(string)
         seed = '-'.join(words)
         return seed
+
+    @staticmethod
+    def _init_visualiser(name: str = '') -> Visualiser:
+        global Visualiser
+        if Visualiser is None:
+            Visualiser = False
+            logger.warn(f'Visualisation requested, but required dependencies are not installed. '
+                        'Refer to the README on how to install these dependencies. ')
+        return Visualiser(name) if Visualiser else None
+
+    @staticmethod
+    def _update_visualisation(visualiser, tracestate: TraceState):
+        if visualiser:
+            try:
+                visualiser.update_trace(tracestate)
+            except TimeoutExceeded:
+                raise
+            except Exception as e:
+                logger.debug(f'Could not update visualisation due to error!\n{e}')
+
+    @staticmethod
+    def _write_visualisation(visualiser, graph_style: str):
+        if visualiser:
+            try:
+                text = visualiser.generate_visualisation(graph_style)
+                logger.info(text, html=True)
+            except TimeoutExceeded:
+                raise
+            except Exception as e:
+                logger.debug(f'Could not generate visualisation due to error!\n{e}')
+        else:
+            logger.info("Graph skipped due to prior failure")
+
+    @staticmethod
+    def _export_graph_data(visualiser, export_dir):
+        if visualiser:
+            try:
+                file_name = visualiser.export_to_file(export_dir)
+                logger.info(f"Graph data stored in file: {file_name}")
+            except TimeoutExceeded:
+                raise
+            except Exception as e:
+                logger.info("Could not export visualisation due to failure.")
+                logger.debug(f"Export error:\n{e}")
