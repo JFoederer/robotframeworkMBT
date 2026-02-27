@@ -30,6 +30,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import random
+
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 
@@ -94,16 +96,17 @@ class TraceState:
     def get_trace(self) -> list[Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self, retry: bool = False):
-        for i in self.c_pool:
-            if i not in self._tried[-1] and not self.is_refinement_active(i) and self.count(i) == 0:
-                return i
-        if not retry:
+    def next_candidate(self, retry: bool = False, randomise: bool = False):
+        untried_candidates = [i for i in self.c_pool if i not in self._tried[-1]
+                              and not self.is_refinement_active(i)]
+        uncovered_candidates = [i for i in untried_candidates if self.count(i) == 0]
+
+        if uncovered_candidates:
+            return random.choice(uncovered_candidates) if randomise else uncovered_candidates[0]
+        elif not retry or not untried_candidates:
             return None
-        for i in self.c_pool:
-            if i not in self._tried[-1] and not self.is_refinement_active(i):
-                return i
-        return None
+        else:
+            return random.choice(untried_candidates) if randomise else untried_candidates[0]
 
     def count(self, index: int) -> int:
         """
