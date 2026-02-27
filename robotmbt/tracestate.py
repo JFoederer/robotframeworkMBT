@@ -80,6 +80,14 @@ class TraceState:
     def active_refinements(self):
         return self._open_refinements[:]
 
+    def copy(self):
+        cp = TraceState(self.c_pool.keys())
+        cp.c_pool.update(self.c_pool)
+        cp._tried = [triedlist[:] for triedlist in self._tried]
+        cp._snapshots = self._snapshots[:]
+        cp._open_refinements = self._open_refinements[:]
+        return cp
+
     def coverage_reached(self):
         return all(self.c_pool.values())
 
