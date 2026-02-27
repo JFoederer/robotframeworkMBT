@@ -45,6 +45,14 @@ class TraceSnapShot:
         self._model: ModelSpace = model_state.copy()
         self.coverage_drought: int = drought
 
+    def copy(self):
+        cp = TraceState(self.c_pool.keys())
+        cp.c_pool.update(self.c_pool)
+        cp._tried = [triedlist[:] for triedlist in self._tried]
+        cp._snapshots = self._snapshots[:]
+        cp._open_refinements = self._open_refinements[:]
+        return cp
+
     @property
     def model(self) -> ModelSpace:
         return self._model.copy()
