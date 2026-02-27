@@ -122,7 +122,7 @@ class SuiteProcessors:
         else:
             logger.info(f'Visualisation disabled due to initialisation failure.')
 
-    def _pre_explore_paths(self):
+    def _pre_explore_paths(self) -> list[list[int]]:
         id_list = [s.src_id for s in self.scenarios]
         random.shuffle(id_list)  # pre-shuffle to prevent scenario 1 from always getting first prio
         tracestates = []
@@ -178,12 +178,12 @@ class SuiteProcessors:
         return suggestions
 
     @staticmethod
-    def _longest_trace(tracestate_list):
+    def _longest_trace(tracestate_list: list[TraceState]) -> TraceState:
         lengths = [len(ts) for ts in tracestate_list]
         return tracestate_list[lengths.index(max(lengths))]
 
     @staticmethod
-    def _last_new_coverage(tracestate_list):
+    def _last_new_coverage(tracestate_list: list[TraceState]) -> TraceState:
         ids = []
         last_trace = tracestate_list[0]
         for tracestate in tracestate_list:
@@ -194,7 +194,7 @@ class SuiteProcessors:
         return last_trace
 
     @staticmethod
-    def _unreached_scenarios(tracestate_list):
+    def _unreached_scenarios(tracestate_list: list[TraceState]) -> list[int]:
         total_coverage = dict().fromkeys(tracestate_list[0].c_pool, 0)
         for ts in tracestate_list:
             total_coverage = {k: total_coverage[k]+v for k, v in ts.c_pool.items()}

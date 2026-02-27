@@ -96,7 +96,7 @@ class TraceState:
     def get_trace(self) -> list[Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self, retry: bool=False, randomise=False):
+    def next_candidate(self, retry: bool = False, randomise: bool = False):
         untried_candidates = [i for i in self.c_pool if i not in self._tried[-1]
                               and not self.is_refinement_active(i)]
         uncovered_candidates = [i for i in untried_candidates if self.count(i) == 0]
