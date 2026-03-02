@@ -95,13 +95,10 @@ class SuiteProcessors:
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        self._prio_order = self._pre_explore_paths(visualiser)[0]
-
         # a short trace without the need for repeating scenarios is preferred
-        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False, randomise=False,
-                                                      visualiser=visualiser)
+        tracestate = self._search_direct_trace(visualiser)
         if not tracestate.coverage_reached():
-            logger.debug("Direct trace not available. Allowing repetition of scenarios")
+            logger.debug("Direct trace not discovered. Allowing repetition of scenarios")
             tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
                                                           visualiser=visualiser)
         if graph:
@@ -122,80 +119,92 @@ class SuiteProcessors:
         else:
             logger.info(f'Visualisation disabled due to initialisation failure.')
 
-    def _pre_explore_paths(self, visualiser: Visualiser = None) -> list[list[int]]:
+    def _search_direct_trace(self, visualiser: Visualiser = None) -> TraceState:
+        """
+        Try to find a direct trace (without repeated scenarios) by exploring multiple traces
+        with different priorities for selecting a scenario. If visualisation is active, then
+        per scenario at least one trace is constructed with that scenario having top priority,
+        giving it the best chance of early insertion with the least dependencies. Other
+        scenarios are randomised for further exploration. This gives a good (but not necessary
+        complete) picture of dependencies between scenarios.
+
+        If no direct trace is found after this first phase, additional attemps are made to
+        construct a direct trace based on the longest trace found so far and basedon the the
+        last trace that resulted in new coverage. If there is still no full trace found, no
+        further attemps are made and the last explored trace is returned.
+
+        If visualisation is inactive, the first discovered full direct trace is returned.
+        """
         id_list = [s.src_id for s in self.scenarios]
         random.shuffle(id_list)  # pre-shuffle to prevent scenario 1 from always getting first prio
         tracestates = []
         for prio_id in id_list:
-            # For each available id, give it pole position in the prio order and randomise the rest.
-            # The randomised bit will give some good variation and the prio_id will always be tried
-            # first giving more (not all) insight in its dependencies.
             scenarios = id_list[:]
             scenarios.remove(prio_id)
             random.shuffle(scenarios)
             scenarios.insert(0, prio_id)
-            logger.debug(f"Exploring with prio order {scenarios}")
-            tracestate = TraceState(scenarios)
-            self._update_visualisation(visualiser, tracestate)
-            count = 0
-            candidate_id = tracestate.next_candidate(retry=False, randomise=False)
-            while candidate_id is not None:
-                count += 1
-                candidate = self._select_scenario_variant(candidate_id, tracestate)
-                if candidate:  # No valid variant available in the current state
-                    modeller.try_to_fit_in_scenario(candidate, tracestate)
-                else:
-                    tracestate.reject_scenario(candidate_id)
-                self._update_visualisation(visualiser, tracestate)
-                candidate_id = tracestate.next_candidate(retry=False)
-            if tracestate.coverage_reached() and not visualiser:
-                return [scenarios]
+            tracestate = self._one_shot_trace(scenarios, visualiser)
             tracestates.append(tracestate)
-            logger.debug(f"Result trace: {tracestate.id_trace} "
-                         f"of length {len(tracestate)} after exploring {count} options.")
+            if tracestate.coverage_reached() and not visualiser:
+                return tracestate
 
-        # first suggested prio-order:
-        #    - all ids from src_id list of longest trace
-        #    - but all unreached scenarios (over all traces) are moved to the front
-        #    - and all unreached in this trace move into second place
-        unreached = self._unreached_scenarios(tracestates)
-        longest = self._longest_trace(tracestates)
-        first_suggestion = [id for id in longest.c_pool if id in unreached]
-        first_suggestion += [id for id in longest.c_pool if id not in first_suggestion and longest.count(id) == 0]
-        first_suggestion += [id for id in longest.c_pool if longest.count(id) > 0]
-        logger.debug(f"Prio order suggestion: {first_suggestion}")
+        tracestate = self._modified_longest_trace(tracestates, visualiser)
+        if tracestate.coverage_reached():
+            return tracestate
+        tracestates.append(tracestate)
+        tracestate = self._trace_from_last_new_coverage(tracestates, visualiser)
+        return tracestate
 
-        # second suggested prio-order:
-        #     - Take the last trace that saw a scenario inserted that had not been reached in any of the prior
-        #       traces. There may be a unique sequence in here to reach that scenario.
-        #     - reordering to insert unreached sceanrio is the same as with the first suggested prio-order
-        latest_new = self._last_new_coverage(tracestates)
-        second_suggestion = [id for id in latest_new.c_pool if id in unreached]
-        second_suggestion += [id for id in latest_new.c_pool
-                              if id not in second_suggestion and latest_new.count(id) == 0]
-        second_suggestion += [id for id in latest_new.c_pool if latest_new.count(id) > 0]
-
-        suggestions = [first_suggestion]
-        if first_suggestion != second_suggestion:
-            logger.debug(f"2nd suggestion: {second_suggestion}")
-            suggestions.append(second_suggestion)
-        return suggestions
-
-    @staticmethod
-    def _longest_trace(tracestate_list: list[TraceState]) -> TraceState:
+    def _modified_longest_trace(self, tracestate_list: list[TraceState], visualiser: Visualiser) -> TraceState:
+        """
+        Finds the longest trace from the provided list of traces, then creates a new one-shot
+        trace based on a new prio order following these rules:
+          - taking all ids from src_id list of longest trace
+          - but all unreached scenarios (over all traces) are moved to the front
+          - and all unreached in the selected trace move into second place
+        """
+        unreached = self._unreached_scenarios(tracestate_list)
         lengths = [len(ts) for ts in tracestate_list]
-        return tracestate_list[lengths.index(max(lengths))]
+        longest = tracestate_list[lengths.index(max(lengths))]
 
-    @staticmethod
-    def _last_new_coverage(tracestate_list: list[TraceState]) -> TraceState:
+        prio_order = [id for id in longest.c_pool if id in unreached]
+        prio_order += [id for id in longest.c_pool if id not in prio_order and longest.count(id) == 0]
+        prio_order += [id for id in longest.c_pool if longest.count(id) > 0]
+        return self._one_shot_trace(prio_order, visualiser)
+
+    def _trace_from_last_new_coverage(self, tracestate_list: list[TraceState], visualiser) -> TraceState:
+        """
+        From the list of traces, finds the last trace that inserted a scenario that had not
+        been reached before. The idea behind this is that maybe this last insertion was most
+        difficult to reach and this trace may contain a unique sequence for reaching that
+        scenario. This trace is than used as a base to try and create a full trace by
+        combining it with the last trace in the list, assumng that the last try is running
+        best try.
+        """
         ids = []
-        last_trace = tracestate_list[0]
+        latest_new = tracestate_list[0]
         for tracestate in tracestate_list:
             for id in [int(float(long_id)) for long_id in tracestate.id_trace]:
                 if id not in ids:
                     ids.append(id)
-                    last_trace = tracestate
-        return last_trace
+                    latest_new = tracestate
+        unreached_in_all = self._unreached_scenarios(tracestate_list)
+        not_in_trace = [id for id in latest_new.c_pool
+                        if id not in unreached_in_all and latest_new.count(id) == 0]
+        learned_from_best_try = [id for id in tracestate_list[-1].c_pool
+                                 if id in not_in_trace and tracestate_list[-1].count(id) > 0]
+        # The resulting prio order will be:
+        # - First all never-reached scenarios in randomized order
+        # - Then all scenarios that are part of neither the last-new nor best-try traces
+        # - Then all scenarios (in order) that are not part of last-new, but are part of the best-try
+        # - and finally all scenarios (in order) that uncovered the last new coverage
+        # Note that items earlier in the prio order are tried more often to get inserted
+        random.shuffle(unreached_in_all)
+        prio_order = unreached_in_all
+        prio_order += [id for id in not_in_trace if id not in learned_from_best_try]
+        prio_order += learned_from_best_try
+        prio_order += [id for id in latest_new.c_pool if latest_new.count(id) > 0]
+        return self._one_shot_trace(prio_order, visualiser)
 
     @staticmethod
     def _unreached_scenarios(tracestate_list: list[TraceState]) -> list[int]:
@@ -204,9 +213,30 @@ class SuiteProcessors:
             total_coverage = {k: total_coverage[k]+v for k, v in ts.c_pool.items()}
         return [id for id in total_coverage if total_coverage[id] == 0]
 
+    def _one_shot_trace(self, scenarios: list[int], visualiser: Visualiser) -> TraceState:
+        """
+        Given a list of scenario ids, construct a trace trying all scenarios in order until
+        a full trace is created, or until a deadend is reached. No rollbacks are done.
+        """
+        logger.debug(f"Exploring with prio order {scenarios}")
+        tracestate = TraceState(scenarios)
+        self._update_visualisation(visualiser, tracestate)
+        candidate_id = tracestate.next_candidate(retry=False, randomise=False)
+        while candidate_id is not None:
+            candidate = self._select_scenario_variant(candidate_id, tracestate)
+            if candidate:  # No valid variant available in the current state
+                modeller.try_to_fit_in_scenario(candidate, tracestate)
+            else:
+                tracestate.reject_scenario(candidate_id)
+            self._update_visualisation(visualiser, tracestate)
+            candidate_id = tracestate.next_candidate(retry=False)
+        logger.debug(f"Discovered trace ({len([id for id, count in tracestate.c_pool.items() if count > 0])} "
+                     f"scenarios): {tracestate.id_trace}")
+        return tracestate
+
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
                                     visualiser: Visualiser = None) -> TraceState:
-        tracestate = TraceState(self._prio_order)
+        tracestate = TraceState([s.src_id for s in self.scenarios])
         self._update_visualisation(visualiser, tracestate)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
