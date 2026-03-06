@@ -122,28 +122,34 @@ class SuiteProcessors:
     def _search_direct_trace(self, visualiser: Visualiser = None) -> TraceState:
         """
         Try to find a direct trace (without repeated scenarios) by exploring multiple traces
-        with different priorities for selecting a scenario. If visualisation is active, then
-        per scenario at least one trace is constructed with that scenario having top priority,
-        giving it the best chance of early insertion with the least dependencies. Other
-        scenarios are randomised for further exploration. This gives a good (but not necessary
-        complete) picture of dependencies between scenarios.
+        with different priorities for selecting a scenario. Each attempt a new set of scenarios
+        is moved to the front of the list, giving it the best chance of early insertion with the
+        least dependencies. Other scenarios are randomised for further exploration. This gives
+        a good (but not necessary complete) picture of dependencies between scenarios.
 
         If no direct trace is found after this first phase, additional attemps are made to
-        construct a direct trace based on the longest trace found so far and basedon the the
+        construct a direct trace based on the longest trace found so far and then based on the
         last trace that resulted in new coverage. If there is still no full trace found, no
         further attemps are made and the last explored trace is returned.
 
-        If visualisation is inactive, the first discovered full direct trace is returned.
+        If visualisation is inactive, then the first discovered full direct trace is returned.
+        If visualisation is active, then the first phase is always completed before returning.
         """
+        LOOPCOUNT = 7
         id_list = [s.src_id for s in self.scenarios]
         random.shuffle(id_list)  # pre-shuffle to prevent scenario 1 from always getting first prio
+        prio_chunks = [id_list[i::LOOPCOUNT] for i in range(LOOPCOUNT)]
         tracestates = []
-        for prio_id in id_list:
-            scenarios = id_list[:]
-            scenarios.remove(prio_id)
-            random.shuffle(scenarios)
-            scenarios.insert(0, prio_id)
+        for prio_ids in prio_chunks:
+            scenarios = prio_ids
+            other_scenarios = [s for s in id_list if s not in prio_ids]
+            random.shuffle(other_scenarios)
+            scenarios += other_scenarios
             tracestate = self._one_shot_trace(scenarios, visualiser)
+            tracestates.append(tracestate)
+            if tracestate.coverage_reached() and not visualiser:
+                return tracestate
+            tracestate = self._one_shot_using_experience(tracestates, visualiser)
             tracestates.append(tracestate)
             if tracestate.coverage_reached() and not visualiser:
                 return tracestate
@@ -218,7 +224,7 @@ class SuiteProcessors:
         Given a list of scenario ids, construct a trace trying all scenarios in order until
         a full trace is created, or until a deadend is reached. No rollbacks are done.
         """
-        logger.debug(f"Exploring with prio order {scenarios}")
+        logger.debug(f"Discovering with prio order {scenarios}")
         tracestate = TraceState(scenarios)
         self._update_visualisation(visualiser, tracestate)
         candidate_id = tracestate.next_candidate(retry=False, randomise=False)
@@ -233,6 +239,13 @@ class SuiteProcessors:
         logger.debug(f"Discovered trace ({len([id for id, count in tracestate.c_pool.items() if count > 0])} "
                      f"scenarios): {tracestate.id_trace}")
         return tracestate
+
+    def _one_shot_using_experience(self, tracestate_list, visualiser, target_index=-1):
+        never_reached = self._unreached_scenarios(tracestate_list)
+        random.shuffle(never_reached)
+        not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
+        prio_order = never_reached + not_in_target + tracestate_list[target_index].covered_ids
+        return self._one_shot_trace(prio_order, visualiser)
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
                                     visualiser: Visualiser = None) -> TraceState:

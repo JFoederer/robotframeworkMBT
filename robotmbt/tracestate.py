@@ -75,8 +75,28 @@ class TraceState:
         return self._snapshots[-1].coverage_drought if self._snapshots else 0
 
     @property
-    def id_trace(self):
+    def id_trace(self) -> list[str]:
+        """Trace of ids, including refinement digits. E.g. ['2.1', '1', '2.0']"""
         return [snap.id for snap in self._snapshots]
+
+    @property
+    def covered_ids(self) -> list[int]:
+        """Trace of scenario source ids in order of selection for insertion.
+           E.g. [2, 1, 3] for ['2.1', '1', '2.0', '3']"""
+        src_ids = [src_id for src_id in self.c_pool if self.count(src_id) > 0]
+        sorted_ids = []
+        while len(sorted_ids) < len(src_ids):
+            for snap in self._snapshots:
+                id = snap.scenario.src_id
+                if id in src_ids:
+                    sorted_ids.append(src_ids.pop(src_ids.index(id)))
+        return sorted_ids
+
+    @property
+    def not_in_trace(self) -> list[int]:
+        """List of scenario source ids that are not in the current trace.
+           Scenarios that are in refinement, but not concluded yet, are excluded."""
+        return [id for id in self.c_pool if self.count(id) == 0]
 
     @property
     def active_refinements(self):
