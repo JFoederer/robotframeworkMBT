@@ -135,10 +135,11 @@ class SuiteProcessors:
         If visualisation is inactive, then the first discovered full direct trace is returned.
         If visualisation is active, then the first phase is always completed before returning.
         """
-        LOOPCOUNT = 7
+        MAX_LOOPCOUNT = 7
         id_list = [s.src_id for s in self.scenarios]
+        loopcount = min(MAX_LOOPCOUNT, len(id_list))
         random.shuffle(id_list)  # pre-shuffle to prevent scenario 1 from always getting first prio
-        prio_chunks = [id_list[i::LOOPCOUNT] for i in range(LOOPCOUNT)]
+        prio_chunks = [id_list[i::loopcount] for i in range(loopcount)]
         tracestates = []
         for prio_ids in prio_chunks:
             scenarios = prio_ids
@@ -154,63 +155,37 @@ class SuiteProcessors:
             if tracestate.coverage_reached() and not visualiser:
                 return tracestate
 
-        tracestate = self._modified_longest_trace(tracestates, visualiser)
+        tracestate = self._one_shot_using_experience(tracestates, visualiser, self._longest_trace(tracestates))
         if tracestate.coverage_reached():
             return tracestate
         tracestates.append(tracestate)
-        tracestate = self._trace_from_last_new_coverage(tracestates, visualiser)
-        return tracestate
+        last_new = self._last_new_coverage(tracestates)
+        while True:  # while still discovering new coverage
+            tracestates.append(self._one_shot_using_experience(tracestates, visualiser, last_new))
+            last_new = self._last_new_coverage(tracestates)
+            if last_new != len(tracestates)-1:
+                break
+        return tracestates[self._longest_trace(tracestates)]
 
-    def _modified_longest_trace(self, tracestate_list: list[TraceState], visualiser: Visualiser) -> TraceState:
-        """
-        Finds the longest trace from the provided list of traces, then creates a new one-shot
-        trace based on a new prio order following these rules:
-          - taking all ids from src_id list of longest trace
-          - but all unreached scenarios (over all traces) are moved to the front
-          - and all unreached in the selected trace move into second place
-        """
-        unreached = self._unreached_scenarios(tracestate_list)
+    def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
         lengths = [len(ts) for ts in tracestate_list]
-        longest = tracestate_list[lengths.index(max(lengths))]
+        return lengths.index(max(lengths))
 
-        prio_order = [id for id in longest.c_pool if id in unreached]
-        prio_order += [id for id in longest.c_pool if id not in prio_order and longest.count(id) == 0]
-        prio_order += [id for id in longest.c_pool if longest.count(id) > 0]
-        return self._one_shot_trace(prio_order, visualiser)
-
-    def _trace_from_last_new_coverage(self, tracestate_list: list[TraceState], visualiser) -> TraceState:
+    def _last_new_coverage(self, tracestate_list: list[TraceState]) -> int:
         """
         From the list of traces, finds the last trace that inserted a scenario that had not
         been reached before. The idea behind this is that maybe this last insertion was most
         difficult to reach and this trace may contain a unique sequence for reaching that
-        scenario. This trace is than used as a base to try and create a full trace by
-        combining it with the last trace in the list, assumng that the last try is running
-        best try.
+        scenario.
         """
         ids = []
-        latest_new = tracestate_list[0]
-        for tracestate in tracestate_list:
+        latest_new = 0
+        for index, tracestate in enumerate(tracestate_list):
             for id in [int(float(long_id)) for long_id in tracestate.id_trace]:
                 if id not in ids:
                     ids.append(id)
-                    latest_new = tracestate
-        unreached_in_all = self._unreached_scenarios(tracestate_list)
-        not_in_trace = [id for id in latest_new.c_pool
-                        if id not in unreached_in_all and latest_new.count(id) == 0]
-        learned_from_best_try = [id for id in tracestate_list[-1].c_pool
-                                 if id in not_in_trace and tracestate_list[-1].count(id) > 0]
-        # The resulting prio order will be:
-        # - First all never-reached scenarios in randomized order
-        # - Then all scenarios that are part of neither the last-new nor best-try traces
-        # - Then all scenarios (in order) that are not part of last-new, but are part of the best-try
-        # - and finally all scenarios (in order) that uncovered the last new coverage
-        # Note that items earlier in the prio order are tried more often to get inserted
-        random.shuffle(unreached_in_all)
-        prio_order = unreached_in_all
-        prio_order += [id for id in not_in_trace if id not in learned_from_best_try]
-        prio_order += learned_from_best_try
-        prio_order += [id for id in latest_new.c_pool if latest_new.count(id) > 0]
-        return self._one_shot_trace(prio_order, visualiser)
+                    latest_new = index
+        return latest_new
 
     @staticmethod
     def _unreached_scenarios(tracestate_list: list[TraceState]) -> list[int]:
@@ -240,7 +215,16 @@ class SuiteProcessors:
                      f"scenarios): {tracestate.id_trace}")
         return tracestate
 
-    def _one_shot_using_experience(self, tracestate_list, visualiser, target_index=-1):
+    def _one_shot_using_experience(self, tracestate_list, visualiser, target_index=-1) -> TraceState:
+        """
+        target_index is the index in tracestate_list to use as prior experience. The next one-shot
+        is tried using a prio order following these rules:
+          - First all never-reached scenarios in randomized order,
+          - then all scenarios that are reachable, but are not part of the prior experience,
+          - and finally all scenarios (in order) that are part of the prior experience.
+
+        Note that items earlier in the prio order are tried more often to get inserted.
+        """
         never_reached = self._unreached_scenarios(tracestate_list)
         random.shuffle(never_reached)
         not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
