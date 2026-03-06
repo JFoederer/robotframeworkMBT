@@ -165,6 +165,11 @@ class SuiteProcessors:
             last_new = self._last_new_coverage(tracestates)
             if last_new != len(tracestates)-1:
                 break
+
+        unreached = self._unreached_scenarios(tracestates)
+        if unreached:
+            n = len(unreached)
+            logger.debug(f"{n} Scenario{'s' if n > 1 else ''} unreached: {unreached}")
         return tracestates[self._longest_trace(tracestates)]
 
     def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
@@ -189,10 +194,8 @@ class SuiteProcessors:
 
     @staticmethod
     def _unreached_scenarios(tracestate_list: list[TraceState]) -> list[int]:
-        total_coverage = dict().fromkeys(tracestate_list[0].c_pool, 0)
-        for ts in tracestate_list:
-            total_coverage = {k: total_coverage[k]+v for k, v in ts.c_pool.items()}
-        return [id for id in total_coverage if total_coverage[id] == 0]
+        not_in_trace = [set(t.not_in_trace) for t in tracestate_list]
+        return list(not_in_trace[0].intersection(*not_in_trace[1:]))
 
     def _one_shot_trace(self, scenarios: list[int], visualiser: Visualiser) -> TraceState:
         """
@@ -211,8 +214,8 @@ class SuiteProcessors:
                 tracestate.reject_scenario(candidate_id)
             self._update_visualisation(visualiser, tracestate)
             candidate_id = tracestate.next_candidate(retry=False)
-        logger.debug(f"Discovered trace ({len([id for id, count in tracestate.c_pool.items() if count > 0])} "
-                     f"scenarios): {tracestate.id_trace}")
+        n = len(tracestate.covered_ids)
+        logger.debug(f"Discovered trace ({n} scenario{'s' if n > 1 else ''}): [{', '.join(tracestate.id_trace)}]")
         return tracestate
 
     def _one_shot_using_experience(self, tracestate_list, visualiser, target_index=-1) -> TraceState:

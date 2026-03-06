@@ -81,8 +81,8 @@ class TraceState:
 
     @property
     def covered_ids(self) -> list[int]:
-        """Trace of scenario source ids in order of selection for insertion.
-           E.g. [2, 1, 3] for ['2.1', '1', '2.0', '3']"""
+        """List of scenario source ids, in order of selection for insertion, that are part of the trace.
+           E.g. [2, 1, 3] for ['2.1', '1', '2.0', '1', '3']"""
         src_ids = [src_id for src_id in self.c_pool if self.count(src_id) > 0]
         sorted_ids = []
         while len(sorted_ids) < len(src_ids):
