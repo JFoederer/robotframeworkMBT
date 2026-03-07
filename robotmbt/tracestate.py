@@ -87,7 +87,7 @@ class TraceState:
         sorted_ids = []
         while len(sorted_ids) < len(src_ids):
             for snap in self._snapshots:
-                id = snap.scenario.src_id
+                id = int(snap.id.split('.')[0])
                 if id in src_ids:
                     sorted_ids.append(src_ids.pop(src_ids.index(id)))
         return sorted_ids
