@@ -38,7 +38,7 @@ class TestTraceState(unittest.TestCase):
     def test_an_empty_tracestate_doesnt_do_so_much(self):
         ts = TraceState([])
         self.assertIs(ts.next_candidate(), None)
-        self.assertIs(ts.coverage_reached(), True)
+        self.assertIs(ts.coverage_reached(), False)
         self.assertEqual(ts.get_trace(), [])
         self.assertIs(ts.can_rewind(), False)
 

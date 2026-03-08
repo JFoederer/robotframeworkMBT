@@ -110,8 +110,8 @@ class TraceState:
         cp._open_refinements = self._open_refinements[:]
         return cp
 
-    def coverage_reached(self):
-        return all(self.c_pool.values())
+    def coverage_reached(self) -> bool:
+        return all(self.c_pool.values()) if self.c_pool else False
 
     def get_trace(self) -> list[Scenario]:
         return [snap.scenario for snap in self._snapshots]
