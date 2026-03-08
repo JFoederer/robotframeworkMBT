@@ -82,7 +82,6 @@ class SuiteProcessors:
 
     def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
                            graph: str = '', export_graph_data: str = '') -> Suite:
-        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -95,18 +94,20 @@ class SuiteProcessors:
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        # a short trace without the need for repeating scenarios is preferred
-        tracestate = self._search_direct_trace()
-        if not tracestate.coverage_reached():
-            logger.debug("Direct trace not discovered. Allowing repetition of scenarios")
-            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True)
-        if graph:
-            self._write_visualisation(graph)
-        if export_graph_data:
-            self._export_graph_data(export_graph_data)
+        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
+        try:
+            # a short trace without the need for repeating scenarios is preferred
+            tracestate = self._search_direct_trace()
+            if not tracestate.coverage_reached():
+                logger.debug("Direct trace not discovered. Allowing repetition of scenarios")
+                tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True)
+        finally:  # Draw the graph even when a timeout or user interrupt occurs
+            if graph:
+                self._write_visualisation(graph)
+            if export_graph_data:
+                self._export_graph_data(export_graph_data)
         if not tracestate.coverage_reached():
             raise Exception("Unable to compose a consistent suite")
-
         self._report_tracestate_wrapup(tracestate)
         self.out_suite.scenarios = tracestate.get_trace()
         return self.out_suite
