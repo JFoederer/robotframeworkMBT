@@ -143,38 +143,56 @@ class SuiteProcessors:
         prio_chunks = [id_list[i::loopcount] for i in range(loopcount)]
         tracestates = []
         for prio_ids in prio_chunks:
-            scenarios = prio_ids
+            prio_order = prio_ids
             other_scenarios = [s for s in id_list if s not in prio_ids]
             random.shuffle(other_scenarios)
-            scenarios += other_scenarios
-            tracestate = self._one_shot_trace(scenarios)
-            tracestates.append(tracestate)
-            if tracestate.coverage_reached() and not self._visualiser:
-                return tracestate
-            tracestate = self._one_shot_using_experience(tracestates)
-            tracestates.append(tracestate)
-            if tracestate.coverage_reached() and not self._visualiser:
-                return tracestate
+            prio_order += other_scenarios
+            if self._is_duplicate_prio_order(tracestates, prio_order):
+                continue
+            tracestates.append(self._one_shot_trace(prio_order))
+            if tracestates[-1].coverage_reached() and not self._visualiser:
+                return tracestates[-1]
+            suggestion = self._create_suggestion_by_experience(tracestates)
+            if self._is_duplicate_prio_order(tracestates, suggestion):
+                continue
+            tracestates.append(self._one_shot_trace(suggestion))
+            if tracestates[-1].coverage_reached() and not self._visualiser:
+                return tracestates[-1]
 
-        tracestate = self._one_shot_using_experience(tracestates, self._longest_trace(tracestates))
-        if tracestate.coverage_reached():
-            return tracestate
-        tracestates.append(tracestate)
+        index_longest = self._longest_trace(tracestates)
+        if tracestates[index_longest].coverage_reached():
+            return tracestates[index_longest]
+        logger.debug("Trying to extend most promising traces")
+        prio_order = self._create_suggestion_by_experience(tracestates, index_longest)
+        if not self._is_duplicate_prio_order(tracestates, prio_order):
+            tracestates.append(self._one_shot_trace(prio_order))
+            if tracestates[-1].coverage_reached():
+                return tracestates[-1]
         last_new = self._last_new_coverage(tracestates)
         while True:  # while still discovering new coverage
-            tracestates.append(self._one_shot_using_experience(tracestates, last_new))
+            prio_order = self._create_suggestion_by_experience(tracestates, last_new)
+            if self._is_duplicate_prio_order(tracestates, prio_order):
+                break
+            tracestates.append(self._one_shot_trace(prio_order))
+            if tracestates[-1].coverage_reached():
+                return tracestates[-1]
             last_new = self._last_new_coverage(tracestates)
             if last_new != len(tracestates)-1:
-                break
+                break  # The new entry did not yield new coverage
 
-        unreached = self._unreached_scenarios(tracestates)
-        if unreached:
-            n = len(unreached)
-            logger.debug(f"{n} Scenario{'s' if n > 1 else ''} unreached: {unreached}")
-        return tracestates[self._longest_trace(tracestates)]
+        longest = tracestates[self._longest_trace(tracestates)]
+        not_in_trace = sorted(longest.not_in_trace)
+        unreached = sorted(self._unreached_scenarios(tracestates))
+        logger.debug(
+            f"Longest trace so far ({len(longest.covered_ids)} scenario{'s' if len(longest.covered_ids) != 1 else ''})"
+            f": [{', '.join(longest.id_trace)}]\n"
+            f"{len(not_in_trace)} Scenario{'s' if len(not_in_trace) != 1 else ''} not in this trace: {not_in_trace}\n"
+            f"{len(unreached)} Scenario{'s' if len(unreached) != 1 else ''} not in any trace: {unreached}")
+        return longest
 
     def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
-        lengths = [len(ts) for ts in tracestate_list]
+        """returns the index of the trace that covers the most scenarios"""
+        lengths = [len(ts.covered_ids) for ts in tracestate_list]
         return lengths.index(max(lengths))
 
     def _last_new_coverage(self, tracestate_list: list[TraceState]) -> int:
@@ -192,6 +210,10 @@ class SuiteProcessors:
                     ids.append(id)
                     latest_new = index
         return latest_new
+
+    @staticmethod
+    def _is_duplicate_prio_order(tracestate_list: list[TraceState], candidate_order) -> bool:
+        return any(ts.prio_order == candidate_order for ts in tracestate_list)
 
     @staticmethod
     def _unreached_scenarios(tracestate_list: list[TraceState]) -> list[int]:
@@ -216,13 +238,13 @@ class SuiteProcessors:
             self._update_visualisation(tracestate)
             candidate_id = tracestate.next_candidate(retry=False)
         n = len(tracestate.covered_ids)
-        logger.debug(f"Discovered trace ({n} scenario{'s' if n > 1 else ''}): [{', '.join(tracestate.id_trace)}]")
+        logger.debug(f"Discovered trace ({n} scenario{'s' if n != 1 else ''}): [{', '.join(tracestate.id_trace)}]")
         return tracestate
 
-    def _one_shot_using_experience(self, tracestate_list, target_index=-1) -> TraceState:
+    def _create_suggestion_by_experience(self, tracestate_list, target_index=-1) -> list[int]:
         """
-        target_index is the index in tracestate_list to use as prior experience. The next one-shot
-        is tried using a prio order following these rules:
+        target_index is the index in tracestate_list to use as prior experience. The next
+        suggestion is a prio order created using the following rules:
           - First all never-reached scenarios in randomized order,
           - then all scenarios that are reachable, but are not part of the prior experience,
           - and finally all scenarios (in order) that are part of the prior experience.
@@ -232,8 +254,7 @@ class SuiteProcessors:
         never_reached = self._unreached_scenarios(tracestate_list)
         random.shuffle(never_reached)
         not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
-        prio_order = never_reached + not_in_target + tracestate_list[target_index].covered_ids
-        return self._one_shot_trace(prio_order)
+        return never_reached + not_in_target + tracestate_list[target_index].covered_ids
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False) -> TraceState:
         tracestate = TraceState([s.src_id for s in self.scenarios])

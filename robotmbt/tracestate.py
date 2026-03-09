@@ -61,12 +61,12 @@ class TraceState:
 
     @property
     def model(self) -> ModelSpace | None:
-        """returns the model as it is at the end of the current trace"""
+        """Returns the model as it is at the end of the current trace"""
         return self._snapshots[-1].model if self._snapshots else None
 
     @property
     def tried(self) -> tuple[int, ...]:
-        """returns the indices that were rejected or previously inserted at the current position"""
+        """Returns the indices that were rejected or previously inserted at the current position"""
         return tuple(self._tried[-1])
 
     @property
@@ -75,14 +75,24 @@ class TraceState:
         return self._snapshots[-1].coverage_drought if self._snapshots else 0
 
     @property
+    def prio_order(self):
+        """
+        Returns the priority order by which scenarios are selected when running without randomisation.
+        This is identical to the list of scenario indexes passed during construction.
+        """
+        return list(self.c_pool.keys())
+
+    @property
     def id_trace(self) -> list[str]:
         """Trace of ids, including refinement digits. E.g. ['2.1', '1', '2.0']"""
         return [snap.id for snap in self._snapshots]
 
     @property
     def covered_ids(self) -> list[int]:
-        """List of scenario source ids, in order of selection for insertion, that are part of the trace.
-           E.g. [2, 1, 3] for ['2.1', '1', '2.0', '1', '3']"""
+        """
+        List of scenario source ids, in order of selection for insertion, that are part of the trace.
+        E.g. [2, 1, 3] for ['2.1', '1', '2.0', '1', '3']
+        """
         src_ids = [src_id for src_id in self.c_pool if self.count(src_id) > 0]
         sorted_ids = []
         while len(sorted_ids) < len(src_ids):
@@ -94,8 +104,10 @@ class TraceState:
 
     @property
     def not_in_trace(self) -> list[int]:
-        """List of scenario source ids that are not in the current trace.
-           Scenarios that are in refinement, but not concluded yet, are excluded."""
+        """
+        List of scenario source ids (in priority order) that are not in the current trace.
+        Scenarios that are in refinement, but not concluded yet, are excluded.
+        """
         return [id for id in self.c_pool if self.count(id) == 0]
 
     @property

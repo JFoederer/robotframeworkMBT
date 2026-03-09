@@ -346,7 +346,7 @@ class TestTraceState(unittest.TestCase):
         self.assertEqual(ts.coverage_drought, 0)
 
     def test_trace_id_properties(self):
-        ts = TraceState([1, 2, 3, 4])
+        ts = TraceState([4, 1, 2, 3])
         ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
         ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
         ts.reject_scenario(3)
@@ -357,7 +357,8 @@ class TestTraceState(unittest.TestCase):
         ts.confirm_full_scenario(1, ScenarioStub(), ModelStub())
         self.assertEqual(ts.id_trace, ['3', '3', '1'])
         self.assertEqual(ts.covered_ids, [3, 1])
-        self.assertEqual(ts.not_in_trace, [2, 4])
+        self.assertEqual(ts.not_in_trace, [4, 2])
+        self.assertEqual(ts.prio_order, [4, 1, 2, 3])
 
 
 class TestPartialScenarios(unittest.TestCase):
