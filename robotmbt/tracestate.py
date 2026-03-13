@@ -53,6 +53,7 @@ class TraceSnapShot:
 class TraceState:
     def __init__(self, scenario_indexes: list[int]):
         self.c_pool: dict[int, int] = {index: 0 for index in scenario_indexes}
+        self.unreached = sorted(scenario_indexes)
         if len(self.c_pool) != len(scenario_indexes):
             raise ValueError("Scenarios must be uniquely identifiable")
         self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
@@ -117,6 +118,7 @@ class TraceState:
     def copy(self):
         cp = TraceState(self.c_pool.keys())
         cp.c_pool.update(self.c_pool)
+        cp.unreached = self.unreached[:]
         cp._tried = [triedlist[:] for triedlist in self._tried]
         cp._snapshots = self._snapshots[:]
         cp._open_refinements = self._open_refinements[:]
@@ -185,6 +187,8 @@ class TraceState:
     def confirm_full_scenario(self, index: int, scenario: Scenario, model: ModelSpace):
         c_drought = 0 if self.c_pool[index] == 0 else self.coverage_drought + 1
         self.c_pool[index] += 1
+        if index in self.unreached:
+            self.unreached.remove(index)
         if self.is_refinement_active(index):
             id = f"{index}.0"
             self._open_refinements.pop()

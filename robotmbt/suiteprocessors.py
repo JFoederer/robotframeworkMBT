@@ -99,7 +99,7 @@ class SuiteProcessors:
             # a short trace without the need for repeating scenarios is preferred
             tracestate = self._search_direct_trace()
             if not tracestate.coverage_reached():
-                logger.debug("Direct trace not discovered. Allowing repetition of scenarios")
+                logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
                 tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True)
         finally:  # Draw the graph even when a timeout or user interrupt occurs
             if graph:
@@ -186,8 +186,10 @@ class SuiteProcessors:
         logger.debug(
             f"Longest trace so far ({len(longest.covered_ids)} scenario{'s' if len(longest.covered_ids) != 1 else ''})"
             f": [{', '.join(longest.id_trace)}]\n"
-            f"{len(not_in_trace)} Scenario{'s' if len(not_in_trace) != 1 else ''} not in this trace: {not_in_trace}\n"
-            f"{len(unreached)} Scenario{'s' if len(unreached) != 1 else ''} not in any trace: {unreached}")
+            f"{len(not_in_trace)} Scenario{'s' if len(not_in_trace) != 1 else ''} not in this trace: "
+            f": [{', '.join([str(i) + '*' if i in unreached else str(i) for i in not_in_trace])}] "
+            "(Scenarios marked with * are not part of any trace)\n\n")
+        self.unreached = unreached
         return longest
 
     def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
@@ -258,6 +260,7 @@ class SuiteProcessors:
 
     def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False) -> TraceState:
         tracestate = TraceState([s.src_id for s in self.scenarios])
+        tracestate.unreached = self.unreached
         self._update_visualisation(tracestate)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
@@ -330,8 +333,9 @@ class SuiteProcessors:
 
     @staticmethod
     def _report_tracestate_to_user(tracestate: TraceState):
-        user_trace = f"[{', '.join(tracestate.id_trace)}]"
-        logger.debug(f"Trace: {user_trace} Reject: {list(tracestate.tried)}")
+        logger.debug(
+            f"Trace: [{', '.join(tracestate.id_trace)}] Reject: {list(tracestate.tried)} Pending: "
+            f"[{', '.join([str(i) + '*' if i in tracestate.unreached else str(i) for i in tracestate.not_in_trace])}]")
 
     @staticmethod
     def _report_tracestate_wrapup(tracestate: TraceState):

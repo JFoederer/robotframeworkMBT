@@ -358,6 +358,7 @@ class TestTraceState(unittest.TestCase):
         self.assertEqual(ts.id_trace, ['3', '3', '1'])
         self.assertEqual(ts.covered_ids, [3, 1])
         self.assertEqual(ts.not_in_trace, [4, 2])
+        self.assertEqual(ts.unreached, [4])
         self.assertEqual(ts.prio_order, [4, 1, 2, 3])
 
 
@@ -594,6 +595,7 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.id_trace, ['3.1', '4', '3.0', '5.1', '1.1', '6'])
         self.assertEqual(ts.covered_ids, [3, 4, 6])
         self.assertEqual(ts.not_in_trace, [1, 2, 5, 7])
+        self.assertEqual(ts.unreached, [5, 7])
 
 
 class ScenarioStub(str):
