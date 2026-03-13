@@ -53,9 +53,9 @@ class TraceSnapShot:
 class TraceState:
     def __init__(self, scenario_indexes: list[int]):
         self.c_pool: dict[int, int] = {index: 0 for index in scenario_indexes}
-        self.unreached = sorted(scenario_indexes)
         if len(self.c_pool) != len(scenario_indexes):
             raise ValueError("Scenarios must be uniquely identifiable")
+        self.unreached = sorted(scenario_indexes)
         self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
         self._snapshots: list[TraceSnapShot] = []  # Keeps details for elements in trace
         self._open_refinements: list[int] = []
@@ -66,9 +66,9 @@ class TraceState:
         return self._snapshots[-1].model if self._snapshots else None
 
     @property
-    def tried(self) -> tuple[int, ...]:
+    def tried(self) -> list[int]:
         """Returns the indices that were rejected or previously inserted at the current position"""
-        return tuple(self._tried[-1])
+        return list(self._tried[-1])
 
     @property
     def coverage_drought(self) -> int:

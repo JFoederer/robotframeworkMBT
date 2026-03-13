@@ -100,7 +100,8 @@ class SuiteProcessors:
             tracestate = self._search_direct_trace()
             if not tracestate.coverage_reached():
                 logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
-                tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True)
+                tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
+                                                              unreached_scenarios=tracestate.unreached)
         finally:  # Draw the graph even when a timeout or user interrupt occurs
             if graph:
                 self._write_visualisation(graph)
@@ -182,14 +183,13 @@ class SuiteProcessors:
 
         longest = tracestates[self._longest_trace(tracestates)]
         not_in_trace = sorted(longest.not_in_trace)
-        unreached = sorted(self._unreached_scenarios(tracestates))
+        longest.unreached = sorted(self._unreached_scenarios(tracestates))
         logger.debug(
             f"Longest trace so far ({len(longest.covered_ids)} scenario{'s' if len(longest.covered_ids) != 1 else ''})"
             f": [{', '.join(longest.id_trace)}]\n"
             f"{len(not_in_trace)} Scenario{'s' if len(not_in_trace) != 1 else ''} not in this trace: "
-            f": [{', '.join([str(i) + '*' if i in unreached else str(i) for i in not_in_trace])}] "
+            f": [{', '.join([str(i) + '*' if i in longest.unreached else str(i) for i in not_in_trace])}] "
             "(Scenarios marked with * are not part of any trace)\n\n")
-        self.unreached = unreached
         return longest
 
     def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
@@ -258,9 +258,11 @@ class SuiteProcessors:
         not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
         return never_reached + not_in_target + tracestate_list[target_index].covered_ids
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False) -> TraceState:
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
+                                    unreached_scenarios: list[int] = None) -> TraceState:
         tracestate = TraceState([s.src_id for s in self.scenarios])
-        tracestate.unreached = self.unreached
+        if unreached_scenarios:
+            tracestate.unreached = unreached_scenarios
         self._update_visualisation(tracestate)
         while not tracestate.coverage_reached():
             candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
@@ -270,6 +272,8 @@ class SuiteProcessors:
                 tail = modeller.rewind(tracestate)
                 logger.debug(f"Having to roll back up to {tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user(tracestate)
+                if tracestate.model:
+                    logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
             else:
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if not candidate:  # No valid variant available in the current state
@@ -279,8 +283,8 @@ class SuiteProcessors:
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
                 self._update_visualisation(tracestate)
-                self._report_tracestate_to_user(tracestate)
                 if len(tracestate) > previous_len:
+                    self._report_tracestate_to_user(tracestate)
                     logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing(tracestate):
@@ -334,7 +338,7 @@ class SuiteProcessors:
     @staticmethod
     def _report_tracestate_to_user(tracestate: TraceState):
         logger.debug(
-            f"Trace: [{', '.join(tracestate.id_trace)}] Reject: {list(tracestate.tried)} Pending: "
+            f"Trace: [{', '.join(tracestate.id_trace)}] Pending: "
             f"[{', '.join([str(i) + '*' if i in tracestate.unreached else str(i) for i in tracestate.not_in_trace])}]")
 
     @staticmethod

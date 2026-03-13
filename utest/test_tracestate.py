@@ -268,19 +268,19 @@ class TestTraceState(unittest.TestCase):
 
     def test_tried_property_starts_empty(self):
         ts = TraceState([1])
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
 
     def test_rejected_scenarios_are_tried(self):
         ts = TraceState([1])
         ts.reject_scenario(1)
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_confirmed_scenario_is_tried_and_triggers_next_step(self):
         ts = TraceState([1])
         ts.confirm_full_scenario(1, ScenarioStub('one'), ModelStub())
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
         ts.rewind()
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_can_iterate_over_tracestate_snapshots(self):
         ts = TraceState([1, 2, 3])
@@ -454,15 +454,15 @@ class TestPartialScenarios(unittest.TestCase):
         ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub())
         ts.reject_scenario(20)
         ts.reject_scenario(21)
-        self.assertEqual(ts.tried, (20, 21))
+        self.assertEqual(ts.tried, [20, 21])
         ts.rewind()
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
         ts.rewind()
-        self.assertEqual(ts.tried, (10, 11, 2))
+        self.assertEqual(ts.tried, [10, 11, 2])
         ts.reject_scenario(12)
-        self.assertEqual(ts.tried, (10, 11, 2, 12))
+        self.assertEqual(ts.tried, [10, 11, 2, 12])
         ts.rewind()
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_highest_part_after_first_part(self):
         ts = TraceState([1])
@@ -526,9 +526,9 @@ class TestPartialScenarios(unittest.TestCase):
     def test_partial_scenario_is_tried_without_finishing(self):
         ts = TraceState([1])
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub())
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
         ts.rewind()
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_get_last_snapshot_by_index(self):
         ts = TraceState([1])
