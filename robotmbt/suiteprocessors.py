@@ -337,9 +337,10 @@ class SuiteProcessors:
 
     @staticmethod
     def _report_tracestate_to_user(tracestate: TraceState):
-        logger.debug(
-            f"Trace: [{', '.join(tracestate.id_trace)}] Pending: "
-            f"[{', '.join([str(i) + '*' if i in tracestate.unreached else str(i) for i in tracestate.not_in_trace])}]")
+        logger.debug(f"Trace: [{', '.join(tracestate.id_trace)}] "
+                     f"Pending: [{', '.join([str(i) + '*' if i in tracestate.unreached else str(i)
+                                             for i in tracestate.not_in_trace])}]"
+                     f"{' Rejected: ' + str(tracestate.tried) if tracestate.tried else ''}")
 
     @staticmethod
     def _report_tracestate_wrapup(tracestate: TraceState):

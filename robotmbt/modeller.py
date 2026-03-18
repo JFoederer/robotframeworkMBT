@@ -141,8 +141,8 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
 
     if not exit_conditions_processed:
         rewind(tracestate)  # Reject insterted scenario. Even though it fits, it is not a refinement.
-        logger.debug(f"Reconsidering scenario {inserted_refinement.src_id}, {inserted_refinement.name}, "
-                     f"did not meet refinement exit condition: {exit_conditions}")
+        logger.debug(f"Reconsidering scenario {inserted_refinement.src_id}, "
+                     f"refinement exit condition not met for scenario {refinement_tail.src_id}: {exit_conditions}")
         return
 
     model = tracestate.model
@@ -157,7 +157,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
     elif not remainder:
         model.end_scenario_scope()
         tracestate.confirm_full_scenario(tail_inserted.src_id, tail_inserted, model)
-        logger.debug(f"Scenario '{tail_inserted.name}' completed after refinement")
+        logger.debug(f"Scenario {tail_inserted.src_id} completed after refinement: {tail_inserted.name}")
         if tracestate.is_refinement_active():
             handle_refinement_exit(tail_inserted, tracestate)
     else:
@@ -232,7 +232,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
 
     # Update scenario with generated values
     if subs.solution:
-        logger.debug(f"Example variant generated with argument substitution: {subs}")
+        logger.debug(f"Example variant generated with argument substitution (↦ replaced by): {subs}")
     scenario.data_choices = subs
     for step in scenario.steps:
         if 'MOD' in step.model_info:
