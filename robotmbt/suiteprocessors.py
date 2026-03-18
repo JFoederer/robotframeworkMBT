@@ -354,9 +354,11 @@ class SuiteProcessors:
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':
+            random.seed()
             logger.info(
                 "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
+            random.seed()
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
