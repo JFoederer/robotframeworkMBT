@@ -25,14 +25,13 @@ jobs:
     - name: Install dependencies (without extra visualisation dependencies)
       run: |
         python -m pip install --upgrade pip           # upgrade pip to latest version
-        pip install .                                 # no additional [visualisation] dependencies
+        pip install .                                 # using the minimum installation
 
     - name: Run tests (without visualisation dependencies)
       run:  python run_tests.py
 
     - name: Install extra visualisation dependencies
-      run:  pip install ".[visualisation]"            # extra [visualisation] dependencies in pyproject.toml
+      run:  pip install .[full]
 
     - name: Run Tests (with visualisation dependencies)
       run:  python run_tests.py
-

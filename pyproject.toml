@@ -30,4 +30,4 @@ include = ["robotmbt*"]
 Homepage = "https://github.com/JFoederer/robotframeworkMBT"
 
 [project.optional-dependencies]
-visualisation = ["networkx", "bokeh", "grandalf", "jsonpickle"]
+full = ["networkx", "bokeh", "grandalf", "jsonpickle"]
