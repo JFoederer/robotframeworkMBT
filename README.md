@@ -24,7 +24,7 @@ RobotMBT offers features to cover both _when_ and _what_ variations.
 
 RobotMBT is suitable for sequencing complete scenarios, including action refinement for when-steps. Concrete example scenarios can be generalised for added data-driven variation. When all steps are properly annotated with modelling info, the library can resolve their dependencies and figure out the correct execution order. Each run a new test sequence is generated from the available options.
 
-To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without leftovers. The same scenario can be inserted multiple times if repetition helps to reach the entry condition for later scenarios.
+To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without leftovers. The same scenario can be inserted into the trace multiple times, creating loops, if repetition helps to reach the entry condition for later scenarios. Dead ends should be prevented, i.e., sequences from which there is no way forward and no way to loop back.
 
 ## Getting started
 
