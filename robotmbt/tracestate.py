@@ -30,6 +30,8 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import random
+
 from robotmbt.modelspace import ModelSpace
 from robotmbt.suitedata import Scenario
 
@@ -53,19 +55,20 @@ class TraceState:
         self.c_pool: dict[int, int] = {index: 0 for index in scenario_indexes}
         if len(self.c_pool) != len(scenario_indexes):
             raise ValueError("Scenarios must be uniquely identifiable")
+        self.unreached = sorted(scenario_indexes)
         self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
         self._snapshots: list[TraceSnapShot] = []  # Keeps details for elements in trace
         self._open_refinements: list[int] = []
 
     @property
     def model(self) -> ModelSpace | None:
-        """returns the model as it is at the end of the current trace"""
+        """Returns the model as it is at the end of the current trace"""
         return self._snapshots[-1].model if self._snapshots else None
 
     @property
-    def tried(self) -> tuple[int, ...]:
-        """returns the indices that were rejected or previously inserted at the current position"""
-        return tuple(self._tried[-1])
+    def tried(self) -> list[int]:
+        """Returns the indices that were rejected or previously inserted at the current position"""
+        return list(self._tried[-1])
 
     @property
     def coverage_drought(self) -> int:
@@ -73,29 +76,71 @@ class TraceState:
         return self._snapshots[-1].coverage_drought if self._snapshots else 0
 
     @property
-    def id_trace(self):
+    def prio_order(self):
+        """
+        Returns the priority order by which scenarios are selected when running without randomisation.
+        This is identical to the list of scenario indexes passed during construction.
+        """
+        return list(self.c_pool.keys())
+
+    @property
+    def id_trace(self) -> list[str]:
+        """Trace of ids, including refinement digits. E.g. ['2.1', '1', '2.0']"""
         return [snap.id for snap in self._snapshots]
+
+    @property
+    def covered_ids(self) -> list[int]:
+        """
+        List of scenario source ids, in order of selection for insertion, that are part of the trace.
+        E.g. [2, 1, 3] for ['2.1', '1', '2.0', '1', '3']
+        """
+        src_ids = [src_id for src_id in self.c_pool if self.count(src_id) > 0]
+        sorted_ids = []
+        while len(sorted_ids) < len(src_ids):
+            for snap in self._snapshots:
+                id = int(snap.id.split('.')[0])
+                if id in src_ids:
+                    sorted_ids.append(src_ids.pop(src_ids.index(id)))
+        return sorted_ids
+
+    @property
+    def not_in_trace(self) -> list[int]:
+        """
+        List of scenario source ids (in priority order) that are not in the current trace.
+        Scenarios that are in refinement, but not concluded yet, are excluded.
+        """
+        return [id for id in self.c_pool if self.count(id) == 0]
 
     @property
     def active_refinements(self):
         return self._open_refinements[:]
 
-    def coverage_reached(self):
-        return all(self.c_pool.values())
+    def copy(self):
+        cp = TraceState(self.c_pool.keys())
+        cp.c_pool.update(self.c_pool)
+        cp.unreached = self.unreached[:]
+        cp._tried = [triedlist[:] for triedlist in self._tried]
+        cp._snapshots = self._snapshots[:]
+        cp._open_refinements = self._open_refinements[:]
+        return cp
+
+    def coverage_reached(self) -> bool:
+        return all(self.c_pool.values()) if self.c_pool else False
 
     def get_trace(self) -> list[Scenario]:
         return [snap.scenario for snap in self._snapshots]
 
-    def next_candidate(self, retry: bool = False):
-        for i in self.c_pool:
-            if i not in self._tried[-1] and not self.is_refinement_active(i) and self.count(i) == 0:
-                return i
-        if not retry:
+    def next_candidate(self, retry: bool = False, randomise: bool = False):
+        untried_candidates = [i for i in self.c_pool if i not in self._tried[-1]
+                              and not self.is_refinement_active(i)]
+        uncovered_candidates = [i for i in untried_candidates if self.count(i) == 0]
+
+        if uncovered_candidates:
+            return random.choice(uncovered_candidates) if randomise else uncovered_candidates[0]
+        elif not retry or not untried_candidates:
             return None
-        for i in self.c_pool:
-            if i not in self._tried[-1] and not self.is_refinement_active(i):
-                return i
-        return None
+        else:
+            return random.choice(untried_candidates) if randomise else untried_candidates[0]
 
     def count(self, index: int) -> int:
         """
@@ -142,6 +187,8 @@ class TraceState:
     def confirm_full_scenario(self, index: int, scenario: Scenario, model: ModelSpace):
         c_drought = 0 if self.c_pool[index] == 0 else self.coverage_drought + 1
         self.c_pool[index] += 1
+        if index in self.unreached:
+            self.unreached.remove(index)
         if self.is_refinement_active(index):
             id = f"{index}.0"
             self._open_refinements.pop()

@@ -6,7 +6,7 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               included, the modifers will number the scenarios at random. The reproduced trace
 ...               must match for both the scenario order and the data order.
 Suite Setup       Treat this test suite Model-based    seed=iulr-vih-esycu-eyl-yfa
-Suite Teardown    Should be equal    ${trace}    H6G3E5I4D9F8J2B1A7C0
+Suite Teardown    Should be equal    ${trace}    H0J3G7F9E5C8A1I2D4B6
 Library           robotmbt
 
 *** Test Cases ***

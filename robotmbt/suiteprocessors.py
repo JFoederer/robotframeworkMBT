@@ -82,7 +82,6 @@ class SuiteProcessors:
 
     def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
                            graph: str = '', export_graph_data: str = '') -> Suite:
-        visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
@@ -95,54 +94,197 @@ class SuiteProcessors:
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
         self._init_randomiser(seed)
-        self.shuffled: list[int] = [s.src_id for s in self.scenarios]
-        random.shuffle(self.shuffled)  # Keep a single shuffle for all TraceStates (non-essential)
-
-        # a short trace without the need for repeating scenarios is preferred
-        tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=False, visualiser=visualiser)
-        if not tracestate.coverage_reached():
-            logger.debug("Direct trace not available. Allowing repetition of scenarios")
-            tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, visualiser=visualiser)
-
-        if graph:
-            self._write_visualisation(visualiser, graph)
-        if export_graph_data:
-            self._export_graph_data(visualiser, export_graph_data)
+        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
+        try:
+            # a short trace without the need for repeating scenarios is preferred
+            tracestate = self._search_direct_trace()
+            if not tracestate.coverage_reached():
+                logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
+                tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
+                                                              unreached_scenarios=tracestate.unreached)
+        finally:  # Draw the graph even when a timeout or user interrupt occurs
+            if graph:
+                self._write_visualisation(graph)
+            if export_graph_data:
+                self._export_graph_data(export_graph_data)
         if not tracestate.coverage_reached():
             raise Exception("Unable to compose a consistent suite")
-
         self._report_tracestate_wrapup(tracestate)
         self.out_suite.scenarios = tracestate.get_trace()
         return self.out_suite
 
     def draw_graph_from_export_file(self, file_path: str, graph_style: str):
-        if visualiser := self._init_visualiser():
-            visualiser.load_from_file(file_path)
-            logger.info(visualiser.generate_visualisation(graph_style), html=True)
+        self._visualiser = self._init_visualiser()
+        if self._visualiser:
+            self._visualiser.load_from_file(file_path)
+            logger.info(self._visualiser.generate_visualisation(graph_style), html=True)
         else:
             logger.info(f'Visualisation disabled due to initialisation failure.')
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, visualiser: Visualiser = None) -> TraceState:
-        tracestate = TraceState(self.shuffled)
+    def _search_direct_trace(self) -> TraceState:
+        """
+        Try to find a direct trace (without repeated scenarios) by exploring multiple traces
+        with different priorities for selecting a scenario. Each attempt a new set of scenarios
+        is moved to the front of the list, giving it the best chance of early insertion with the
+        least dependencies. Other scenarios are randomised for further exploration. This gives
+        a good (but not necessary complete) picture of dependencies between scenarios.
+
+        If no direct trace is found after this first phase, additional attemps are made to
+        construct a direct trace based on the longest trace found so far and then based on the
+        last trace that resulted in new coverage. If there is still no full trace found, no
+        further attemps are made and the last explored trace is returned.
+
+        If visualisation is inactive, then the first discovered full direct trace is returned.
+        If visualisation is active, then the first phase is always completed before returning.
+        """
+        MAX_LOOPCOUNT = 7
+        id_list = [s.src_id for s in self.scenarios]
+        loopcount = min(MAX_LOOPCOUNT, len(id_list))
+        random.shuffle(id_list)  # pre-shuffle to prevent scenario 1 from always getting first prio
+        prio_chunks = [id_list[i::loopcount] for i in range(loopcount)]
+        tracestates = []
+        for prio_ids in prio_chunks:
+            prio_order = prio_ids
+            other_scenarios = [s for s in id_list if s not in prio_ids]
+            random.shuffle(other_scenarios)
+            prio_order += other_scenarios
+            if self._is_duplicate_prio_order(tracestates, prio_order):
+                continue
+            tracestates.append(self._one_shot_trace(prio_order))
+            if tracestates[-1].coverage_reached() and not self._visualiser:
+                return tracestates[-1]
+            suggestion = self._create_suggestion_by_experience(tracestates)
+            if self._is_duplicate_prio_order(tracestates, suggestion):
+                continue
+            tracestates.append(self._one_shot_trace(suggestion))
+            if tracestates[-1].coverage_reached() and not self._visualiser:
+                return tracestates[-1]
+
+        index_longest = self._longest_trace(tracestates)
+        if tracestates[index_longest].coverage_reached():
+            return tracestates[index_longest]
+        logger.debug("Trying to extend most promising traces")
+        prio_order = self._create_suggestion_by_experience(tracestates, index_longest)
+        if not self._is_duplicate_prio_order(tracestates, prio_order):
+            tracestates.append(self._one_shot_trace(prio_order))
+            if tracestates[-1].coverage_reached():
+                return tracestates[-1]
+        last_new = self._last_new_coverage(tracestates)
+        while True:  # while still discovering new coverage
+            prio_order = self._create_suggestion_by_experience(tracestates, last_new)
+            if self._is_duplicate_prio_order(tracestates, prio_order):
+                break
+            tracestates.append(self._one_shot_trace(prio_order))
+            if tracestates[-1].coverage_reached():
+                return tracestates[-1]
+            last_new = self._last_new_coverage(tracestates)
+            if last_new != len(tracestates)-1:
+                break  # The new entry did not yield new coverage
+
+        longest = tracestates[self._longest_trace(tracestates)]
+        not_in_trace = sorted(longest.not_in_trace)
+        longest.unreached = sorted(self._unreached_scenarios(tracestates))
+        logger.debug(
+            f"Longest trace so far ({len(longest.covered_ids)} scenario{'s' if len(longest.covered_ids) != 1 else ''})"
+            f": [{', '.join(longest.id_trace)}]\n"
+            f"{len(not_in_trace)} Scenario{'s' if len(not_in_trace) != 1 else ''} not in this trace: "
+            f": [{', '.join([str(i) + '*' if i in longest.unreached else str(i) for i in not_in_trace])}] "
+            "(Scenarios marked with * are not part of any trace)\n\n")
+        return longest
+
+    def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
+        """returns the index of the trace that covers the most scenarios"""
+        lengths = [len(ts.covered_ids) for ts in tracestate_list]
+        return lengths.index(max(lengths))
+
+    def _last_new_coverage(self, tracestate_list: list[TraceState]) -> int:
+        """
+        From the list of traces, finds the last trace that inserted a scenario that had not
+        been reached before. The idea behind this is that maybe this last insertion was most
+        difficult to reach and this trace may contain a unique sequence for reaching that
+        scenario.
+        """
+        ids = []
+        latest_new = 0
+        for index, tracestate in enumerate(tracestate_list):
+            for id in [int(float(long_id)) for long_id in tracestate.id_trace]:
+                if id not in ids:
+                    ids.append(id)
+                    latest_new = index
+        return latest_new
+
+    @staticmethod
+    def _is_duplicate_prio_order(tracestate_list: list[TraceState], candidate_order) -> bool:
+        return any(ts.prio_order == candidate_order for ts in tracestate_list)
+
+    @staticmethod
+    def _unreached_scenarios(tracestate_list: list[TraceState]) -> list[int]:
+        not_in_trace = [set(t.not_in_trace) for t in tracestate_list]
+        return list(not_in_trace[0].intersection(*not_in_trace[1:]))
+
+    def _one_shot_trace(self, scenarios: list[int]) -> TraceState:
+        """
+        Given a list of scenario ids, construct a trace trying all scenarios in order until
+        a full trace is created, or until a deadend is reached. No rollbacks are done.
+        """
+        logger.debug(f"Discovering with prio order {scenarios}")
+        tracestate = TraceState(scenarios)
+        self._update_visualisation(tracestate)
+        candidate_id = tracestate.next_candidate(retry=False, randomise=False)
+        while candidate_id is not None:
+            candidate = self._select_scenario_variant(candidate_id, tracestate)
+            if candidate:  # No valid variant available in the current state
+                modeller.try_to_fit_in_scenario(candidate, tracestate)
+            else:
+                tracestate.reject_scenario(candidate_id)
+            self._update_visualisation(tracestate)
+            candidate_id = tracestate.next_candidate(retry=False)
+        n = len(tracestate.covered_ids)
+        logger.debug(f"Discovered trace ({n} scenario{'s' if n != 1 else ''}): [{', '.join(tracestate.id_trace)}]")
+        return tracestate
+
+    def _create_suggestion_by_experience(self, tracestate_list, target_index=-1) -> list[int]:
+        """
+        target_index is the index in tracestate_list to use as prior experience. The next
+        suggestion is a prio order created using the following rules:
+          - First all never-reached scenarios in randomized order,
+          - then all scenarios that are reachable, but are not part of the prior experience,
+          - and finally all scenarios (in order) that are part of the prior experience.
+
+        Note that items earlier in the prio order are tried more often to get inserted.
+        """
+        never_reached = self._unreached_scenarios(tracestate_list)
+        random.shuffle(never_reached)
+        not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
+        return never_reached + not_in_target + tracestate_list[target_index].covered_ids
+
+    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
+                                    unreached_scenarios: list[int] = None) -> TraceState:
+        tracestate = TraceState([s.src_id for s in self.scenarios])
+        if unreached_scenarios:
+            tracestate.unreached = unreached_scenarios
+        self._update_visualisation(tracestate)
         while not tracestate.coverage_reached():
-            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios)
+            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
                     break
                 tail = modeller.rewind(tracestate)
                 logger.debug(f"Having to roll back up to {tail.scenario.name if tail else 'the beginning'}")
                 self._report_tracestate_to_user(tracestate)
+                if tracestate.model:
+                    logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
             else:
                 candidate = self._select_scenario_variant(candidate_id, tracestate)
                 if not candidate:  # No valid variant available in the current state
                     tracestate.reject_scenario(candidate_id)
-                    self._update_visualisation(visualiser, tracestate)
+                    self._update_visualisation(tracestate)
                     continue
                 previous_len = len(tracestate)
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
-                self._update_visualisation(visualiser, tracestate)
-                self._report_tracestate_to_user(tracestate)
+                self._update_visualisation(tracestate)
                 if len(tracestate) > previous_len:
+                    self._report_tracestate_to_user(tracestate)
                     logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
                     self.DROUGHT_LIMIT = 50
                     if self.__last_candidate_changed_nothing(tracestate):
@@ -154,8 +296,8 @@ class SuiteProcessors:
                         modeller.rewind(tracestate, drought_recovery=True)
                         self._report_tracestate_to_user(tracestate)
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
-            self._update_visualisation(visualiser, tracestate)
-        self._update_visualisation(visualiser, tracestate)
+            self._update_visualisation(tracestate)
+        self._update_visualisation(tracestate)
         return tracestate
 
     @staticmethod
@@ -195,8 +337,9 @@ class SuiteProcessors:
 
     @staticmethod
     def _report_tracestate_to_user(tracestate: TraceState):
-        user_trace = f"[{', '.join(tracestate.id_trace)}]"
-        logger.debug(f"Trace: {user_trace} Reject: {list(tracestate.tried)}")
+        pending = ', '.join([str(i) + '*' if i in tracestate.unreached else str(i) for i in tracestate.not_in_trace])
+        logger.debug(f"Trace: [{', '.join(tracestate.id_trace)}] Pending: [{pending}]"
+                     f"{' Rejected: ' + str(tracestate.tried) if tracestate.tried else ''}")
 
     @staticmethod
     def _report_tracestate_wrapup(tracestate: TraceState):
@@ -210,9 +353,11 @@ class SuiteProcessors:
         if isinstance(seed, str):
             seed = seed.strip()
         if str(seed).lower() == 'none':
+            random.seed()
             logger.info(
                 "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
+            random.seed()
             new_seed = SuiteProcessors._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
@@ -244,8 +389,7 @@ class SuiteProcessors:
         seed = '-'.join(words)
         return seed
 
-    @staticmethod
-    def _init_visualiser(name: str = '') -> Visualiser:
+    def _init_visualiser(self, name: str = ''):
         global Visualiser
         if Visualiser is None:
             Visualiser = False
@@ -253,21 +397,19 @@ class SuiteProcessors:
                         'Refer to the README on how to install these dependencies. ')
         return Visualiser(name) if Visualiser else None
 
-    @staticmethod
-    def _update_visualisation(visualiser, tracestate: TraceState):
-        if visualiser:
+    def _update_visualisation(self, tracestate: TraceState):
+        if self._visualiser:
             try:
-                visualiser.update_trace(tracestate)
+                self._visualiser.update_trace(tracestate)
             except TimeoutExceeded:
                 raise
             except Exception as e:
                 logger.debug(f'Could not update visualisation due to error!\n{e}')
 
-    @staticmethod
-    def _write_visualisation(visualiser, graph_style: str):
-        if visualiser:
+    def _write_visualisation(self, graph_style: str):
+        if self._visualiser:
             try:
-                text = visualiser.generate_visualisation(graph_style)
+                text = self._visualiser.generate_visualisation(graph_style)
                 logger.info(text, html=True)
             except TimeoutExceeded:
                 raise
@@ -276,11 +418,10 @@ class SuiteProcessors:
         else:
             logger.info("Graph skipped due to prior failure")
 
-    @staticmethod
-    def _export_graph_data(visualiser, export_dir):
-        if visualiser:
+    def _export_graph_data(self, export_dir):
+        if self._visualiser:
             try:
-                file_name = visualiser.export_to_file(export_dir)
+                file_name = self._visualiser.export_to_file(export_dir)
                 logger.info(f"Graph data stored in file: {file_name}")
             except TimeoutExceeded:
                 raise

@@ -31,7 +31,7 @@
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, call
 
 from robotmbt.suiteprocessors import SuiteProcessors
 
@@ -48,19 +48,19 @@ class TestRandomSeeding(unittest.TestCase):
 
     def test_seed_none_keeps_system_seed(self, mock):
         SuiteProcessors._init_randomiser(None)
-        mock.assert_not_called()
+        mock.assert_called_with()
 
     def test_seed_none_as_string(self, mock):
         SuiteProcessors._init_randomiser("None")
-        mock.assert_not_called()
+        mock.assert_called_with()
 
     def test_seed_none_as_string_is_stripped(self, mock):
         SuiteProcessors._init_randomiser(" None\t")
-        mock.assert_not_called()
+        mock.assert_called_with()
 
     def test_seed_none_as_string_is_case_insensitive(self, mock):
         SuiteProcessors._init_randomiser("nOnE")
-        mock.assert_not_called()
+        mock.assert_called_with()
 
     def test_seed_new_generates_reusable_seed(self, mock):
         SuiteProcessors._init_randomiser("new")
@@ -81,6 +81,16 @@ class TestRandomSeeding(unittest.TestCase):
             self._is_generated_seed(new_seed)
             self.assertNotIn('***', new_seed.translate({ord(c): '*' for c in 'aeiouy'}))
             self.assertNotIn('***', new_seed.translate({ord(c): '*' for c in 'bcdfghjklmnpqrstvwxz'}))
+
+    def test_seed_is_reset_after_using_specific_seed(self, mock):
+        """
+        added to cover the issue where, after having rerun a specific trace, the next
+        generated seed was always the same.
+        """
+        SuiteProcessors._init_randomiser("specific seed")
+        SuiteProcessors._init_randomiser("new")
+        new_seed = mock.call_args.args[0]
+        mock.assert_has_calls([call("specific seed"), call(), call(new_seed)])
 
     def _is_generated_seed(self, arg):
         """

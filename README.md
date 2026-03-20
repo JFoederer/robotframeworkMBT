@@ -24,23 +24,27 @@ RobotMBT offers features to cover both _when_ and _what_ variations.
 
 RobotMBT is suitable for sequencing complete scenarios, including action refinement for when-steps. Concrete example scenarios can be generalised for added data-driven variation. When all steps are properly annotated with modelling info, the library can resolve their dependencies and figure out the correct execution order. Each run a new test sequence is generated from the available options.
 
-To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without leftovers. The same scenario can be inserted multiple times if repetition helps to reach the entry condition for later scenarios.
+To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without leftovers. The same scenario can be inserted into the trace multiple times, creating loops, if repetition helps to reach the entry condition for later scenarios. Dead ends should be prevented, i.e., sequences from which there is no way forward and no way to loop back.
 
 ## Getting started
 
-To get a feel for what this library can do, have a look at our [Titanic themed demo](https://github.com/JFoederer/robotframeworkMBT/tree/main/demo/Titanic), which is executable as a [Robot framework](https://robotframework.org/) test suite.
-
 The recommended installation method is using [pip](http://pip-installer.org)
+
+    pip install --upgrade robotframework-mbt[full]
+
+The full installation includes additional graphical dependencies to help during model creation. These are optional. The minimum installation includes everything you need to create and run model-based test suites.
 
     pip install --upgrade robotframework-mbt
 
-After installation include `robotmbt` as library in your robot file to get access to the new functionality. To run your test suite model-based, use the __Treat this test suite model-based__ keyword as suite setup. Check the _How to model_ section to learn how to make your scenarios suitable for running model-based.
+After installation, include `robotmbt` as library in your robot file to get access to the new functionality. To run your test suite model-based, use the __Treat this test suite model-based__ keyword as suite setup. Check the _How to model_ section to learn how to make your scenarios suitable for running model-based.
 
 ```robotframework
 *** Settings ***
 Library        robotmbt
 Suite Setup    Treat this test suite model-based
 ```
+
+To get a feel for what this library can do, have a look at our [Titanic themed demo](https://github.com/JFoederer/robotframeworkMBT/tree/main/demo/Titanic), which is executable as a [Robot framework](https://robotframework.org/) test suite.
 
 ## How to model
 
@@ -211,13 +215,13 @@ Using `seed=new` will force generation of a new reusable seed and is identical t
 
 A graph can be included in the log file to visualise how scenarios are linked. This helps in understanding a test suite's structure and reveals alternative paths that did not make it into the final trace.
 
-To enable graph generation, some extra dependencies must be installed: `pip install robotframework-mbt[visualisation]`
-
 Generate the graph by setting the graph style for the model-based suite. The graph will be included in the Robot log file as part of the keyword's logging.
 
 ```robotframework
 Treat this test suite Model-based  graph=scenario
 ```
+
+_Note_: The graphing functionality requires the _full_ installation package: `pip install robotframework-mbt[full]`
 
 Available graph styles:
 

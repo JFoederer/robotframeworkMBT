@@ -14,9 +14,9 @@ Documentation     This suite uses the `seed` argument to reproduce a previously 
 ...               The looping part is enhanced with refinement. The high-level scenario includes
 ...               a data choice by using step modifiers. The lower level includes a path choice.
 ...               Both low-level scenarios are equally valid, the only difference is that the data
-...               choice is included either once or twice.
-Suite Setup       Treat this test suite Model-based    seed=gujuqt-iakm-oexo-xnu-huba
-Suite Teardown    Should be equal    ${trace}    ATQQPRSPRPXY
+...               choice is included either once (single letter) or twice (letter repeated).
+Suite Setup       Treat this test suite Model-based    seed=efyuti-oan-naimfe-noelua-ler
+Suite Teardown    Should be equal    ${trace}    ATTSPRRPPXY
 Library           robotmbt
 
 *** Test Cases ***

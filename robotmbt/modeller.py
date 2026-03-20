@@ -57,11 +57,11 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
     elif not remainder:  # the scenario processed in full
         model.end_scenario_scope()
         tracestate.confirm_full_scenario(inserted.src_id, inserted, model)
-        logger.debug(f"Inserted scenario {inserted.src_id}, {inserted.name}")
+        logger.debug(f"Scenario {inserted.src_id} inserted: {inserted.name}")
         if tracestate.is_refinement_active():
             handle_refinement_exit(inserted, tracestate)
     else:  # the scenario is split into two parts, ready for refinement
-        logger.debug(f"Partially inserted scenario {inserted.src_id}, {inserted.name}\n"
+        logger.debug(f"Scenario {inserted.src_id} partially inserted: {inserted.name}\n"
                      f"Refinement needed at step: {remainder.steps[1]}")
         inserted.name = f"{inserted.name} (part {tracestate.highest_part(inserted.src_id)+1})"
         tracestate.push_partial_scenario(inserted.src_id, inserted, model, remainder)
@@ -79,12 +79,12 @@ def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, S
                         part1, part2 = split_for_refinement(scenario, step)
                         return part1, part2, dict()
                     else:
-                        return None, None, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
+                        return None, None, dict(fail_msg=f"Rejecting scenario {scenario.src_id}, "
                                                 f"{scenario.name}, due to step '{step}': [{expr}] is False")
             except TimeoutExceeded:
                 raise
             except Exception as err:
-                return None, None, dict(fail_msg=f"Unable to insert scenario {scenario.src_id}, "
+                return None, None, dict(fail_msg=f"Rejecting scenario {scenario.src_id}, "
                                         f"{scenario.name}, due to step '{step}': [{expr}] {err}")
     return scenario.copy(), None, dict()
 
@@ -141,8 +141,8 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
 
     if not exit_conditions_processed:
         rewind(tracestate)  # Reject insterted scenario. Even though it fits, it is not a refinement.
-        logger.debug(f"Reconsidering scenario {inserted_refinement.src_id}, {inserted_refinement.name}, "
-                     f"did not meet refinement exit condition: {exit_conditions}")
+        logger.debug(f"Reconsidering scenario {inserted_refinement.src_id}, "
+                     f"refinement exit condition not met for scenario {refinement_tail.src_id}: {exit_conditions}")
         return
 
     model = tracestate.model
@@ -157,7 +157,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
     elif not remainder:
         model.end_scenario_scope()
         tracestate.confirm_full_scenario(tail_inserted.src_id, tail_inserted, model)
-        logger.debug(f"Scenario '{tail_inserted.name}' completed after refinement")
+        logger.debug(f"Scenario {tail_inserted.src_id} completed after refinement: {tail_inserted.name}")
         if tracestate.is_refinement_active():
             handle_refinement_exit(tail_inserted, tracestate)
     else:
@@ -219,20 +219,20 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     except TimeoutExceeded:
         raise
     except Exception as err:
-        logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
+        logger.debug(f"Rejecting scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                      f"    In step {step}: {err}")
         return None
 
     try:
         subs.solve()
     except ValueError as err:
-        logger.debug(f"Unable to insert scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
+        logger.debug(f"Rejecting scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                      f"    {err}: {subs}")
         return None
 
     # Update scenario with generated values
     if subs.solution:
-        logger.debug(f"Example variant generated with argument substitution: {subs}")
+        logger.debug(f"Example variant generated with argument substitution (↦ replaced by): {subs}")
     scenario.data_choices = subs
     for step in scenario.steps:
         if 'MOD' in step.model_info:

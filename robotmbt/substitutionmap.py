@@ -49,7 +49,7 @@ class SubstitutionMap:
 
     def __str__(self):
         src = self.solution or self.substitutions
-        return ", ".join([f"{k} ⤝ {v}" for k, v in src.items()])
+        return ", ".join([f"{k} ↦ {v}" for k, v in src.items()])
 
     def copy(self):
         new = SubstitutionMap()

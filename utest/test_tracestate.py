@@ -38,7 +38,7 @@ class TestTraceState(unittest.TestCase):
     def test_an_empty_tracestate_doesnt_do_so_much(self):
         ts = TraceState([])
         self.assertIs(ts.next_candidate(), None)
-        self.assertIs(ts.coverage_reached(), True)
+        self.assertIs(ts.coverage_reached(), False)
         self.assertEqual(ts.get_trace(), [])
         self.assertIs(ts.can_rewind(), False)
 
@@ -69,6 +69,9 @@ class TestTraceState(unittest.TestCase):
         ts.rewind()
         self.assertIs(ts.next_candidate(), None)
 
+    def test_scenarios_must_be_uniquely_identifiable(self):
+        self.assertRaises(ValueError, TraceState, [1, 2, 3, 2])
+
     def test_candidates_come_in_order_when_accepted(self):
         ts = TraceState([10, 20, 30])
         candidates = []
@@ -78,9 +81,6 @@ class TestTraceState(unittest.TestCase):
         candidates.append(ts.next_candidate())
         self.assertEqual(candidates, [10, 20, 30, None])
 
-    def test_scenarios_must_be_uniquely_identifiable(self):
-        self.assertRaises(ValueError, TraceState, [1, 2, 3, 2])
-
     def test_candidates_come_in_order_when_rejected(self):
         ts = TraceState([10, 20, 30])
         candidates = []
@@ -89,6 +89,17 @@ class TestTraceState(unittest.TestCase):
             ts.reject_scenario(candidates[-1])
         candidates.append(ts.next_candidate())
         self.assertEqual(candidates, [10, 20, 30, None])
+
+    def test_candidates_can_be_randomised(self):
+        FIXED_ORDER = [10, 20, 30]
+        candidates = FIXED_ORDER
+        while candidates == FIXED_ORDER:
+            ts = TraceState(FIXED_ORDER)
+            candidates = []
+            for _ in range(3):
+                candidates.append(ts.next_candidate(randomise=True))
+                ts.confirm_full_scenario(candidates[-1], ScenarioStub(), ModelStub())
+        self.assertNotEqual(candidates, FIXED_ORDER)
 
     def test_rejected_scenarios_are_candidates_for_new_positions(self):
         ts = TraceState([1, 2, 3])
@@ -125,6 +136,23 @@ class TestTraceState(unittest.TestCase):
         ts.reject_scenario(1)
         self.assertEqual(ts.next_candidate(retry=True), 2)
         self.assertEqual(ts.next_candidate(retry=False), None)
+
+    def test_unreached_scenarios_are_preferred_candidates_when_randomised(self):
+        ts = TraceState([10, 20, 30])
+        first = ts.next_candidate(retry=True, randomise=True)
+        ts.confirm_full_scenario(first, ScenarioStub(), ModelStub())
+        second = ts.next_candidate(retry=True, randomise=True)
+        self.assertNotEqual(first, second)
+        ts.reject_scenario(second)
+        third = ts.next_candidate(retry=True, randomise=True)
+        self.assertNotEqual(third, first)
+        self.assertNotEqual(third, second)
+        ts.reject_scenario(third)
+        new = ts.next_candidate(retry=True, randomise=True)
+        self.assertEqual(new, first)
+        ts.confirm_full_scenario(first, ScenarioStub(), ModelStub())
+        new = ts.next_candidate(retry=True, randomise=True)
+        self.assertNotEqual(new, first)
 
     def test_count_scenario_repetitions(self):
         ts = TraceState([1, 2])
@@ -240,19 +268,19 @@ class TestTraceState(unittest.TestCase):
 
     def test_tried_property_starts_empty(self):
         ts = TraceState([1])
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
 
     def test_rejected_scenarios_are_tried(self):
         ts = TraceState([1])
         ts.reject_scenario(1)
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_confirmed_scenario_is_tried_and_triggers_next_step(self):
         ts = TraceState([1])
         ts.confirm_full_scenario(1, ScenarioStub('one'), ModelStub())
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
         ts.rewind()
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_can_iterate_over_tracestate_snapshots(self):
         ts = TraceState([1, 2, 3])
@@ -316,6 +344,22 @@ class TestTraceState(unittest.TestCase):
         self.assertEqual(ts.coverage_drought, 1)
         ts.rewind()
         self.assertEqual(ts.coverage_drought, 0)
+
+    def test_trace_id_properties(self):
+        ts = TraceState([4, 1, 2, 3])
+        ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
+        ts.reject_scenario(3)
+        ts.confirm_full_scenario(2, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(1, ScenarioStub(), ModelStub())
+        ts.rewind()
+        ts.rewind()
+        ts.confirm_full_scenario(1, ScenarioStub(), ModelStub())
+        self.assertEqual(ts.id_trace, ['3', '3', '1'])
+        self.assertEqual(ts.covered_ids, [3, 1])
+        self.assertEqual(ts.not_in_trace, [4, 2])
+        self.assertEqual(ts.unreached, [4])
+        self.assertEqual(ts.prio_order, [4, 1, 2, 3])
 
 
 class TestPartialScenarios(unittest.TestCase):
@@ -410,15 +454,15 @@ class TestPartialScenarios(unittest.TestCase):
         ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub())
         ts.reject_scenario(20)
         ts.reject_scenario(21)
-        self.assertEqual(ts.tried, (20, 21))
+        self.assertEqual(ts.tried, [20, 21])
         ts.rewind()
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
         ts.rewind()
-        self.assertEqual(ts.tried, (10, 11, 2))
+        self.assertEqual(ts.tried, [10, 11, 2])
         ts.reject_scenario(12)
-        self.assertEqual(ts.tried, (10, 11, 2, 12))
+        self.assertEqual(ts.tried, [10, 11, 2, 12])
         ts.rewind()
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_highest_part_after_first_part(self):
         ts = TraceState([1])
@@ -482,9 +526,9 @@ class TestPartialScenarios(unittest.TestCase):
     def test_partial_scenario_is_tried_without_finishing(self):
         ts = TraceState([1])
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub())
-        self.assertEqual(ts.tried, ())
+        self.assertEqual(ts.tried, [])
         ts.rewind()
-        self.assertEqual(ts.tried, (1,))
+        self.assertEqual(ts.tried, [1])
 
     def test_get_last_snapshot_by_index(self):
         ts = TraceState([1])
@@ -511,6 +555,47 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.coverage_drought, 1)
         ts.confirm_full_scenario(2, ScenarioStub('two remainder'), ModelStub())
         self.assertEqual(ts.coverage_drought, 0)
+
+    def test_tracestates_can_be_copied(self):
+        ts = TraceState([1, 2, 3])
+        ts.confirm_full_scenario(1, 'one', {})
+        ts.confirm_full_scenario(2, 'two', {})
+        cp = ts.copy()
+        self.assertEqual(ts.c_pool, cp.c_pool)
+        self.assertEqual(ts.tried, cp.tried)
+        self.assertEqual(ts.active_refinements, cp.active_refinements)
+        self.assertEqual(ts[-1], cp[-1])
+
+    def test_tracestate_copies_are_independent(self):
+        ts = TraceState([1, 2, 3])
+        ts.confirm_full_scenario(1, 'one', {})
+        ts.confirm_full_scenario(2, 'two', {})
+        cp = ts.copy()
+        cp.push_partial_scenario(3, 'three', {})
+        self.assertNotEqual(ts.active_refinements, cp.active_refinements)
+        cp.confirm_full_scenario(3, 'two', {})
+        self.assertEqual(len(cp), len(ts)+2)
+        self.assertNotEqual(ts.c_pool, cp.c_pool)
+        cp.rewind()
+        self.assertIn(3, cp.tried)
+        self.assertNotIn(3, ts.tried)
+
+    def test_trace_id_properties_for_partials(self):
+        ts = TraceState([1, 2, 3, 4, 5, 6, 7])
+        ts.push_partial_scenario(1, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(1, ScenarioStub(), ModelStub())
+        ts.rewind()
+        ts.push_partial_scenario(3, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(4, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
+        ts.push_partial_scenario(5, ScenarioStub(), ModelStub())
+        ts.push_partial_scenario(1, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(6, ScenarioStub(), ModelStub())
+        self.assertEqual(ts.id_trace, ['3.1', '4', '3.0', '5.1', '1.1', '6'])
+        self.assertEqual(ts.covered_ids, [3, 4, 6])
+        self.assertEqual(ts.not_in_trace, [1, 2, 5, 7])
+        self.assertEqual(ts.unreached, [5, 7])
 
 
 class ScenarioStub(str):

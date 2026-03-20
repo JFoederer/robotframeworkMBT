@@ -57,7 +57,7 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.confirm_full_scenario(candidate1, 'T1.0', {})
         ts.rewind()
         self.assertEqual(ts.get_trace(), [])
-        self.assertEqual(ts.tried, (candidate1,))
+        self.assertEqual(ts.tried, [candidate1])
         self.assertIs(ts.next_candidate(), candidate2)
         self.assertIs(ts.coverage_reached(), False)
 
@@ -69,7 +69,7 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.confirm_full_scenario(candidate2, 'B1', {})
         ts.rewind()
         self.assertEqual(ts.get_trace(), ['T1.1'])
-        self.assertEqual(ts.tried, (candidate2,))
+        self.assertEqual(ts.tried, [candidate2])
         self.assertIs(ts.next_candidate(), None)
         self.assertIs(ts.coverage_reached(), False)
 
@@ -98,7 +98,7 @@ class TestTraceStateRefinement(unittest.TestCase):
         ts.reject_scenario(inner2)
         ts.rewind()
         ts.rewind()
-        self.assertEqual(ts.tried, (inner1,))
+        self.assertEqual(ts.tried, [inner1])
         self.assertEqual(ts.next_candidate(), inner2)
         ts.confirm_full_scenario(inner2, 'B2', {})
         ts.push_partial_scenario(outer, 'T1.2', {})
@@ -212,7 +212,7 @@ class TestTraceStateRefinement(unittest.TestCase):
         self.assertIs(previous, None)
         self.assertIs(ts.coverage_reached(), False)
         self.assertEqual(ts.get_trace(), [])
-        self.assertEqual(ts.tried, (top_level,))
+        self.assertEqual(ts.tried, [top_level])
 
     def test_highest_parts_from_refined_scenario(self):
         ts = TraceState(range(4))
