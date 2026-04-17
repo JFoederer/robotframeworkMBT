@@ -102,6 +102,11 @@ class SuiteProcessors:
                 logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
                 tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
                                                               unreached_scenarios=tracestate.unreached)
+            else:
+                # The visualiser assumes that the last trace is the final selected trace, which is not always
+                # the case. Re-adding the selected trace to prevent the wrong path from being highlighted.
+                self._update_visualisation(TraceState(tracestate.prio_order))
+                self._update_visualisation(tracestate)
         finally:  # Draw the graph even when a timeout or user interrupt occurs
             if graph:
                 self._write_visualisation(graph)
