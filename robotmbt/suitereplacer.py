@@ -97,7 +97,7 @@ class SuiteReplacer:
         self.suite_gen = [iter(modelbased_suite.suites)]
         self.test_case_gen = [iter(modelbased_suite.scenarios)]
         self.__clearTestSuite(self.current_suite)
-        self.add_next_new()  # adds the first test case or subsuite. The rest will be added at runtime through listeners
+        self.add_next_new(self.current_suite)  # add first test case only. Others are added at runtime by listeners.
         self.mbt_anchor_suite = self.current_suite
 
     @keyword("Set model-based options")
@@ -173,23 +173,27 @@ class SuiteReplacer:
         suite.tests.clear()
         suite.suites.clear()
 
-    def add_next_new(self, suite_only: bool = False):
-        """Adds the next-in-line new subsuite or test case to the current running test suite"""
+    def add_next_new(self, target_suite: robot.model.TestSuite):
+        """
+        Adds the next-in-line test case to the current running test suite. When needed,
+        inserts all sub-suites leading up to the next test case.
+        """
         try:
             new_suite = next(self.suite_gen[-1])
             self.suite_gen.append(iter(new_suite.suites))
             self.test_case_gen.append(iter(new_suite.scenarios))
-            self.add_suite(new_suite)
+            new_target = self.add_suite(new_suite, target_suite)
+            self.add_next_new(new_target)
         except StopIteration:
-            if not suite_only:
-                try:
-                    self.add_test(next(self.test_case_gen[-1]))
-                except StopIteration:
-                    pass
+            try:
+                self.add_test(next(self.test_case_gen[-1]), target_suite)
+            except StopIteration:
+                pass
 
-    def add_suite(self, subsuite: Suite):
-        new_suite = self.current_suite.suites.create(name=subsuite.name)
-        new_suite.resource = self.current_suite.resource
+    @staticmethod
+    def add_suite(subsuite: Suite, target_suite: robot.model.TestSuite) -> robot.model.TestSuite:
+        new_suite = target_suite.suites.create(name=subsuite.name)
+        new_suite.resource = target_suite.resource
         if subsuite.setup:
             new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword,
                                              args=subsuite.setup.posnom_args_str,
@@ -198,9 +202,11 @@ class SuiteReplacer:
             new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword,
                                                 args=subsuite.teardown.posnom_args_str,
                                                 type='teardown')
+        return new_suite
 
-    def add_test(self, tc: Scenario):
-        new_tc = self.current_suite.tests.create(name=tc.name)
+    @staticmethod
+    def add_test(tc: Scenario, target_suite: robot.model.TestSuite):
+        new_tc = target_suite.tests.create(name=tc.name)
         if tc.setup:
             new_tc.setup = rmodel.Keyword(name=tc.setup.keyword,
                                           args=tc.setup.posnom_args_str,
@@ -217,9 +223,6 @@ class SuiteReplacer:
 
     def _start_suite(self, suite: robot.model.TestSuite, result):
         self.current_suite = suite
-        if not self.mbt_anchor_suite:
-            return
-        self.add_next_new()
 
     def _end_suite(self, suite: robot.model.TestSuite, result):
         if suite == self.mbt_anchor_suite:
@@ -229,12 +232,12 @@ class SuiteReplacer:
         self.suite_gen.pop()
         self.test_case_gen.pop()
         self.current_suite = self.current_suite.parent
-        self.add_next_new(suite_only=True)
+        self.add_next_new(self.current_suite)
 
     def _end_test(self, test_case: robot.model.TestCase, result):
         if not self.mbt_anchor_suite:
             return
         try:
-            self.add_test(next(self.test_case_gen[-1]))
+            self.add_test(next(self.test_case_gen[-1]), self.current_suite)
         except StopIteration:
             pass
