@@ -142,7 +142,7 @@ class SuiteReplacer:
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
-            scenario = Scenario(tc.name, parent=out_suite)
+            scenario = Scenario(tc.name, parent=out_suite, og_tc=tc)
             if tc.setup:
                 step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
@@ -206,7 +206,7 @@ class SuiteReplacer:
 
     @staticmethod
     def add_test(tc: Scenario, target_suite: robot.model.TestSuite):
-        new_tc = target_suite.tests.create(name=tc.name)
+        new_tc = tc.og_tc.copy(name=tc.name, body=[])
         if tc.setup:
             new_tc.setup = rmodel.Keyword(name=tc.setup.keyword,
                                           args=tc.setup.posnom_args_str,
@@ -220,6 +220,7 @@ class SuiteReplacer:
                 new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
             else:
                 new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
+        target_suite.tests.append(new_tc)
 
     def _start_suite(self, suite: robot.model.TestSuite, result):
         self.current_suite = suite

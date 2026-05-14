@@ -166,7 +166,7 @@ class TestScenarios(unittest.TestCase):
 
     @staticmethod
     def create_scenario(name, parent=None):
-        scenario = Scenario(name, parent)
+        scenario = Scenario(name, parent, RobotTestCaseStub())
         scenario.steps = TestSteps.create_steps(parent=scenario)
         return scenario
 
@@ -176,7 +176,7 @@ class TestScenarios(unittest.TestCase):
     def test_longname_with_parent_includes_both_names(self):
         def p(): return None  # Create an object to assign the name attribute to
         p.longname = 'long'
-        scenario = Scenario('name', p)
+        scenario = Scenario('name', p, RobotTestCaseStub())
         self.assertEqual(scenario.longname, 'long.name')
 
     def test_no_errors_when_ok(self):
@@ -489,6 +489,11 @@ class RobotKwStub:
         argument_names = []
         def map(x, y, z): return ([], [])
         def __iter__(_): return iter([])
+
+
+class RobotTestCaseStub:
+    def copy(self, **kwargs):
+        pass
 
 
 class StubStepArguments(list):
