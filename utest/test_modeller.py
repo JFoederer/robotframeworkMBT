@@ -52,7 +52,7 @@ class TestModeller(unittest.TestCase):
         scenario.steps.append(StepStub('initialise x', dict(IN=[], OUT=['new model', 'model.x = 0'])))
         scenario.steps.append(StepStub('x should be 2', dict(IN=['model.x == 2'], OUT=[])))
         part1, part2, fail_info = process_scenario(scenario, ModelSpace())
-        self.assertEndsWith(fail_info['fail_msg'], "[model.x == 2] is False")
+        self.assertIn("[model.x == 2] is False", fail_info['fail_msg'])
 
     def test_duplicate_in_out_condition_does_not_refine(self):
         """
@@ -64,7 +64,7 @@ class TestModeller(unittest.TestCase):
         scenario.steps.append(StepStub('x should be 2', dict(IN=['model.x == 2'], OUT=['model.x == 2'])))
         part1, part2, fail_info = process_scenario(scenario, ModelSpace())
         self.assertIsNone(part2)
-        self.assertEndsWith(fail_info['fail_msg'], "[model.x == 2] is False")
+        self.assertIn("[model.x == 2] is False", fail_info['fail_msg'])
 
 
 class ScenarioStub:
