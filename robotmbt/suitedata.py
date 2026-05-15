@@ -71,11 +71,14 @@ class Suite:
 
 
 class Scenario:
-    def __init__(self, name: str, parent: Suite | None = None):
+    def __init__(self, name: str, parent: Suite, og_tc):
         self.name: str = name
+        # Keeping any keyword references in the copy of the original test case has a large
+        # performance impact. That is why some attributes are set to None.
+        self.og_tc = og_tc.copy(body=[], parent=None, _setup=None, _teardown=None)
         # Parent scenario is kept for easy searching, processing and referencing
         # after steps and scenarios have been potentially moved around
-        self.parent: Suite | None = parent
+        self.parent: Suite = parent
         self.setup: Step | None = None  # Can be a single step or None
         self.teardown: Step | None = None  # Can be a single step or None
         self.steps: list[Step] = []

@@ -72,34 +72,31 @@ def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, S
         if 'error' in step.model_info:
             return None, None, dict(fail_masg=f"Error in scenario {scenario.name} "
                                     f"at step {step}: {step.model_info['error']}")
-        for expr in _relevant_expressions(step):
-            try:
-                if model.process_expression(expr, step.args) is False:
-                    if step.gherkin_kw in ['when', None] and expr in step.model_info['OUT']:
-                        part1, part2 = split_for_refinement(scenario, step)
-                        return part1, part2, dict()
-                    else:
+        if step.gherkin_kw is None and not step.model_info:
+            continue  # model info is optional for action keywords
+        if 'IN' not in step.model_info or 'OUT' not in step.model_info:
+            raise Exception(f"Model info incomplete for step: {step}")
+        try:
+            if step.gherkin_kw in ['given', 'when', None]:
+                for expr in step.model_info['IN']:
+                    if model.process_expression(expr, step.args) is False:
                         return None, None, dict(fail_msg=f"Rejecting scenario {scenario.src_id}, "
                                                 f"{scenario.name}, due to step '{step}': [{expr}] is False")
-            except TimeoutExceeded:
-                raise
-            except Exception as err:
-                return None, None, dict(fail_msg=f"Rejecting scenario {scenario.src_id}, "
-                                        f"{scenario.name}, due to step '{step}': [{expr}] {err}")
+            if step.gherkin_kw in ['when', 'then', None]:
+                for expr in step.model_info['OUT']:
+                    if model.process_expression(expr, step.args) is False:
+                        if step.gherkin_kw in ['when', None]:
+                            part1, part2 = split_for_refinement(scenario, step)
+                            return part1, part2, dict()
+                        else:
+                            return None, None, dict(fail_msg=f"Rejecting scenario {scenario.src_id}, "
+                                                    f"{scenario.name}, due to step '{step}': [{expr}] is False")
+        except TimeoutExceeded:
+            raise
+        except Exception as err:
+            return None, None, dict(fail_msg=f"Rejecting scenario {scenario.src_id}, "
+                                    f"{scenario.name}, due to step '{step}': [{expr}] {err}")
     return scenario.copy(), None, dict()
-
-
-def _relevant_expressions(step: Step) -> list[str]:
-    if step.gherkin_kw is None and not step.model_info:
-        return []  # model info is optional for action keywords
-    expressions = []
-    if 'IN' not in step.model_info or 'OUT' not in step.model_info:
-        raise Exception(f"Model info incomplete for step: {step}")
-    if step.gherkin_kw in ['given', 'when', None]:
-        expressions += step.model_info['IN']
-    if step.gherkin_kw in ['when', 'then', None]:
-        expressions += step.model_info['OUT']
-    return expressions
 
 
 def split_for_refinement(scenario: Scenario, step: Step) -> tuple[Scenario, Scenario]:

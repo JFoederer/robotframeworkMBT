@@ -107,6 +107,10 @@ There are three typical kinds of steps:
 * __Refinement__  
   Action refinement allows for hierarchy in scenarios by delegating implementation of a when-step to another scenario. The `:IN:` and `:OUT:` expressions of the when-step contain conditions (checks), but the `:IN:` and `:OUT:` expressions contradict. A single full scenario can be inserted to resolve the contradiction. For a scenario to be a valid refinement, all `:IN:` conditions must match at the current position and the pending `:OUT:` conditions must be satisfied after insertion. The step implementation should check and confirm the end state of the system under test after refinement.
 
+### File structure
+
+The test suite that has `Treat this test suite model-based` in its setup is considered the _root suite_ for the model. This can be either a [suite directory](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#suite-directories) or a [suite file](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#suite-files). All scenarios (test cases) in the model's root suite and its sub suites are in scope for the model. When a scenario becomes part of the generated trace, it is added directly to the root suite. Therefore, the test report will show a flattened structure. The root suite must have access to all the keywords used in the scenarios, because in Robot Framework the test suite defines the scope for its test cases.
+
 ### Keeping your models clean
 
 Clean models start with tidy model info. If multiple expressions are needed, you can separate them in the `*model info*` by using the pipe symbol (`|`) or by starting the next expression on a new line. A single expression cannot be split over multiple lines. Try to keep expressions simple. If expressions start becoming complex, maybe the model data needs an update.
@@ -177,7 +181,7 @@ Modifiers can be used on any type of argument: embedded, positional or named. If
 
 #### Technicalities
 
-Please note that all modifiers in the scenario are processed before processing the regular `:IN:` and `:OUT:` expressions. This implies that when model data is used in a modifier, that it will use the model data as it is at the start of the scenario. Any updates to the model data during the scenario steps do not affect the possible choices for the example values.
+All modifiers in the scenario are processed before processing the regular `:IN:` and `:OUT:` expressions. This implies that when model data is used in a modifier, that it will use the model data as it is at the start of the scenario. Any updates to the model data during the scenario steps do not affect the possible choices for the example values.
 
 It is possible to use the argument value itself as one of the options. Using the actual argument as the only option (e.g. `:MOD: ${receiver}= [${receiver}]`) can force all other steps into a specific option, chosen directly from the scenario. For this to work, the single option must be a valid option for all steps using the same example value.
 
@@ -198,6 +202,8 @@ In a then-step, modifiers behave slightly different. In then-steps no new option
 #### Limitations
 
 For now, variable data considers strict equivalence classes only. This means that all variants are considered equal for all purposes. If, for a certain scenario, a single valid example variant has been generated and executed, then this scenario is considered covered. There are no options yet to indicate deeper coverage targets based on data variations. It also implies that whenever any variant is valid, all scenario variants must be valid. And that regardless of which variant is chosen, the exact same scenarios can be chosen as the next one. This does however not mean that once a variant is chosen, that this variant will be used throughout the whole trace. If a scenario is selected multiple times in the same trace, then each occurrence will get new randomly selected data.
+
+Modified example values do not cascade. If a modifier expression references another argument in its step that has a modifier of their own, then it will use the original example value, not the modified example value.
 
 ## Configuration options
 

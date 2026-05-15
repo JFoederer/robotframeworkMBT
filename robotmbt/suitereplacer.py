@@ -30,7 +30,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from typing import Any
 
 import robot.model
@@ -49,11 +49,13 @@ Robot = BuiltIn()
 class SuiteReplacer:
     def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
         self.current_suite: robot.model.TestSuite | None = None
-        self.robot_suite: robot.model.TestSuite | None = None
+        self.mbt_anchor_suite: robot.model.TestSuite | None = None
         self.processor_lib_name: str | None = processor_lib
         self.processor_name: str = processor
         self._processor_lib: SuiteProcessors | None | object = None
         self._processor_method: Callable[..., Suite] | None = None
+        self.suite_gen: list[Iterator[Suite]] = []  # Generator for on-the-fly suite insertion
+        self.test_case_gen: list[Iterator[Scenario]] = []  # Generator for on-the-fly test case insertion
         self.processor_options: dict[str, Any] = {}
 
     @property
@@ -87,15 +89,16 @@ class SuiteReplacer:
         `Update model-based options`, then these arguments take precedence over the library option and
         affect only the current test suite.
         """
-        self.robot_suite = self.current_suite
-
-        logger.info(f"Analysing Robot test suite '{self.robot_suite.name}' for model-based execution.")
+        logger.info(f"Analysing Robot test suite '{self.current_suite.name}' for model-based execution.")
         local_settings = self.processor_options.copy()
         local_settings.update(kwargs)
-        master_suite = self.__process_robot_suite(self.robot_suite, parent=None)
+        master_suite = self.__process_robot_suite(self.current_suite, parent=None)
         modelbased_suite = self.processor_method(master_suite, **local_settings)
-        self.__clearTestSuite(self.robot_suite)
-        self.__generateRobotSuite(modelbased_suite, self.robot_suite)
+        self.suite_gen = [iter(modelbased_suite.suites)]
+        self.test_case_gen = [iter(modelbased_suite.scenarios)]
+        self.__clearTestSuite(self.current_suite)
+        self.add_next_new(self.current_suite)  # add first test case only. Others are added at runtime by listeners.
+        self.mbt_anchor_suite = self.current_suite
 
     @keyword("Set model-based options")
     def set_model_based_options(self, **kwargs):
@@ -139,7 +142,7 @@ class SuiteReplacer:
         for st in in_suite.suites:
             out_suite.suites.append(self.__process_robot_suite(st, parent=out_suite))
         for tc in in_suite.tests:
-            scenario = Scenario(tc.name, parent=out_suite)
+            scenario = Scenario(tc.name, parent=out_suite, og_tc=tc)
             if tc.setup:
                 step_info = Step(tc.setup.name, *tc.setup.args, parent=scenario)
                 step_info.add_robot_dependent_data(Robot._namespace.get_runner(step_info.org_step).keyword)
@@ -170,38 +173,72 @@ class SuiteReplacer:
         suite.tests.clear()
         suite.suites.clear()
 
-    def __generateRobotSuite(self, suite_model: Suite, target_suite: robot.model.TestSuite):
-        for subsuite in suite_model.suites:
-            new_suite = target_suite.suites.create(name=subsuite.name)
-            new_suite.resource = target_suite.resource
-            if subsuite.setup:
-                new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword,
-                                                 args=subsuite.setup.posnom_args_str,
-                                                 type='setup')
-            if subsuite.teardown:
-                new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword,
-                                                    args=subsuite.teardown.posnom_args_str,
-                                                    type='teardown')
-            self.__generateRobotSuite(subsuite, new_suite)
-        for tc in suite_model.scenarios:
-            new_tc = target_suite.tests.create(name=tc.name)
-            if tc.setup:
-                new_tc.setup = rmodel.Keyword(name=tc.setup.keyword,
-                                              args=tc.setup.posnom_args_str,
-                                              type='setup')
-            if tc.teardown:
-                new_tc.teardown = rmodel.Keyword(name=tc.teardown.keyword,
-                                                 args=tc.teardown.posnom_args_str,
-                                                 type='teardown')
-            for step in tc.steps:
-                if step.keyword == 'VAR':
-                    new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
-                else:
-                    new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
+    def add_next_new(self, target_suite: robot.model.TestSuite):
+        """
+        Adds the next-in-line test case to the current running test suite. When needed,
+        inserts all sub-suites leading up to the next test case.
+        """
+        try:
+            new_suite = next(self.suite_gen[-1])
+            self.suite_gen.append(iter(new_suite.suites))
+            self.test_case_gen.append(iter(new_suite.scenarios))
+            new_target = self.add_suite(new_suite, target_suite)
+            self.add_next_new(new_target)
+        except StopIteration:
+            try:
+                self.add_test(next(self.test_case_gen[-1]), target_suite)
+            except StopIteration:
+                pass
 
-    def _start_suite(self, suite: Suite | None, result):
+    @staticmethod
+    def add_suite(subsuite: Suite, target_suite: robot.model.TestSuite) -> robot.model.TestSuite:
+        new_suite = target_suite.suites.create(name=subsuite.name)
+        new_suite.resource = target_suite.resource
+        if subsuite.setup:
+            new_suite.setup = rmodel.Keyword(name=subsuite.setup.keyword,
+                                             args=subsuite.setup.posnom_args_str,
+                                             type='setup')
+        if subsuite.teardown:
+            new_suite.teardown = rmodel.Keyword(name=subsuite.teardown.keyword,
+                                                args=subsuite.teardown.posnom_args_str,
+                                                type='teardown')
+        return new_suite
+
+    @staticmethod
+    def add_test(tc: Scenario, target_suite: robot.model.TestSuite):
+        new_tc = tc.og_tc.copy(name=tc.name, body=[])
+        if tc.setup:
+            new_tc.setup = rmodel.Keyword(name=tc.setup.keyword,
+                                          args=tc.setup.posnom_args_str,
+                                          type='setup')
+        if tc.teardown:
+            new_tc.teardown = rmodel.Keyword(name=tc.teardown.keyword,
+                                             args=tc.teardown.posnom_args_str,
+                                             type='teardown')
+        for step in tc.steps:
+            if step.keyword == 'VAR':
+                new_tc.body.create_var(step.posnom_args_str[0], step.posnom_args_str[1:])
+            else:
+                new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
+        target_suite.tests.append(new_tc)
+
+    def _start_suite(self, suite: robot.model.TestSuite, result):
         self.current_suite = suite
 
-    def _end_suite(self, suite: Suite | None, result):
-        if suite == self.robot_suite:
-            self.robot_suite = None
+    def _end_suite(self, suite: robot.model.TestSuite, result):
+        if suite == self.mbt_anchor_suite:
+            self.mbt_anchor_suite = None
+        if not self.mbt_anchor_suite:
+            return
+        self.suite_gen.pop()
+        self.test_case_gen.pop()
+        self.current_suite = self.current_suite.parent
+        self.add_next_new(self.current_suite)
+
+    def _end_test(self, test_case: robot.model.TestCase, result):
+        if not self.mbt_anchor_suite:
+            return
+        try:
+            self.add_test(next(self.test_case_gen[-1]), self.current_suite)
+        except StopIteration:
+            pass
