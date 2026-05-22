@@ -185,6 +185,8 @@ class SuiteReplacer:
             new_target = self.add_suite(new_suite, target_suite)
             self.add_next_new(new_target)
         except StopIteration:
+            if hasattr(self.processor_lib, 'next_scenario_request'):
+                self.processor_lib.next_scenario_request()
             try:
                 self.add_test(next(self.test_case_gen[-1]), target_suite)
             except StopIteration:
@@ -238,6 +240,8 @@ class SuiteReplacer:
     def _end_test(self, test_case: robot.model.TestCase, result):
         if not self.mbt_anchor_suite:
             return
+        if hasattr(self.processor_lib, 'next_scenario_request'):
+            self.processor_lib.next_scenario_request()
         try:
             self.add_test(next(self.test_case_gen[-1]), self.current_suite)
         except StopIteration:

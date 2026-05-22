@@ -48,6 +48,9 @@ except ImportError:
 
 
 class SuiteProcessors:
+    BATCH_SIZE = 100
+    SCENARIO_TARGET = 0
+
     @staticmethod
     def echo(in_suite: Suite) -> Suite:
         return in_suite
@@ -97,26 +100,39 @@ class SuiteProcessors:
         self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
         try:
             # a short trace without the need for repeating scenarios is preferred
-            tracestate = self._search_direct_trace()
-            if not tracestate.coverage_reached():
-                logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
-                tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
-                                                              unreached_scenarios=tracestate.unreached)
-            else:
+            direct_tracestate = self._search_direct_trace()
+            if direct_tracestate.coverage_reached():
                 # The visualiser assumes that the last trace is the final selected trace, which is not always
                 # the case. Re-adding the selected trace to prevent the wrong path from being highlighted.
-                self._update_visualisation(TraceState(tracestate.prio_order))
-                self._update_visualisation(tracestate)
+                self.tracestate = direct_tracestate
+                self._update_visualisation(self.tracestate)
+                self._update_visualisation(self.tracestate)
+            else:
+                self.tracestate = TraceState([s.src_id for s in self.scenarios])
+                self.tracestate.unreached = direct_tracestate.unreached
+                logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
+                self._generate_next_batch(self.BATCH_SIZE)
         finally:  # Draw the graph even when a timeout or user interrupt occurs
             if graph:
                 self._write_visualisation(graph)
             if export_graph_data:
                 self._export_graph_data(export_graph_data)
-        if not tracestate.coverage_reached():
+        if len(self.tracestate) == 0:
             raise Exception("Unable to compose a consistent suite")
-        self._report_tracestate_wrapup(tracestate)
-        self.out_suite.scenarios = tracestate.get_trace()
+        self._report_tracestate_wrapup(self.tracestate)
+        self.index = 0
         return self.out_suite
+
+    def next_scenario_request(self):
+        try:
+            if len(self.tracestate) <= self.index:
+                self._generate_next_batch(self.BATCH_SIZE)
+            if len(self.tracestate) > self.index:
+                self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
+                self.index += 1
+                self.tracestate.no_rewind += 1
+        except AttributeError:
+            pass
 
     def draw_graph_from_export_file(self, file_path: str, graph_style: str):
         self._visualiser = self._init_visualiser()
@@ -263,14 +279,13 @@ class SuiteProcessors:
         not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
         return never_reached + not_in_target + tracestate_list[target_index].covered_ids
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
-                                    unreached_scenarios: list[int] = None) -> TraceState:
-        tracestate = TraceState([s.src_id for s in self.scenarios])
-        if unreached_scenarios:
-            tracestate.unreached = unreached_scenarios
+    def _generate_next_batch(self, batchsize):
+        tracestate = self.tracestate
+        old_len = len(tracestate)
         self._update_visualisation(tracestate)
-        while not tracestate.coverage_reached():
-            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
+        while (len(tracestate) < old_len + batchsize) and \
+              (not tracestate.coverage_reached() or (self.SCENARIO_TARGET and len(tracestate) < self.SCENARIO_TARGET)):
+            candidate_id = tracestate.next_candidate(retry=True, randomise=True)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
                     break
@@ -303,7 +318,6 @@ class SuiteProcessors:
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
             self._update_visualisation(tracestate)
         self._update_visualisation(tracestate)
-        return tracestate
 
     @staticmethod
     def __last_candidate_changed_nothing(tracestate: TraceState) -> bool:
