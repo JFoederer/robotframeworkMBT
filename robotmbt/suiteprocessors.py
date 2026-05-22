@@ -48,9 +48,6 @@ except ImportError:
 
 
 class SuiteProcessors:
-    BATCH_SIZE = 100
-    SCENARIO_TARGET = 0
-
     @staticmethod
     def echo(in_suite: Suite) -> Suite:
         return in_suite
@@ -84,6 +81,9 @@ class SuiteProcessors:
         return out_suite
 
     def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
+                           batch_size: str | int = 100,
+                           coverage_target: str | int | None = 1,
+                           scenario_target: str | int | None = None,
                            graph: str = '', export_graph_data: str = '') -> Suite:
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
@@ -96,8 +96,16 @@ class SuiteProcessors:
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
+        # handle options
+        self.batch_size = int(batch_size)
+        self.coverage_target = 0 if coverage_target is None else int(coverage_target)
+        if self.coverage_target not in [0, 1]:
+            logger.warn(f"Unsuppported coverage target request '{coverage_target}'. Using default coverage target of 1")
+            self.coverage_target = 1
+        self.scenario_target = 0 if scenario_target is None else int(scenario_target)
         self._init_randomiser(seed)
         self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
+
         try:
             # a short trace without the need for repeating scenarios is preferred
             direct_tracestate = self._search_direct_trace()
@@ -111,7 +119,7 @@ class SuiteProcessors:
                 self.tracestate = TraceState([s.src_id for s in self.scenarios])
                 self.tracestate.unreached = direct_tracestate.unreached
                 logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
-                self._generate_next_batch(self.BATCH_SIZE)
+                self._generate_next_batch(self.batch_size)
         finally:  # Draw the graph even when a timeout or user interrupt occurs
             if graph:
                 self._write_visualisation(graph)
@@ -126,7 +134,8 @@ class SuiteProcessors:
     def next_scenario_request(self):
         try:
             if len(self.tracestate) <= self.index:
-                self._generate_next_batch(self.BATCH_SIZE)
+                self._generate_next_batch(self.batch_size)
+                logger.warn(f"Extending run with {self.batch_size} scenarios. now {len(self.tracestate)} scenarios long.")
             if len(self.tracestate) > self.index:
                 self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
                 self.index += 1
@@ -284,7 +293,7 @@ class SuiteProcessors:
         old_len = len(tracestate)
         self._update_visualisation(tracestate)
         while (len(tracestate) < old_len + batchsize) and \
-              (not tracestate.coverage_reached() or (self.SCENARIO_TARGET and len(tracestate) < self.SCENARIO_TARGET)):
+              (not tracestate.coverage_reached() or (self.scenario_target and len(tracestate) < self.scenario_target)):
             candidate_id = tracestate.next_candidate(retry=True, randomise=True)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
