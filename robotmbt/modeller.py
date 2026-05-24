@@ -260,6 +260,6 @@ def rewind(tracestate: TraceState, drought_recovery: bool = False) -> TraceSnapS
         # When rewinding an 'in between' part, rewind both the part and the refinement
         tracestate.rewind()
     tail = tracestate.rewind()
-    while drought_recovery and tracestate.coverage_drought:
+    while drought_recovery and tracestate.coverage_drought and tracestate.can_rewind():
         tail = tracestate.rewind()
     return tail

@@ -59,7 +59,9 @@ class TraceState:
         self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
         self._snapshots: list[TraceSnapShot] = []  # Keeps details for elements in trace
         self._open_refinements: list[int] = []
-        self.no_rewind = 0
+        # The rewind limit indicates a (soft) limit for scenarios that should not be rewound. E.g. because they were
+        # already scheduled for execution. It refers to the number of scenarios that should remain in the trace.
+        self.rewind_limit = 0
 
     @property
     def model(self) -> ModelSpace | None:
@@ -123,7 +125,7 @@ class TraceState:
         cp._tried = [triedlist[:] for triedlist in self._tried]
         cp._snapshots = self._snapshots[:]
         cp._open_refinements = self._open_refinements[:]
-        cp.no_rewind = self.no_rewind
+        cp.rewind_limit = self.rewind_limit
         return cp
 
     def coverage_reached(self) -> bool:
@@ -211,7 +213,7 @@ class TraceState:
         self._snapshots.append(TraceSnapShot(id, scenario, model, remainder, self.coverage_drought))
 
     def can_rewind(self) -> bool:
-        return len(self._snapshots[self.no_rewind:]) > 0
+        return len(self._snapshots[self.rewind_limit:]) > 0
 
     def rewind(self) -> TraceSnapShot | None:
         id = self._snapshots[-1].id

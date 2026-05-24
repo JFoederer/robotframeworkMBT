@@ -139,7 +139,7 @@ class SuiteProcessors:
             if len(self.tracestate) > self.index:
                 self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
                 self.index += 1
-                self.tracestate.no_rewind += 1
+                self.tracestate.rewind_limit += 1
         except AttributeError:
             pass
 
@@ -292,8 +292,9 @@ class SuiteProcessors:
         tracestate = self.tracestate
         old_len = len(tracestate)
         self._update_visualisation(tracestate)
-        while (len(tracestate) < old_len + batchsize) and \
-              (not tracestate.coverage_reached() or (self.scenario_target and len(tracestate) < self.scenario_target)):
+        while len(tracestate) < old_len + batchsize and \
+              (self.coverage_target and not tracestate.coverage_reached()
+               or self.scenario_target and len(tracestate) < self.scenario_target):
             candidate_id = tracestate.next_candidate(retry=True, randomise=True)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():
@@ -319,7 +320,7 @@ class SuiteProcessors:
                     if self.__last_candidate_changed_nothing(tracestate):
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
                         modeller.rewind(tracestate)
-                    elif tracestate.coverage_drought > self.DROUGHT_LIMIT:
+                    elif self.coverage_target and not self.tracestate.coverage_reached() and tracestate.coverage_drought > self.DROUGHT_LIMIT:
                         logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
                                      "Roll back to last coverage increase and try something else.")
                         modeller.rewind(tracestate, drought_recovery=True)
