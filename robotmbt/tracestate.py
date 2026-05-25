@@ -213,13 +213,39 @@ class TraceState:
         self._snapshots.append(TraceSnapShot(id, scenario, model, remainder, self.coverage_drought))
 
     def can_rewind(self) -> bool:
-        return len(self._snapshots[self.rewind_limit:]) > 0
+        rewind_margin = len(self._snapshots[self.rewind_limit:])
+        if rewind_margin == 0:
+            return False
+        n = 1
+        index, part = self.split_id(self._snapshots[-1].id)
+        if part and part > 1:
+            # When rewinding an 'in between' part, rewind both the part and the refinement
+            n += 1
+        if part != 0:
+            return rewind_margin >= n
+
+        # Refined scenarios that are already closed will be rewound in full.
+        # Check if the scenario's opening part is within the rewind margin.
+        for i in range(1, rewind_margin + 1):
+            if self._snapshots[-i].id == f'{index}.1':
+                n = i
+                return True
+        return False  # went beyond rewind limit
 
     def rewind(self) -> TraceSnapShot | None:
+        """
+        Performs a single rewind action, removing the most recently completed scenario from the trace.
+
+        If the most recently completed scenario contained refinements, then the complete scenario, including
+        its refinements is rewound. If multi-part refinement is ongoing and a refinement step just ended,
+        without completing the full scenario, then the trace is rewound to before the latest refinement.
+        Use can_rewind() to check if a rewind is possible.
+        """
         id = self._snapshots[-1].id
-        index = int(id.split('.')[0])
+        index, part = self.split_id(id)
         self._snapshots.pop()
         if id.endswith('.0'):
+            # refined scenarios are rewinded in full
             self.c_pool[index] -= 1
             self._open_refinements.append(index)
             while self._snapshots[-1].id != f"{index}.1":
@@ -227,11 +253,19 @@ class TraceState:
             return self.rewind()
 
         self._tried.pop()
+        if part and part > 1:
+            # When rewinding an 'in between' part, rewind both the part and the refinement
+            return self.rewind()
+
         if '.' not in id:
             self.c_pool[index] -= 1
         if id.endswith('.1'):
             self._open_refinements.pop()
         return self._snapshots[-1] if self._snapshots else None
+
+    @staticmethod
+    def split_id(id: str) -> tuple[int, int | int, None]:
+        return tuple(map(int, id.split('.'))) if '.' in id else (int(id), None)
 
     def __iter__(self):
         return iter(self._snapshots)

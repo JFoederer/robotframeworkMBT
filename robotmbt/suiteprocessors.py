@@ -135,7 +135,7 @@ class SuiteProcessors:
         try:
             if len(self.tracestate) <= self.index:
                 self._generate_next_batch(self.batch_size)
-                logger.warn(f"Extending run with {self.batch_size} scenarios. now {len(self.tracestate)} scenarios long.")
+                logger.warn(f"Extending run with max. {self.batch_size} scenarios. Now {len(self.tracestate)} long.")
             if len(self.tracestate) > self.index:
                 self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
                 self.index += 1
@@ -293,8 +293,8 @@ class SuiteProcessors:
         old_len = len(tracestate)
         self._update_visualisation(tracestate)
         while len(tracestate) < old_len + batchsize and \
-              (self.coverage_target and not tracestate.coverage_reached()
-               or self.scenario_target and len(tracestate) < self.scenario_target):
+            (self.coverage_target and not tracestate.coverage_reached()
+             or self.scenario_target and len(tracestate) < self.scenario_target):
             candidate_id = tracestate.next_candidate(retry=True, randomise=True)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():

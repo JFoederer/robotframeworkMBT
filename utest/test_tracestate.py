@@ -345,6 +345,15 @@ class TestTraceState(unittest.TestCase):
         ts.rewind()
         self.assertEqual(ts.coverage_drought, 0)
 
+    def test_rewind_limit(self):
+        ts = TraceState([1, 2])
+        ts.confirm_full_scenario(1, ScenarioStub('one'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two'), ModelStub())
+        ts.rewind_limit = 1
+        self.assertTrue(ts.can_rewind())
+        ts.rewind()
+        self.assertFalse(ts.can_rewind())
+
     def test_trace_id_properties(self):
         ts = TraceState([4, 1, 2, 3])
         ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
@@ -394,19 +403,20 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.get_trace(), [])
 
     def test_rewind_all_parts(self):
-        ts = TraceState([1])
+        ts = TraceState([1, 2])
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two'), ModelStub())
         self.assertIs(ts.coverage_reached(), False)
         ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub())
         self.assertIs(ts.coverage_reached(), False)
-        self.assertEqual(ts.get_trace(), ['part1', 'part2'])
+        self.assertEqual(ts.get_trace(), ['part1', 'two', 'part2'])
         self.assertIs(ts.next_candidate(), None)
         ts.rewind()
         self.assertEqual(ts.get_trace(), ['part1'])
         self.assertIs(ts.next_candidate(), None)
         ts.rewind()
         self.assertEqual(ts.get_trace(), [])
-        self.assertIs(ts.next_candidate(), None)
+        self.assertIs(ts.next_candidate(), 2)
         self.assertIs(ts.can_rewind(), False)
 
     def test_partial_scenario_still_excluded_from_candidacy_after_rewind(self):
@@ -416,16 +426,16 @@ class TestPartialScenarios(unittest.TestCase):
         ts.rewind()
         self.assertIs(ts.next_candidate(), None)
 
-    def test_rewind_to_partial_scenario(self):
-        ts = TraceState([1])
+    def test_rewind_partial_to_partial_scenario(self):
+        ts = TraceState([1, 2])
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub(a=1))
-        ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub(b=2))
+        ts.push_partial_scenario(2, ScenarioStub('part1'), ModelStub(b=2))
         snapshot = ts.rewind()
         self.assertEqual(snapshot.id, '1.1')
         self.assertEqual(snapshot.scenario, 'part1')
         self.assertEqual(snapshot.model, dict(a=1))
 
-    def test_rewind_last_part(self):
+    def test_rewind_partial_to_full_scenario(self):
         ts = TraceState([1, 2])
         ts.confirm_full_scenario(1, ScenarioStub('one'), ModelStub(a=1))
         ts.push_partial_scenario(2, ScenarioStub('part1'), ModelStub(b=2))
@@ -435,14 +445,25 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(snapshot.scenario, 'one')
         self.assertEqual(snapshot.model, dict(a=1))
 
-    def test_rewind_all_parts_of_completed_scenario_at_once(self):
-        ts = TraceState([1])
+    def test_rewind_full_to_partial_scenario(self):
+        ts = TraceState([1, 2])
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub(a=1))
-        ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub(b=2))
+        ts.confirm_full_scenario(2, ScenarioStub('two'), ModelStub(b=2))
+        snapshot = ts.rewind()
+        self.assertEqual(snapshot.id, '1.1')
+        self.assertEqual(snapshot.scenario, 'part1')
+        self.assertEqual(snapshot.model, dict(a=1))
+
+    def test_rewind_all_parts_of_completed_scenario_at_once(self):
+        ts = TraceState([1, 2, 3])
+        ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two'), ModelStub())
+        ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub())
+        ts.confirm_full_scenario(3, ScenarioStub('three'), ModelStub())
         ts.confirm_full_scenario(1, ScenarioStub('remainder'), ModelStub())
         tail = ts.rewind()
         self.assertEqual(ts.get_trace(), [])
-        self.assertIs(ts.next_candidate(), None)
+        self.assertIs(ts.next_candidate(), 2)
         self.assertIs(tail, None)
 
     def test_tried_entries_after_rewind(self):
@@ -455,8 +476,6 @@ class TestPartialScenarios(unittest.TestCase):
         ts.reject_scenario(20)
         ts.reject_scenario(21)
         self.assertEqual(ts.tried, [20, 21])
-        ts.rewind()
-        self.assertEqual(ts.tried, [])
         ts.rewind()
         self.assertEqual(ts.tried, [10, 11, 2])
         ts.reject_scenario(12)
@@ -486,8 +505,9 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.highest_part(1), 0)
 
     def test_highest_part_after_partial_rewind(self):
-        ts = TraceState([1])
+        ts = TraceState([1, 2])
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two'), ModelStub())
         ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub())
         self.assertEqual(ts.highest_part(1), 2)
         ts.rewind()
@@ -496,10 +516,12 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.highest_part(1), 0)
 
     def test_highest_part_is_0_when_no_refinement_is_ongoing(self):
-        ts = TraceState([1])
+        ts = TraceState([1, 2, 3])
         self.assertEqual(ts.highest_part(1), 0)
         ts.push_partial_scenario(1, ScenarioStub('part1'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two'), ModelStub())
         ts.push_partial_scenario(1, ScenarioStub('part2'), ModelStub())
+        ts.confirm_full_scenario(3, ScenarioStub('three'), ModelStub())
         ts.confirm_full_scenario(1, ScenarioStub('remainder'), ModelStub())
         self.assertEqual(ts.highest_part(1), 0)
         ts.rewind()
@@ -596,6 +618,34 @@ class TestPartialScenarios(unittest.TestCase):
         self.assertEqual(ts.covered_ids, [3, 4, 6])
         self.assertEqual(ts.not_in_trace, [1, 2, 5, 7])
         self.assertEqual(ts.unreached, [5, 7])
+
+    def test_rewind_limit_for_partials(self):
+        ts = TraceState([1, 2, 3])
+        ts.push_partial_scenario(1, ScenarioStub(), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub(), ModelStub())
+        self.assertTrue(ts.can_rewind())
+        ts.rewind_limit = 2
+        self.assertFalse(ts.can_rewind())
+
+        ts.push_partial_scenario(1, ScenarioStub(), ModelStub())
+        self.assertFalse(ts.can_rewind())
+
+        ts.confirm_full_scenario(3, ScenarioStub(), ModelStub())
+        self.assertTrue(ts.can_rewind())
+        ts.confirm_full_scenario(1, ScenarioStub(), ModelStub())
+        self.assertFalse(ts.can_rewind())
+
+    def test_rewind_limit_just_before_partial(self):
+        ts = TraceState([1, 2, 3])
+        ts.confirm_full_scenario(1, 'one', ModelStub())
+        ts.rewind_limit = 1
+        ts.push_partial_scenario(2, 'part1', ModelStub())
+        self.assertTrue(ts.can_rewind())
+        ts.confirm_full_scenario(3, 'three', ModelStub())
+        ts.confirm_full_scenario(2, 'final part', ModelStub())
+        self.assertTrue(ts.can_rewind())
+        ts.rewind_limit = 2
+        self.assertFalse(ts.can_rewind())
 
 
 class ScenarioStub(str):
