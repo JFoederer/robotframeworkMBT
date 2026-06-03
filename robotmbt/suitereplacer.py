@@ -40,39 +40,32 @@ from robot.api.deco import library, keyword
 from robot.libraries.BuiltIn import BuiltIn
 
 from .suitedata import Suite, Scenario, Step
-from .suiteprocessors import SuiteProcessors
+from .suiteprocessors import SuiteProcessor, ModelBased, Echo, Flatten
 
 Robot = BuiltIn()
 
 
 @library(scope="GLOBAL", listener='SELF')
 class SuiteReplacer:
-    def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
+    def __init__(self, processor: str = 'robotmbt'):
         self.current_suite: robot.model.TestSuite | None = None
         self.mbt_anchor_suite: robot.model.TestSuite | None = None
-        self.processor_lib_name: str | None = processor_lib
         self.processor_name: str = processor
-        self._processor_lib: SuiteProcessors | None | object = None
-        self._processor_method: Callable[..., Suite] | None = None
+        self.processor: SuiteProcessor | None = None
         self.suite_gen: list[Iterator[Suite]] = []  # Generator for on-the-fly suite insertion
         self.test_case_gen: list[Iterator[Scenario]] = []  # Generator for on-the-fly test case insertion
         self.processor_options: dict[str, Any] = {}
 
-    @property
-    def processor_lib(self) -> SuiteProcessors:
-        if self._processor_lib is None:
-            self._processor_lib = SuiteProcessors() if self.processor_lib_name is None \
-                else Robot.get_library_instance(self.processor_lib_name)
-        return self._processor_lib
-
-    @property
-    def processor_method(self):
-        if self._processor_method is None:
-            if not hasattr(self.processor_lib, self.processor_name):
-                Robot.fail(
-                    f"Processor '{self.processor_name}' not available for model-based processor library {self.processor_lib_name}")
-            self._processor_method = getattr(self._processor_lib, self.processor_name)
-        return self._processor_method
+    def load_processor(self):
+        if self.processor_name.lower() == 'robotmbt':
+            self.processor = ModelBased()
+        elif self.processor_name.lower() == 'echo':
+            self.processor = Echo()
+        elif self.processor_name.lower() == 'flatten':
+            self.processor = Flatten()
+        else:
+            self.processor = Robot.get_library_instance(self.processor_name)
+        return self.processor
 
     @keyword(name="Treat this test suite Model-based")
     def treat_model_based(self, **kwargs):
@@ -93,7 +86,8 @@ class SuiteReplacer:
         local_settings = self.processor_options.copy()
         local_settings.update(kwargs)
         master_suite = self.__process_robot_suite(self.current_suite, parent=None)
-        modelbased_suite = self.processor_method(master_suite, **local_settings)
+        self.load_processor()
+        modelbased_suite = self.processor.process_test_suite(master_suite, **local_settings)
         self.suite_gen = [iter(modelbased_suite.suites)]
         self.test_case_gen = [iter(modelbased_suite.scenarios)]
         self.__clearTestSuite(self.current_suite)
@@ -125,7 +119,7 @@ class SuiteReplacer:
         different graph style than was used during the test run. If no graph style is selected,
         then the scenario graph style is used.
         """
-        SuiteProcessors().draw_graph_from_export_file(json_file_path, graph_style)
+        ModelBased().draw_graph_from_export_file(json_file_path, graph_style)
 
     def __process_robot_suite(self, in_suite: robot.model.TestSuite, parent: Suite | None) -> Suite:
         out_suite = Suite(in_suite.name, parent)
@@ -185,8 +179,7 @@ class SuiteReplacer:
             new_target = self.add_suite(new_suite, target_suite)
             self.add_next_new(new_target)
         except StopIteration:
-            if hasattr(self.processor_lib, 'next_scenario_request'):
-                self.processor_lib.next_scenario_request()
+            self.processor.next_scenario_request()
             try:
                 self.add_test(next(self.test_case_gen[-1]), target_suite)
             except StopIteration:
@@ -240,8 +233,9 @@ class SuiteReplacer:
     def _end_test(self, test_case: robot.model.TestCase, result):
         if not self.mbt_anchor_suite:
             return
-        if hasattr(self.processor_lib, 'next_scenario_request'):
-            self.processor_lib.next_scenario_request()
+        if not isinstance(self.processor, SuiteProcessor):
+            raise TypeError("processor must be of type SuiteProcessor")
+        self.processor.next_scenario_request()
         try:
             self.add_test(next(self.test_case_gen[-1]), self.current_suite)
         except StopIteration:

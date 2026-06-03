@@ -33,50 +33,50 @@
 import unittest
 from unittest.mock import patch, call
 
-from robotmbt.suiteprocessors import SuiteProcessors
+from robotmbt.suiteprocessors import ModelBased
 
 
 @patch('robotmbt.suiteprocessors.random.seed')
 class TestRandomSeeding(unittest.TestCase):
     def test_provided_seed_is_used_as_is(self, mock):
-        SuiteProcessors._init_randomiser("specific seed")
+        ModelBased._init_randomiser("specific seed")
         mock.assert_called_with("specific seed")
 
     def test_provided_seed_is_stripped(self, mock):
-        SuiteProcessors._init_randomiser(" specific seed\t")
+        ModelBased._init_randomiser(" specific seed\t")
         mock.assert_called_with("specific seed")
 
     def test_seed_none_keeps_system_seed(self, mock):
-        SuiteProcessors._init_randomiser(None)
+        ModelBased._init_randomiser(None)
         mock.assert_called_with()
 
     def test_seed_none_as_string(self, mock):
-        SuiteProcessors._init_randomiser("None")
+        ModelBased._init_randomiser("None")
         mock.assert_called_with()
 
     def test_seed_none_as_string_is_stripped(self, mock):
-        SuiteProcessors._init_randomiser(" None\t")
+        ModelBased._init_randomiser(" None\t")
         mock.assert_called_with()
 
     def test_seed_none_as_string_is_case_insensitive(self, mock):
-        SuiteProcessors._init_randomiser("nOnE")
+        ModelBased._init_randomiser("nOnE")
         mock.assert_called_with()
 
     def test_seed_new_generates_reusable_seed(self, mock):
-        SuiteProcessors._init_randomiser("new")
+        ModelBased._init_randomiser("new")
         self._is_generated_seed(mock.call_args.args[0])
 
     def test_seed_new_is_stripped(self, mock):
-        SuiteProcessors._init_randomiser(" new\t")
+        ModelBased._init_randomiser(" new\t")
         self._is_generated_seed(mock.call_args.args[0])
 
     def test_seed_new_is_case_insensitive(self, mock):
-        SuiteProcessors._init_randomiser("NeW")
+        ModelBased._init_randomiser("NeW")
         self._is_generated_seed(mock.call_args.args[0])
 
     def test_generated_seeds_have_max_2_consecutive_vowels_or_consonants(self, mock):
         for _ in range(20):
-            SuiteProcessors._init_randomiser("new")
+            ModelBased._init_randomiser("new")
             new_seed = mock.call_args.args[0]
             self._is_generated_seed(new_seed)
             self.assertNotIn('***', new_seed.translate({ord(c): '*' for c in 'aeiouy'}))
@@ -87,8 +87,8 @@ class TestRandomSeeding(unittest.TestCase):
         added to cover the issue where, after having rerun a specific trace, the next
         generated seed was always the same.
         """
-        SuiteProcessors._init_randomiser("specific seed")
-        SuiteProcessors._init_randomiser("new")
+        ModelBased._init_randomiser("specific seed")
+        ModelBased._init_randomiser("new")
         new_seed = mock.call_args.args[0]
         mock.assert_has_calls([call("specific seed"), call(), call(new_seed)])
 

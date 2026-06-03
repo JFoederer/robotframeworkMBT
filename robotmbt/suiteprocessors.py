@@ -47,12 +47,21 @@ except ImportError:
     Visualiser = None
 
 
-class SuiteProcessors:
-    @staticmethod
-    def echo(in_suite: Suite) -> Suite:
+class SuiteProcessor:
+    def process_test_suite(self, in_suite: Suite, **kwargs) -> Suite:
+        raise NotImplementedError()
+
+    def next_scenario_request(self):
+        pass
+
+
+class Echo(SuiteProcessor):
+    def process_test_suite(self, in_suite: Suite) -> Suite:
         return in_suite
 
-    def flatten(self, in_suite: Suite) -> Suite:
+
+class Flatten(SuiteProcessor):
+    def process_test_suite(self, in_suite: Suite) -> Suite:
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
         have any sub-suites, only scenarios. The scenarios do not have a setup. Any setup
@@ -69,7 +78,7 @@ class SuiteProcessors:
                 scenario.teardown = None
         out_suite.scenarios = []
         for suite in in_suite.suites:
-            subsuite = self.flatten(suite)
+            subsuite = self.process_test_suite(suite)
             for scenario in subsuite.scenarios:
                 if subsuite.setup:
                     scenario.steps.insert(0, subsuite.setup)
@@ -80,6 +89,8 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
+
+class ModelBased(SuiteProcessor):
     def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
                            batch_size: str | int = 100,
                            coverage_target: str | int | None = 1,
@@ -89,7 +100,7 @@ class SuiteProcessors:
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
-        self.flat_suite = self.flatten(in_suite)
+        self.flat_suite = Flatten().process_test_suite(in_suite)
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
         self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
@@ -132,16 +143,13 @@ class SuiteProcessors:
         return self.out_suite
 
     def next_scenario_request(self):
-        try:
-            if len(self.tracestate) <= self.index:
-                self._generate_next_batch(self.batch_size)
-                logger.warn(f"Extending run with max. {self.batch_size} scenarios. Now {len(self.tracestate)} long.")
-            if len(self.tracestate) > self.index:
-                self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
-                self.index += 1
-                self.tracestate.rewind_limit += 1
-        except AttributeError:
-            pass
+        if len(self.tracestate) <= self.index:
+            self._generate_next_batch(self.batch_size)
+            logger.warn(f"Extending run with max. {self.batch_size} scenarios. Now {len(self.tracestate)} long.")
+        if len(self.tracestate) > self.index:
+            self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
+            self.index += 1
+            self.tracestate.rewind_limit += 1
 
     def draw_graph_from_export_file(self, file_path: str, graph_style: str):
         self._visualiser = self._init_visualiser()
@@ -387,7 +395,7 @@ class SuiteProcessors:
                 "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             random.seed()
-            new_seed = SuiteProcessors._generate_seed()
+            new_seed = ModelBased._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
         else:
