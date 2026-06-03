@@ -5,4 +5,4 @@ Documentation     In this suite one of the processor options is set on the highe
 ...               all. The second suite should be unaffected by the option set in the preceeding
 ...               suite.
 Suite Setup       Set model-based options    repeat=2
-Library           robotmbt    processor_lib=suiterepeater
+Library           robotmbt    processor=suiterepeater

@@ -1,4 +1,6 @@
-class MyProcessor:
+from robotmbt import SuiteProcessor
+
+class MyProcessor(SuiteProcessor):
 
     def process_test_suite(self, in_suite):
         self.in_suite = in_suite

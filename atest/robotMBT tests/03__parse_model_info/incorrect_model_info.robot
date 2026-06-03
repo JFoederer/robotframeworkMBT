@@ -1,7 +1,7 @@
 *** Settings ***
 Suite Setup       Expect failing suite processing
 Library           MyProcessor.py
-Library           robotmbt    processor_lib=MyProcessor
+Library           robotmbt    processor=MyProcessor
 
 *** Test Cases ***
 fail on empty model info
