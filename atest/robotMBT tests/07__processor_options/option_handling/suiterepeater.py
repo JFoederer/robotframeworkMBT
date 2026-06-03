@@ -3,6 +3,7 @@ import copy
 from robot.api.deco import library
 from robotmbt import SuiteProcessor
 
+
 @library(auto_keywords=None, listener=True)
 class SuiteRepeater(SuiteProcessor):
     """
