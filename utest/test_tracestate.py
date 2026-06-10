@@ -305,6 +305,30 @@ class TestTraceState(unittest.TestCase):
         self.assertEqual(ts[-1].scenario, 'three')
         self.assertEqual([s.id for s in ts[1:]], ['2', '3'])
 
+    def test_tracestate_snapshots_track_coverage(self):
+        """
+        Coverage counter shows the number of times that full coverage is achieved. I.e., the
+        counter stays 0 until the last sceanrio is reached for the first time. Then it stays
+        at 1 until all scenarios have been executed at least a second time.
+        """
+        ts = TraceState([1, 2, 3])
+        ts.confirm_full_scenario(1, ScenarioStub('one A'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two A'), ModelStub())
+        ts.confirm_full_scenario(3, ScenarioStub('three A'), ModelStub())
+        self.assertEqual(ts[-1].coverage_reached, 1)
+        self.assertEqual(ts[-2].coverage_reached, 0)
+        self.assertEqual(ts[0].coverage_reached, 0)
+        ts.confirm_full_scenario(1, ScenarioStub('one B'), ModelStub())
+        ts.confirm_full_scenario(2, ScenarioStub('two B'), ModelStub())
+        ts.confirm_full_scenario(3, ScenarioStub('three B'), ModelStub())
+        self.assertEqual(ts[1].coverage_reached, 0)
+        self.assertEqual(ts[2].coverage_reached, 1)
+        self.assertEqual(ts[-1].coverage_reached, 2)
+        ts.confirm_full_scenario(3, ScenarioStub('three C'), ModelStub())
+        self.assertEqual(ts[-1].coverage_reached, 2)
+        self.assertEqual(ts[-2].coverage_reached, 2)
+        self.assertEqual(ts[-3].coverage_reached, 1)
+
     def test_adding_coverage_prevents_drought(self):
         ts = TraceState(range(3))
         ts.confirm_full_scenario(ts.next_candidate(), ScenarioStub('one'), ModelStub())

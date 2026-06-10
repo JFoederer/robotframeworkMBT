@@ -48,25 +48,65 @@ except ImportError:
 
 
 class SuiteProcessor:
-    def process_test_suite(self, in_suite: Suite, **kwargs) -> Suite:
-        raise NotImplementedError()
+    def process_test_suite(self, in_suite: Suite,
+                           **kwargs) -> Suite:
+        self._handle_target_options(**kwargs)
+        self.scenario_count = in_suite.scenario_count()
+        # Counts the scenarios committed by the runner. I.e. the scenarios that are scheduled for execution
+        # and cannot be touched anymore
+        self.commit_count: int = 0
+        return Suite('not implemented')
 
-    def next_scenario_request(self):
-        pass
+    def next_scenario_request(self) -> int:
+        """
+        Indicates the wish for (at least) one more scenario to trigger trace genaration when needed.
+        Returns the number of buffered scenarios. If 0 is returned, nothing could be added anymore.
+        """
+        # This basic implementation assumes that the complete target test suite is returned directly
+        # by process_test_suite() in an overridden method. No further generation is triggered.
+        return self.scenario_count - self.commit_count
+
+    def commit_next_scenario(self):
+        self.commit_count += 1
+
+    def are_all_targets_reached(self, committed_only: bool = True) -> bool:
+        if not committed_only:
+            return True
+        if self.coverage_target and self.commit_count < self.scenario_count:
+            return False
+        if self.scenario_target and self.commit_count < self.scenario_target:
+            return False
+        return True
+
+    def _handle_target_options(self,
+                               coverage_target: str | int | None = 1,
+                               scenario_target: str | int | None = None,
+                               **kwargs):
+        self.coverage_target = 0 if coverage_target is None else int(coverage_target)
+        if self.coverage_target not in [0, 1]:
+            logger.warn(f"Unsuppported coverage target request '{coverage_target}'. Using default coverage target of 1")
+            self.coverage_target = 1
+        self.scenario_target = 0 if scenario_target is None else int(scenario_target)
 
 
 class Echo(SuiteProcessor):
-    def process_test_suite(self, in_suite: Suite) -> Suite:
+    def process_test_suite(self, in_suite: Suite, **kwargs) -> Suite:
+        super().process_test_suite(in_suite, **kwargs)
         return in_suite
 
 
 class Flatten(SuiteProcessor):
-    def process_test_suite(self, in_suite: Suite) -> Suite:
+    def process_test_suite(self, in_suite: Suite, **kwargs) -> Suite:
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
         have any sub-suites, only scenarios. The scenarios do not have a setup. Any setup
         keywords are inserted at the front of the scenario as regular steps.
         """
+        super().process_test_suite(in_suite, **kwargs)
+        return self.flatten(in_suite)
+
+    @staticmethod
+    def flatten(in_suite: Suite) -> Suite:
         out_suite = copy.deepcopy(in_suite)
         outer_scenarios = out_suite.scenarios
         for scenario in outer_scenarios:
@@ -78,7 +118,7 @@ class Flatten(SuiteProcessor):
                 scenario.teardown = None
         out_suite.scenarios = []
         for suite in in_suite.suites:
-            subsuite = self.process_test_suite(suite)
+            subsuite = Flatten.flatten(suite)
             for scenario in subsuite.scenarios:
                 if subsuite.setup:
                     scenario.steps.insert(0, subsuite.setup)
@@ -93,29 +133,23 @@ class Flatten(SuiteProcessor):
 class ModelBased(SuiteProcessor):
     def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
                            batch_size: str | int = 100,
-                           coverage_target: str | int | None = 1,
-                           scenario_target: str | int | None = None,
-                           graph: str = '', export_graph_data: str = '') -> Suite:
+                           graph: str = '', export_graph_data: str = '', **kwargs) -> Suite:
+        # handle options
+        super().process_test_suite(in_suite, **kwargs)
+        self.batch_size = int(batch_size)
+        self._init_randomiser(seed)
+        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
+
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
-        self.flat_suite = Flatten().process_test_suite(in_suite)
+        self.flat_suite = Flatten.flatten(in_suite)
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
         self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
-
-        # handle options
-        self.batch_size = int(batch_size)
-        self.coverage_target = 0 if coverage_target is None else int(coverage_target)
-        if self.coverage_target not in [0, 1]:
-            logger.warn(f"Unsuppported coverage target request '{coverage_target}'. Using default coverage target of 1")
-            self.coverage_target = 1
-        self.scenario_target = 0 if scenario_target is None else int(scenario_target)
-        self._init_randomiser(seed)
-        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
 
         try:
             # a short trace without the need for repeating scenarios is preferred
@@ -139,17 +173,32 @@ class ModelBased(SuiteProcessor):
         if len(self.tracestate) == 0:
             raise Exception("Unable to compose a consistent suite")
         self._report_tracestate_wrapup(self.tracestate)
-        self.index = 0
         return self.out_suite
 
     def next_scenario_request(self):
-        if len(self.tracestate) <= self.index:
+        if len(self.tracestate) <= self.commit_count:
             self._generate_next_batch(self.batch_size)
             logger.warn(f"Extending run with max. {self.batch_size} scenarios. Now {len(self.tracestate)} long.")
-        if len(self.tracestate) > self.index:
-            self.out_suite.scenarios.append(self.tracestate[self.index].scenario)
-            self.index += 1
-            self.tracestate.rewind_limit += 1
+        if len(self.tracestate) > self.commit_count:
+            self.out_suite.scenarios.append(self.tracestate[self.commit_count].scenario)
+        return len(self.tracestate) - self.commit_count
+
+    def commit_next_scenario(self):
+        self.commit_count += 1
+        self.tracestate.rewind_limit += 1
+
+    def are_all_targets_reached(self, committed_only: bool = True) -> bool:
+        if committed_only:
+            if self.coverage_target and not self.tracestate[self.commit_count-1].coverage_reached:
+                return False
+            if self.scenario_target and self.commit_count < self.scenario_target:
+                return False
+        else:
+            if self.coverage_target and not self.tracestate.coverage_reached():
+                return False
+            if self.scenario_target and len(self.tracestate) < self.scenario_target:
+                return False
+        return True
 
     def draw_graph_from_export_file(self, file_path: str, graph_style: str):
         self._visualiser = self._init_visualiser()
@@ -300,9 +349,7 @@ class ModelBased(SuiteProcessor):
         tracestate = self.tracestate
         old_len = len(tracestate)
         self._update_visualisation(tracestate)
-        while len(tracestate) < old_len + batchsize and \
-            (self.coverage_target and not tracestate.coverage_reached()
-             or self.scenario_target and len(tracestate) < self.scenario_target):
+        while len(tracestate) < old_len + batchsize and not self.are_all_targets_reached(committed_only=False):
             candidate_id = tracestate.next_candidate(retry=True, randomise=True)
             if candidate_id is None:  # No more candidates remaining for this level
                 if not tracestate.can_rewind():

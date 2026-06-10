@@ -38,11 +38,12 @@ from robotmbt.suitedata import Scenario
 
 class TraceSnapShot:
     def __init__(self, id: str, inserted_scenario: Scenario, model_state: ModelSpace,
-                 remainder: Scenario | None = None, drought: int = 0):
+                 remainder: Scenario | None = None, coverage: int = 0, drought: int = 0):
         self.id: str = id
         self.scenario: Scenario = inserted_scenario
         self.remainder: Scenario | None = remainder
         self._model: ModelSpace = model_state.copy()
+        self.coverage_reached: int = coverage
         self.coverage_drought: int = drought
 
     @property
@@ -200,7 +201,8 @@ class TraceState:
             id = str(index)
             self._tried[-1].append(index)
             self._tried.append([])
-        self._snapshots.append(TraceSnapShot(id, scenario, model, drought=c_drought))
+        self._snapshots.append(TraceSnapShot(id, scenario, model,
+                                             coverage=min(self.c_pool.values()), drought=c_drought))
 
     def push_partial_scenario(self, index: int, scenario: Scenario, model: ModelSpace, remainder=None):
         if self.is_refinement_active(index):
@@ -210,7 +212,8 @@ class TraceState:
             self._tried[-1].append(index)
             self._open_refinements.append(index)
         self._tried.append([])
-        self._snapshots.append(TraceSnapShot(id, scenario, model, remainder, self.coverage_drought))
+        self._snapshots.append(TraceSnapShot(id, scenario, model, remainder,
+                                             coverage=min(self.c_pool.values()), drought=self.coverage_drought))
 
     def can_rewind(self) -> bool:
         rewind_margin = len(self._snapshots[self.rewind_limit:])

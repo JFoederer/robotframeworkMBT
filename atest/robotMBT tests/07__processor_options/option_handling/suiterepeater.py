@@ -13,9 +13,11 @@ class SuiteRepeater(SuiteProcessor):
     """
 
     def process_test_suite(self, in_suite, repeat=1, **kwargs):
+        super().process_test_suite(in_suite, **kwargs)
         n_repeats = int(repeat)
         if kwargs.get('bonus_scenario', False):
             n_repeats += 1
+        self.scenario_count *= n_repeats
         out_suite = copy.deepcopy(in_suite)
         out_suite.scenarios = n_repeats*out_suite.scenarios
         for i in range(len(out_suite.scenarios)):

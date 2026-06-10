@@ -91,8 +91,8 @@ class SuiteReplacer:
         self.suite_gen = [iter(modelbased_suite.suites)]
         self.test_case_gen = [iter(modelbased_suite.scenarios)]
         self.__clearTestSuite(self.current_suite)
-        self.add_next_new(self.current_suite)  # add first test case only. Others are added at runtime by listeners.
         self.mbt_anchor_suite = self.current_suite
+        self.add_next_new(self.mbt_anchor_suite)
 
     @keyword("Set model-based options")
     def set_model_based_options(self, **kwargs):
@@ -182,6 +182,7 @@ class SuiteReplacer:
             self.processor.next_scenario_request()
             try:
                 self.add_test(next(self.test_case_gen[-1]), target_suite)
+                self.processor.commit_next_scenario()
             except StopIteration:
                 pass
 
@@ -235,8 +236,12 @@ class SuiteReplacer:
             return
         if not isinstance(self.processor, SuiteProcessor):
             raise TypeError("processor must be of type SuiteProcessor")
+        if self.processor.are_all_targets_reached():
+            return
+
         self.processor.next_scenario_request()
         try:
             self.add_test(next(self.test_case_gen[-1]), self.current_suite)
+            self.processor.commit_next_scenario()
         except StopIteration:
             pass
