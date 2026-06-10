@@ -66,6 +66,9 @@ class TestSuites(unittest.TestCase):
         self.assertEqual(self.topsuite.suites[-1].scenarios[-1].longname,
                          'topsuite.suite B.scenario BB')
 
+    def test_scenario_count(self):
+        self.assertEqual(self.topsuite.scenario_count(), 6)
+
     def test_error_in_suite_setup_is_detected(self):
         step = Step('top setup', parent=self.topsuite)
         step.gherkin_kw = 'given'
