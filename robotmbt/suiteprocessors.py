@@ -84,7 +84,7 @@ class SuiteProcessor:
                                **kwargs):
         self.coverage_target = 0 if coverage_target is None else int(coverage_target)
         if self.coverage_target not in [0, 1]:
-            logger.warn(f"Unsuppported coverage target request '{coverage_target}'. Using default coverage target of 1")
+            logger.warn(f"Unsupported coverage target request '{coverage_target}'. Using default coverage target of 1")
             self.coverage_target = 1
         self.scenario_target = 0 if scenario_target is None else int(scenario_target)
 
