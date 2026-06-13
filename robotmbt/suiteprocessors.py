@@ -154,11 +154,10 @@ class ModelBased(SuiteProcessor):
         try:
             # a short trace without the need for repeating scenarios is preferred
             direct_tracestate = self._search_direct_trace()
-            if direct_tracestate.coverage_reached():
+            if self.are_all_targets_reached(direct_tracestate, committed_only=False):
                 # The visualiser assumes that the last trace is the final selected trace, which is not always
                 # the case. Re-adding the selected trace to prevent the wrong path from being highlighted.
                 self.tracestate = direct_tracestate
-                self._update_visualisation(self.tracestate)
                 self._update_visualisation(self.tracestate)
             else:
                 self.tracestate = TraceState([s.src_id for s in self.scenarios])
@@ -172,6 +171,7 @@ class ModelBased(SuiteProcessor):
                 self._export_graph_data(export_graph_data)
         if len(self.tracestate) == 0:
             raise Exception("Unable to compose a consistent suite")
+        self.out_suite.scenarios = self.tracestate.get_trace()
         self._report_tracestate_wrapup(self.tracestate)
         return self.out_suite
 
@@ -187,16 +187,18 @@ class ModelBased(SuiteProcessor):
         self.commit_count += 1
         self.tracestate.rewind_limit += 1
 
-    def are_all_targets_reached(self, committed_only: bool = True) -> bool:
+    def are_all_targets_reached(self, tracestate: TraceState | None = None, committed_only: bool = True) -> bool:
+        if tracestate is None:
+            tracestate = self.tracestate
         if committed_only:
-            if self.coverage_target and not self.tracestate[self.commit_count-1].coverage_reached:
+            if self.coverage_target and not tracestate[self.commit_count-1].coverage_reached:
                 return False
             if self.scenario_target and self.commit_count < self.scenario_target:
                 return False
         else:
-            if self.coverage_target and not self.tracestate.coverage_reached():
+            if self.coverage_target and not tracestate.coverage_reached():
                 return False
-            if self.scenario_target and len(self.tracestate) < self.scenario_target:
+            if self.scenario_target and len(tracestate) < self.scenario_target:
                 return False
         return True
 
@@ -238,23 +240,23 @@ class ModelBased(SuiteProcessor):
             if self._is_duplicate_prio_order(tracestates, prio_order):
                 continue
             tracestates.append(self._one_shot_trace(prio_order))
-            if tracestates[-1].coverage_reached() and not self._visualiser:
+            if self.are_all_targets_reached(tracestates[-1], committed_only=False) and not self._visualiser:
                 return tracestates[-1]
             suggestion = self._create_suggestion_by_experience(tracestates)
             if self._is_duplicate_prio_order(tracestates, suggestion):
                 continue
             tracestates.append(self._one_shot_trace(suggestion))
-            if tracestates[-1].coverage_reached() and not self._visualiser:
+            if self.are_all_targets_reached(tracestates[-1], committed_only=False) and not self._visualiser:
                 return tracestates[-1]
 
         index_longest = self._longest_trace(tracestates)
-        if tracestates[index_longest].coverage_reached():
+        if self.are_all_targets_reached(tracestates[index_longest], committed_only=False):
             return tracestates[index_longest]
         logger.debug("Trying to extend most promising traces")
         prio_order = self._create_suggestion_by_experience(tracestates, index_longest)
         if not self._is_duplicate_prio_order(tracestates, prio_order):
             tracestates.append(self._one_shot_trace(prio_order))
-            if tracestates[-1].coverage_reached():
+            if self.are_all_targets_reached(tracestates[-1], committed_only=False):
                 return tracestates[-1]
         last_new = self._last_new_coverage(tracestates)
         while True:  # while still discovering new coverage
@@ -262,7 +264,7 @@ class ModelBased(SuiteProcessor):
             if self._is_duplicate_prio_order(tracestates, prio_order):
                 break
             tracestates.append(self._one_shot_trace(prio_order))
-            if tracestates[-1].coverage_reached():
+            if self.are_all_targets_reached(tracestates[-1], committed_only=False):
                 return tracestates[-1]
             last_new = self._last_new_coverage(tracestates)
             if last_new != len(tracestates)-1:
