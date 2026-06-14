@@ -171,21 +171,20 @@ class ModelBased(SuiteProcessor):
                 self._export_graph_data(export_graph_data)
         if len(self.tracestate) == 0:
             raise Exception("Unable to compose a consistent suite")
-        self.out_suite.scenarios = self.tracestate.get_trace()
         self._report_tracestate_wrapup(self.tracestate)
         return self.out_suite
 
     def next_scenario_request(self):
-        if len(self.tracestate) <= self.commit_count:
+        if len(self.tracestate) <= self.out_suite.scenario_count():
             self._generate_next_batch(self.batch_size)
             logger.warn(f"Extending run with max. {self.batch_size} scenarios. Now {len(self.tracestate)} long.")
-        if len(self.tracestate) > self.commit_count:
-            self.out_suite.scenarios.append(self.tracestate[self.commit_count].scenario)
-        return len(self.tracestate) - self.commit_count
+        if len(self.tracestate) > self.out_suite.scenario_count():
+            self.out_suite.scenarios.append(self.tracestate[self.out_suite.scenario_count()].scenario)
 
     def commit_next_scenario(self):
         self.commit_count += 1
         self.tracestate.rewind_limit += 1
+        return len(self.tracestate) - self.commit_count
 
     def are_all_targets_reached(self, tracestate: TraceState | None = None, committed_only: bool = True) -> bool:
         if tracestate is None:

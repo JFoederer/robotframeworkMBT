@@ -34,6 +34,7 @@ import unittest
 from unittest.mock import patch, call
 
 from robotmbt.suiteprocessors import ModelBased
+from robotmbt.suitedata import Suite, Scenario, Step
 
 
 @patch('robotmbt.suiteprocessors.random.seed')
@@ -102,6 +103,131 @@ class TestRandomSeeding(unittest.TestCase):
         for word in words:
             self.assertTrue(word.isalpha())
             self.assertTrue(3 <= len(word) <= 6)
+
+
+class TestBatchSize(unittest.TestCase):
+    def setUp(self):
+        self.suite = Suite('testsuite')
+        init_scenario = Scenario('init scenario', self.suite, RobotTestCaseStub())
+        init_step = Step('init keyword', parent=init_scenario)
+        init_step.model_info = dict(IN=["new prop"], OUT=["prop.flag = True"])
+        init_scenario.steps = [init_step]
+        body_scenario = Scenario('body scenario', self.suite, RobotTestCaseStub())
+        self.scenario_name_without_rep_count = len('body scenario')
+        step = Step('action keyword', parent=body_scenario)
+        step.model_info = dict(IN=["prop.flag = not prop.flag"], OUT=[])  # force a change so retries are not rejected
+        body_scenario.steps = [step]
+        self.suite.scenarios = [init_scenario, body_scenario]
+        self.processor = ModelBased()
+
+    def test_batch_size_1(self):
+        out_suite = self.processor.process_test_suite(self.suite, scenario_target=3, batch_size=1)
+        self.processor.next_scenario_request()
+        self.assertEqual(out_suite.scenario_count(), 1)
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.assertListEqual([s.name[:self.scenario_name_without_rep_count] for s in out_suite.scenarios],
+                             ['init scenario'] + ['body scenario']*(out_suite.scenario_count()-1))
+
+    def test_batch_size_2_last_batch_not_full(self):
+        out_suite = self.processor.process_test_suite(self.suite, scenario_target=3, batch_size=2)
+        self.processor.next_scenario_request()
+        self.assertEqual(out_suite.scenario_count(), 1)
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 1)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.assertEqual(out_suite.scenario_count(), 3)
+
+    def test_batch_size_2_last_batch_full(self):
+        out_suite = self.processor.process_test_suite(self.suite, scenario_target=4, batch_size=2)
+        self.processor.next_scenario_request()
+        self.assertEqual(out_suite.scenario_count(), 1)
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 1)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 1)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 0)
+        self.assertEqual(out_suite.scenario_count(), 4)
+
+    def test_batch_size_10(self):
+        out_suite = self.processor.process_test_suite(self.suite, scenario_target=15, batch_size=10)
+        self.processor.next_scenario_request()
+        self.assertEqual(out_suite.scenario_count(), 1)
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 9)
+        for _ in range(9):
+            self.processor.next_scenario_request()
+            buffered = self.processor.commit_next_scenario()
+        self.assertEqual(out_suite.scenario_count(), 10)
+        self.assertEqual(buffered, 0)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 4)
+
+    def test_batch_size_3_is_trace_length(self):
+        out_suite = self.processor.process_test_suite(self.suite, scenario_target=3, batch_size=3)
+        self.processor.next_scenario_request()
+        buffered = self.processor.commit_next_scenario()
+        self.assertEqual(buffered, 2)
+        self.processor.next_scenario_request()
+        self.processor.next_scenario_request()
+        self.assertEqual(out_suite.scenario_count(), 3)
+        self.assertListEqual([s.name[:self.scenario_name_without_rep_count] for s in out_suite.scenarios],
+                             ['init scenario'] + ['body scenario']*(out_suite.scenario_count()-1))
+
+    def test_requesting_beyond_targets_has_no_effect(self):
+        out_suite = self.processor.process_test_suite(self.suite, scenario_target=3, batch_size=3)
+        self.processor.next_scenario_request()
+        self.processor.commit_next_scenario()
+        self.processor.next_scenario_request()
+        self.processor.commit_next_scenario()
+        self.assertFalse(self.processor.are_all_targets_reached())
+        self.processor.next_scenario_request()
+        self.processor.commit_next_scenario()
+        self.assertEqual(out_suite.scenario_count(), 3)
+        self.assertTrue(self.processor.are_all_targets_reached())
+        self.processor.next_scenario_request()
+        self.assertTrue(self.processor.are_all_targets_reached())
+        self.assertEqual(out_suite.scenario_count(), 3)
+
+    def test_multi_batch(self):
+        """Check some variations in batch size versus target size"""
+        for target, batch in [(1, 1),     # Smallest target and batch
+                              (23, 3),    # Multiple batches needed te completer
+                              (10, 24),   # Batch size exceeds target size
+                              (15, 14),   # Batch size just not enough
+                              (16, 16)    # Batch size equals target size
+                              ]:
+            out_suite = self.processor.process_test_suite(self.suite, coverage_target=0,
+                                                          scenario_target=target, batch_size=batch)
+            while not self.processor.are_all_targets_reached():
+                self.processor.next_scenario_request()
+                self.processor.commit_next_scenario()
+            self.assertEqual(out_suite.scenario_count(), target)
+            self.assertListEqual([s.name[:self.scenario_name_without_rep_count] for s in out_suite.scenarios],
+                                 ['init scenario'] + ['body scenario']*(out_suite.scenario_count()-1))
+
+
+class RobotTestCaseStub:
+    def copy(self, **kwargs):
+        pass
 
 
 if __name__ == '__main__':
