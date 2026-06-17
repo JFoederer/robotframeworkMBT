@@ -57,17 +57,35 @@ class SuiteProcessor:
         self.commit_count: int = 0
         return Suite('not implemented')
 
-    def next_scenario_request(self) -> int:
-        """
-        Indicates the wish for (at least) one more scenario to trigger trace genaration when needed.
-        Returns the number of buffered scenarios. If 0 is returned, nothing could be added anymore.
-        """
+    def next_scenario_request(self):
+        """Indicates the wish for (at least) one more scenario and triggers trace genaration when needed."""
         # This basic implementation assumes that the complete target test suite is returned directly
         # by process_test_suite() in an overridden method. No further generation is triggered.
-        return self.scenario_count - self.commit_count
+        if self.scenario_count >= self.commit_count + 1:
+            self.commit_count += 1
 
-    def commit_next_scenario(self):
-        self.commit_count += 1
+    @property
+    def scenarios_committed(self) -> int:
+        """
+        Each time next_scenario_request() is called, you commit to one more scenario, if there is at
+        least one more scenario available. This can be an already pending scenario, or new trace
+        generation can be triggered to generate a next scenario (or batch). Committed scenarios are
+        assumed to have been executed when determining the achieved targets.
+        """
+        return self.commit_count
+
+    @property
+    def scenarios_pending(self) -> int:
+        """
+        The number of scenarios that are waiting in the buffer for when more scenarios are requested.
+
+        For practical reasons, trace generation can run ahead of the actual test execution, creating
+        a buffer of pending scenarios ahead of time.
+
+        Note that pending scenarios are still subject to change. Only committed scenarios are frozen
+        in place.
+        """
+        return self.scenario_count - self.commit_count
 
     def are_all_targets_reached(self, committed_only: bool = True) -> bool:
         if not committed_only:
@@ -171,20 +189,24 @@ class ModelBased(SuiteProcessor):
                 self._export_graph_data(export_graph_data)
         if len(self.tracestate) == 0:
             raise Exception("Unable to compose a consistent suite")
-        self._report_tracestate_wrapup(self.tracestate)
+        self._report_tracestate_wrapup()
         return self.out_suite
 
     def next_scenario_request(self):
         if len(self.tracestate) <= self.out_suite.scenario_count():
             self._generate_next_batch(self.batch_size)
-            logger.warn(f"Extending run with max. {self.batch_size} scenarios. Now {len(self.tracestate)} long.")
         if len(self.tracestate) > self.out_suite.scenario_count():
             self.out_suite.scenarios.append(self.tracestate[self.out_suite.scenario_count()].scenario)
+            self.commit_count += 1
+            self.tracestate.rewind_limit += 1
 
-    def commit_next_scenario(self):
-        self.commit_count += 1
-        self.tracestate.rewind_limit += 1
-        return len(self.tracestate) - self.commit_count
+    @property
+    def scenarios_committed(self) -> int:
+        return self.out_suite.scenario_count()
+
+    @property
+    def scenarios_pending(self) -> int:
+        return len(self.tracestate) - self.out_suite.scenario_count()
 
     def are_all_targets_reached(self, tracestate: TraceState | None = None, committed_only: bool = True) -> bool:
         if tracestate is None:
@@ -352,7 +374,8 @@ class ModelBased(SuiteProcessor):
         self._update_visualisation(tracestate)
         while len(tracestate) < old_len + batchsize and not self.are_all_targets_reached(committed_only=False):
             candidate_id = tracestate.next_candidate(retry=True, randomise=True)
-            if candidate_id is None:  # No more candidates remaining for this level
+            if candidate_id is None:
+                logger.debug("No more candidates remaining at this position.")
                 if not tracestate.can_rewind():
                     break
                 tail = modeller.rewind(tracestate)
@@ -426,10 +449,12 @@ class ModelBased(SuiteProcessor):
         logger.debug(f"Trace: [{', '.join(tracestate.id_trace)}] Pending: [{pending}]"
                      f"{' Rejected: ' + str(tracestate.tried) if tracestate.tried else ''}")
 
-    @staticmethod
-    def _report_tracestate_wrapup(tracestate: TraceState):
-        logger.info("Trace composed:")
-        for progression in tracestate:
+    def _report_tracestate_wrapup(self):
+        if self.are_all_targets_reached(committed_only=False):
+            logger.info("Trace composed:")
+        else:
+            logger.info("First part of trace composed: (Check scenarios tagged with `mbt trace extension` for continued generation)")
+        for progression in self.tracestate:
             logger.info(progression.scenario.name)
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 

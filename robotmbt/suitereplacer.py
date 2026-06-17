@@ -30,10 +30,11 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any
 
 import robot.model
+import robot.result
 import robot.running.model as rmodel
 from robot.api import logger
 from robot.api.deco import library, keyword
@@ -92,6 +93,7 @@ class SuiteReplacer:
         self.test_case_gen = [iter(modelbased_suite.scenarios)]
         self.__clearTestSuite(self.current_suite)
         self.mbt_anchor_suite = self.current_suite
+        self.processor.next_scenario_request()
         self.add_next_new(self.mbt_anchor_suite)
 
     @keyword("Set model-based options")
@@ -179,10 +181,8 @@ class SuiteReplacer:
             new_target = self.add_suite(new_suite, target_suite)
             self.add_next_new(new_target)
         except StopIteration:
-            self.processor.next_scenario_request()
             try:
                 self.add_test(next(self.test_case_gen[-1]), target_suite)
-                self.processor.commit_next_scenario()
             except StopIteration:
                 pass
 
@@ -218,10 +218,10 @@ class SuiteReplacer:
                 new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
         target_suite.tests.append(new_tc)
 
-    def _start_suite(self, suite: robot.model.TestSuite, result):
+    def _start_suite(self, suite: rmodel.TestSuite, result):
         self.current_suite = suite
 
-    def _end_suite(self, suite: robot.model.TestSuite, result):
+    def _end_suite(self, suite: rmodel.TestSuite, result):
         if suite == self.mbt_anchor_suite:
             self.mbt_anchor_suite = None
         if not self.mbt_anchor_suite:
@@ -231,17 +231,30 @@ class SuiteReplacer:
         self.current_suite = self.current_suite.parent
         self.add_next_new(self.current_suite)
 
-    def _end_test(self, test_case: robot.model.TestCase, result):
+    def _end_test(self, test_case: rmodel.TestCase, result: robot.result.model.TestCase):
         if not self.mbt_anchor_suite:
             return
         if not isinstance(self.processor, SuiteProcessor):
             raise TypeError("processor must be of type SuiteProcessor")
         if self.processor.are_all_targets_reached():
+            logger.info(f"{self.processor.scenarios_committed} Scenarios completed for model. All targets achieved.")
             return
 
+        committed_old = self.processor.scenarios_committed
+        pending_old = self.processor.scenarios_pending
+        if not pending_old:
+            logger.info(f"{committed_old} scenarios completed. Looking to extend trace.")
         self.processor.next_scenario_request()
+        committed = self.processor.scenarios_committed
+        pending = self.processor.scenarios_pending
+        new_total = committed + pending
+        old_total = committed_old + pending_old
+        if new_total > old_total:
+            result.tags.add('mbt trace extension')
+            logger.info(f"MBT trace generation added {new_total-old_total} new scenarios.")
+        if not pending_old and new_total == old_total:
+            logger.info(f"Trace could not be extended.")
         try:
             self.add_test(next(self.test_case_gen[-1]), self.current_suite)
-            self.processor.commit_next_scenario()
         except StopIteration:
             pass
