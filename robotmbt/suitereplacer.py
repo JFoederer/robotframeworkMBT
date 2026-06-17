@@ -251,7 +251,7 @@ class SuiteReplacer:
         old_total = committed_old + pending_old
         if new_total > old_total:
             result.tags.add('mbt trace extension')
-            logger.info(f"MBT trace generation added {new_total-old_total} new scenarios.")
+            logger.info(f"MBT trace generation prepared {new_total-old_total} new scenarios.")
         if not pending_old and new_total == old_total:
             logger.info(f"Trace could not be extended.")
         try:

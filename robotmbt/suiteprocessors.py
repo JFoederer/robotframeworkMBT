@@ -172,10 +172,15 @@ class ModelBased(SuiteProcessor):
         try:
             # a short trace without the need for repeating scenarios is preferred
             direct_tracestate = self._search_direct_trace()
-            if self.are_all_targets_reached(direct_tracestate, committed_only=False):
-                # The visualiser assumes that the last trace is the final selected trace, which is not always
-                # the case. Re-adding the selected trace to prevent the wrong path from being highlighted.
+            if self._discovery_ready(direct_tracestate):
                 self.tracestate = direct_tracestate
+                n = len(direct_tracestate.covered_ids)
+                logger.debug(f"Using discovered trace ({n} scenario{'s' if n != 1 else ''}):"
+                             f" [{', '.join(direct_tracestate.id_trace)}]")
+                # The visualiser assumes that the last trace is the final selected trace, which is not always
+                # the case. Re-initialising and then adding the selected trace again prevents the wrong path
+                # from being highlighted.
+                self._update_visualisation(TraceState(direct_tracestate.prio_order))
                 self._update_visualisation(self.tracestate)
             else:
                 self.tracestate = TraceState([s.src_id for s in self.scenarios])
@@ -261,23 +266,23 @@ class ModelBased(SuiteProcessor):
             if self._is_duplicate_prio_order(tracestates, prio_order):
                 continue
             tracestates.append(self._one_shot_trace(prio_order))
-            if self.are_all_targets_reached(tracestates[-1], committed_only=False) and not self._visualiser:
+            if self._discovery_ready(tracestates[-1]) and not self._visualiser:
                 return tracestates[-1]
             suggestion = self._create_suggestion_by_experience(tracestates)
             if self._is_duplicate_prio_order(tracestates, suggestion):
                 continue
             tracestates.append(self._one_shot_trace(suggestion))
-            if self.are_all_targets_reached(tracestates[-1], committed_only=False) and not self._visualiser:
+            if self._discovery_ready(tracestates[-1]) and not self._visualiser:
                 return tracestates[-1]
 
         index_longest = self._longest_trace(tracestates)
-        if self.are_all_targets_reached(tracestates[index_longest], committed_only=False):
+        if self._discovery_ready(tracestates[index_longest]):
             return tracestates[index_longest]
         logger.debug("Trying to extend most promising traces")
         prio_order = self._create_suggestion_by_experience(tracestates, index_longest)
         if not self._is_duplicate_prio_order(tracestates, prio_order):
             tracestates.append(self._one_shot_trace(prio_order))
-            if self.are_all_targets_reached(tracestates[-1], committed_only=False):
+            if self._discovery_ready(tracestates[-1]):
                 return tracestates[-1]
         last_new = self._last_new_coverage(tracestates)
         while True:  # while still discovering new coverage
@@ -285,7 +290,7 @@ class ModelBased(SuiteProcessor):
             if self._is_duplicate_prio_order(tracestates, prio_order):
                 break
             tracestates.append(self._one_shot_trace(prio_order))
-            if self.are_all_targets_reached(tracestates[-1], committed_only=False):
+            if self._discovery_ready(tracestates[-1]):
                 return tracestates[-1]
             last_new = self._last_new_coverage(tracestates)
             if last_new != len(tracestates)-1:
@@ -301,6 +306,9 @@ class ModelBased(SuiteProcessor):
             f": [{', '.join([str(i) + '*' if i in longest.unreached else str(i) for i in not_in_trace])}] "
             "(Scenarios marked with * are not part of any trace)\n\n")
         return longest
+
+    def _discovery_ready(self, tracestate):
+        return self.are_all_targets_reached(tracestate, committed_only=False) or len(tracestate) >= self.batch_size
 
     def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
         """returns the index of the trace that covers the most scenarios"""
@@ -341,7 +349,7 @@ class ModelBased(SuiteProcessor):
         tracestate = TraceState(scenarios)
         self._update_visualisation(tracestate)
         candidate_id = tracestate.next_candidate(retry=False, randomise=False)
-        while candidate_id is not None:
+        while candidate_id is not None and not self._discovery_ready(tracestate):
             candidate = self._select_scenario_variant(candidate_id, tracestate)
             if candidate:  # No valid variant available in the current state
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
