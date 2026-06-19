@@ -213,6 +213,7 @@ Configure your test run by using any of the options from the list.
 |-----------------------------------------|----------------------------------|--------------------------------|
 | [coverage_target](#setting-run-targets) | Each scenario must be executed at least this many times | 0 or 1* |
 | [scenario_target](#setting-run-targets) | The trace must have at least this many scenarios   | 0* or higher |
+| [time_target](#setting-run-targets)     | Setting a minimum test run duration           | Robot time string |
 | [seed](#random-seed)                    | Re-running a prior trace          | a specific seed, new* or None |
 | [batch_size](#batch-size)               | Phased trace generation              | 1 or higher (default 100*) |
 | [graph](#graphs)                        | Visualising the model   | None*, scenario or scenario-delta-value |
@@ -230,9 +231,9 @@ Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/Robot
 
 ### Setting run targets
 
-By default, a trace will be generated that runs to _single coverage_, meaning that each scenario must be included in the trace at least once. This is equivalent to setting `coverage_target=1`. To continue generating longer traces after single coverage is reached, a scenario target can be added. For example, `scenario_target=500` will continue to run until there are 500 scenarios in the trace. Note that when scenarios are split up due to when-step refinement, that each part will count as one scenario.
+By default, a trace will be generated that runs to _single coverage_, meaning that each scenario must be included in the trace at least once. This is equivalent to setting `coverage_target=1`. To continue generating longer traces after single coverage is achieved, a second target can be enabled. For example, `scenario_target=500` will continue to run until there are 500 scenarios in the trace. Note that when scenarios are split up due to when-step refinement, that each part will count as one scenario. Alternatively, setting `time_target=1 hour 30 min` will cause the test run to run at least this long. Refer to the Robot Framework documentation to find [supported time formats](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#time-as-time-string).
 
-If you do not need guaranteed coverage, then `coverage_target=0` will disable the coverage check. Test runs can now finish before all scenarios are executed, once the `scenario_target` is reached. This does not affect the trace generation process, which will still prefer new coverage over repetition.
+The test run will finish once all enabled targets are achieved. By default, only the coverage target is set. If you do not need guaranteed coverage, then `coverage_target=0` will disable the coverage check. Test runs can now finish before all scenarios are executed. This does not affect the trace generation process, which will still prefer new coverage over repetition.
 
 Tip: _When generating large test suites, use Robot Framework's [Split log](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#splitting-logs)  feature (`--splitlog`), to keep log file sizes manageable._
 

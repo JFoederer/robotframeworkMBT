@@ -32,9 +32,11 @@
 
 import copy
 import random
+import time
 
 from robot.api import logger
 from robot.errors import TimeoutExceeded
+from robot.utils import timestr_to_secs
 
 from . import modeller
 from .modelspace import ModelSpace
@@ -48,13 +50,20 @@ except ImportError:
 
 
 class SuiteProcessor:
+    def __init__(self):
+        self.scenario_count: int = 0
+        self.commit_count: int = 0
+        self.coverage_target: int = 1
+        self.scenario_target: int = 0
+        self.time_target: float = 0
+
     def process_test_suite(self, in_suite: Suite,
                            **kwargs) -> Suite:
         self._handle_target_options(**kwargs)
         self.scenario_count = in_suite.scenario_count()
         # Counts the scenarios committed by the runner. I.e. the scenarios that are scheduled for execution
         # and cannot be touched anymore
-        self.commit_count: int = 0
+        self.commit_count = 0
         return Suite('not implemented')
 
     def next_scenario_request(self):
@@ -94,17 +103,21 @@ class SuiteProcessor:
             return False
         if self.scenario_target and self.commit_count < self.scenario_target:
             return False
+        if self.time_target and time.time() < self.time_target:
+            return False
         return True
 
     def _handle_target_options(self,
                                coverage_target: str | int | None = 1,
-                               scenario_target: str | int | None = None,
+                               scenario_target: str | int = 0,
+                               time_target: str | None = None,
                                **kwargs):
         self.coverage_target = 0 if coverage_target is None else int(coverage_target)
         if self.coverage_target not in [0, 1]:
             logger.warn(f"Unsupported coverage target request '{coverage_target}'. Using default coverage target of 1")
             self.coverage_target = 1
-        self.scenario_target = 0 if scenario_target is None else int(scenario_target)
+        self.scenario_target = int(scenario_target)
+        self.time_target = (time.time() + timestr_to_secs(time_target)) if time_target else 0
 
 
 class Echo(SuiteProcessor):
@@ -216,6 +229,8 @@ class ModelBased(SuiteProcessor):
     def are_all_targets_reached(self, tracestate: TraceState | None = None, committed_only: bool = True) -> bool:
         if tracestate is None:
             tracestate = self.tracestate
+        if self.time_target and time.time() < self.time_target:
+            return False
         if committed_only:
             if self.coverage_target and not tracestate[self.commit_count-1].coverage_reached:
                 return False
