@@ -32,6 +32,7 @@
 
 from .version import VERSION
 from .suitereplacer import SuiteReplacer
+from .suiteprocessors import SuiteProcessor
 
 
 class robotmbt(SuiteReplacer):

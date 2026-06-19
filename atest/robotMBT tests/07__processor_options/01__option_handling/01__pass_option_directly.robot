@@ -1,9 +1,9 @@
 *** Settings ***
 Suite Setup       Run keywords    Set suite variable    ${test_count}    ${0}
-...                        AND    Treat this test suite Model-based    repeat=2    bonus_scenario=${True}
-Suite Teardown    Should be equal    ${test_count}    ${3}
+...                        AND    Treat this test suite Model-based    repeat=2
+Suite Teardown    Should be equal    ${test_count}    ${2}
 Library           suiterepeater.py
-Library           robotmbt    processor_lib=suiterepeater
+Library           robotmbt    processor=suiterepeater
 
 *** Test Cases ***
 only test case

@@ -30,49 +30,43 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from collections.abc import Callable, Iterator
+from collections.abc import Iterator
 from typing import Any
 
 import robot.model
+import robot.result
 import robot.running.model as rmodel
 from robot.api import logger
 from robot.api.deco import library, keyword
 from robot.libraries.BuiltIn import BuiltIn
 
 from .suitedata import Suite, Scenario, Step
-from .suiteprocessors import SuiteProcessors
+from .suiteprocessors import SuiteProcessor, ModelBased, Echo, Flatten
 
 Robot = BuiltIn()
 
 
 @library(scope="GLOBAL", listener='SELF')
 class SuiteReplacer:
-    def __init__(self, processor: str = 'process_test_suite', processor_lib: str | None = None):
+    def __init__(self, processor: str = 'robotmbt'):
         self.current_suite: robot.model.TestSuite | None = None
         self.mbt_anchor_suite: robot.model.TestSuite | None = None
-        self.processor_lib_name: str | None = processor_lib
         self.processor_name: str = processor
-        self._processor_lib: SuiteProcessors | None | object = None
-        self._processor_method: Callable[..., Suite] | None = None
+        self.processor: SuiteProcessor | None = None
         self.suite_gen: list[Iterator[Suite]] = []  # Generator for on-the-fly suite insertion
         self.test_case_gen: list[Iterator[Scenario]] = []  # Generator for on-the-fly test case insertion
         self.processor_options: dict[str, Any] = {}
 
-    @property
-    def processor_lib(self) -> SuiteProcessors:
-        if self._processor_lib is None:
-            self._processor_lib = SuiteProcessors() if self.processor_lib_name is None \
-                else Robot.get_library_instance(self.processor_lib_name)
-        return self._processor_lib
-
-    @property
-    def processor_method(self):
-        if self._processor_method is None:
-            if not hasattr(self.processor_lib, self.processor_name):
-                Robot.fail(
-                    f"Processor '{self.processor_name}' not available for model-based processor library {self.processor_lib_name}")
-            self._processor_method = getattr(self._processor_lib, self.processor_name)
-        return self._processor_method
+    def load_processor(self):
+        if self.processor_name.lower() == 'robotmbt':
+            self.processor = ModelBased()
+        elif self.processor_name.lower() == 'echo':
+            self.processor = Echo()
+        elif self.processor_name.lower() == 'flatten':
+            self.processor = Flatten()
+        else:
+            self.processor = Robot.get_library_instance(self.processor_name)
+        return self.processor
 
     @keyword(name="Treat this test suite Model-based")
     def treat_model_based(self, **kwargs):
@@ -93,12 +87,14 @@ class SuiteReplacer:
         local_settings = self.processor_options.copy()
         local_settings.update(kwargs)
         master_suite = self.__process_robot_suite(self.current_suite, parent=None)
-        modelbased_suite = self.processor_method(master_suite, **local_settings)
+        self.load_processor()
+        modelbased_suite = self.processor.process_test_suite(master_suite, **local_settings)
         self.suite_gen = [iter(modelbased_suite.suites)]
         self.test_case_gen = [iter(modelbased_suite.scenarios)]
         self.__clearTestSuite(self.current_suite)
-        self.add_next_new(self.current_suite)  # add first test case only. Others are added at runtime by listeners.
         self.mbt_anchor_suite = self.current_suite
+        self.processor.next_scenario_request()
+        self.add_next_new(self.mbt_anchor_suite)
 
     @keyword("Set model-based options")
     def set_model_based_options(self, **kwargs):
@@ -125,7 +121,7 @@ class SuiteReplacer:
         different graph style than was used during the test run. If no graph style is selected,
         then the scenario graph style is used.
         """
-        SuiteProcessors().draw_graph_from_export_file(json_file_path, graph_style)
+        ModelBased().draw_graph_from_export_file(json_file_path, graph_style)
 
     def __process_robot_suite(self, in_suite: robot.model.TestSuite, parent: Suite | None) -> Suite:
         out_suite = Suite(in_suite.name, parent)
@@ -222,10 +218,10 @@ class SuiteReplacer:
                 new_tc.body.create_keyword(name=step.keyword, assign=step.assign, args=step.posnom_args_str)
         target_suite.tests.append(new_tc)
 
-    def _start_suite(self, suite: robot.model.TestSuite, result):
+    def _start_suite(self, suite: rmodel.TestSuite, result: robot.result.model.TestSuite):
         self.current_suite = suite
 
-    def _end_suite(self, suite: robot.model.TestSuite, result):
+    def _end_suite(self, suite: rmodel.TestSuite, result: robot.result.model.TestSuite):
         if suite == self.mbt_anchor_suite:
             self.mbt_anchor_suite = None
         if not self.mbt_anchor_suite:
@@ -235,9 +231,35 @@ class SuiteReplacer:
         self.current_suite = self.current_suite.parent
         self.add_next_new(self.current_suite)
 
-    def _end_test(self, test_case: robot.model.TestCase, result):
+    def _end_test(self, test_case: rmodel.TestCase, result: robot.result.model.TestCase):
         if not self.mbt_anchor_suite:
             return
+        if not isinstance(self.processor, SuiteProcessor):
+            raise TypeError("processor must be of type SuiteProcessor")
+        if self.processor.are_all_targets_reached():
+            logger.info(f"{self.processor.scenarios_committed} Scenarios completed for model. All targets achieved.")
+            return
+
+        committed_old = self.processor.scenarios_committed
+        pending_old = self.processor.scenarios_pending
+        if not pending_old:
+            logger.info(f"{committed_old} Scenario{'s' if committed_old != 1 else ''} completed. Looking to extend trace.")
+        self.processor.next_scenario_request()
+        committed = self.processor.scenarios_committed
+        pending = self.processor.scenarios_pending
+        new_total = committed + pending
+        old_total = committed_old + pending_old
+        if not pending_old and new_total == old_total:
+            logger.info(f"Trace could not be extended.")
+            if not self.processor.are_all_targets_reached():
+                new_tc = self.current_suite.tests.create(name='Confirm exit criteria')
+                new_tc.body.create_keyword(name='Fail', args=('Not all targets achieved',))
+                self.mbt_anchor_suite = None
+                return
+
+        if new_total > old_total:
+            result.tags.add('mbt trace extension')
+            logger.info(f"MBT trace generation prepared {new_total-old_total} new scenarios.")
         try:
             self.add_test(next(self.test_case_gen[-1]), self.current_suite)
         except StopIteration:

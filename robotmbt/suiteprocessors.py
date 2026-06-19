@@ -32,9 +32,11 @@
 
 import copy
 import random
+import time
 
 from robot.api import logger
 from robot.errors import TimeoutExceeded
+from robot.utils import timestr_to_secs
 
 from . import modeller
 from .modelspace import ModelSpace
@@ -47,17 +49,95 @@ except ImportError:
     Visualiser = None
 
 
-class SuiteProcessors:
-    @staticmethod
-    def echo(in_suite: Suite) -> Suite:
+class SuiteProcessor:
+    def __init__(self):
+        self.scenario_count: int = 0
+        self.commit_count: int = 0
+        self.coverage_target: int = 1
+        self.scenario_target: int = 0
+        self.time_target: float = 0
+
+    def process_test_suite(self, in_suite: Suite,
+                           **kwargs) -> Suite:
+        self._handle_target_options(**kwargs)
+        self.scenario_count = in_suite.scenario_count()
+        # Counts the scenarios committed by the runner. I.e. the scenarios that are scheduled for execution
+        # and cannot be touched anymore
+        self.commit_count = 0
+        return Suite('not implemented')
+
+    def next_scenario_request(self):
+        """Indicates the wish for (at least) one more scenario and triggers trace genaration when needed."""
+        # This basic implementation assumes that the complete target test suite is returned directly
+        # by process_test_suite() in an overridden method. No further generation is triggered.
+        if self.scenario_count >= self.commit_count + 1:
+            self.commit_count += 1
+
+    @property
+    def scenarios_committed(self) -> int:
+        """
+        Each time next_scenario_request() is called, you commit to one more scenario, if there is at
+        least one more scenario available. This can be an already pending scenario, or new trace
+        generation can be triggered to generate a next scenario (or batch). Committed scenarios are
+        assumed to have been executed when determining the achieved targets.
+        """
+        return self.commit_count
+
+    @property
+    def scenarios_pending(self) -> int:
+        """
+        The number of scenarios that are waiting in the buffer for when more scenarios are requested.
+
+        For practical reasons, trace generation can run ahead of the actual test execution, creating
+        a buffer of pending scenarios ahead of time.
+
+        Note that pending scenarios are still subject to change. Only committed scenarios are frozen
+        in place.
+        """
+        return self.scenario_count - self.commit_count
+
+    def are_all_targets_reached(self, committed_only: bool = True) -> bool:
+        if not committed_only:
+            return True
+        if self.coverage_target and self.commit_count < self.scenario_count:
+            return False
+        if self.scenario_target and self.commit_count < self.scenario_target:
+            return False
+        if self.time_target and time.time() < self.time_target:
+            return False
+        return True
+
+    def _handle_target_options(self,
+                               coverage_target: str | int | None = 1,
+                               scenario_target: str | int = 0,
+                               time_target: str | None = None,
+                               **kwargs):
+        self.coverage_target = 0 if coverage_target is None else int(coverage_target)
+        if self.coverage_target not in [0, 1]:
+            logger.warn(f"Unsupported coverage target request '{coverage_target}'. Using default coverage target of 1")
+            self.coverage_target = 1
+        self.scenario_target = int(scenario_target)
+        self.time_target = (time.time() + timestr_to_secs(time_target)) if time_target else 0
+
+
+class Echo(SuiteProcessor):
+    def process_test_suite(self, in_suite: Suite, **kwargs) -> Suite:
+        super().process_test_suite(in_suite, **kwargs)
         return in_suite
 
-    def flatten(self, in_suite: Suite) -> Suite:
+
+class Flatten(SuiteProcessor):
+    def process_test_suite(self, in_suite: Suite, **kwargs) -> Suite:
         """
         Takes a Suite as input and returns a Suite as output. The output Suite does not
         have any sub-suites, only scenarios. The scenarios do not have a setup. Any setup
         keywords are inserted at the front of the scenario as regular steps.
         """
+        super().process_test_suite(in_suite, **kwargs)
+        return self.flatten(in_suite)
+
+    @staticmethod
+    def flatten(in_suite: Suite) -> Suite:
         out_suite = copy.deepcopy(in_suite)
         outer_scenarios = out_suite.scenarios
         for scenario in outer_scenarios:
@@ -69,7 +149,7 @@ class SuiteProcessors:
                 scenario.teardown = None
         out_suite.scenarios = []
         for suite in in_suite.suites:
-            subsuite = self.flatten(suite)
+            subsuite = Flatten.flatten(suite)
             for scenario in subsuite.scenarios:
                 if subsuite.setup:
                     scenario.steps.insert(0, subsuite.setup)
@@ -80,43 +160,88 @@ class SuiteProcessors:
         out_suite.suites = []
         return out_suite
 
+
+class ModelBased(SuiteProcessor):
     def process_test_suite(self, in_suite: Suite, *, seed: str | int | bytes | bytearray = 'new',
-                           graph: str = '', export_graph_data: str = '') -> Suite:
+                           batch_size: str | int = 100,
+                           graph: str = '', export_graph_data: str = '', **kwargs) -> Suite:
+        # handle options
+        super().process_test_suite(in_suite, **kwargs)
+        self.batch_size = int(batch_size)
+        self._init_randomiser(seed)
+        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
+
         self.out_suite = Suite(in_suite.name)
         self.out_suite.filename = in_suite.filename
         self.out_suite.parent = in_suite.parent
         self._fail_on_step_errors(in_suite)
-        self.flat_suite = self.flatten(in_suite)
+        self.flat_suite = Flatten.flatten(in_suite)
         for id, scenario in enumerate(self.flat_suite.scenarios, start=1):
             scenario.src_id = id
         self.scenarios: list[Scenario] = self.flat_suite.scenarios[:]
         logger.debug("Use these numbers to reference scenarios from traces\n\t" +
                      "\n\t".join([f"{s.src_id}: {s.name}" for s in self.scenarios]))
 
-        self._init_randomiser(seed)
-        self._visualiser = self._init_visualiser(in_suite.name) if graph or export_graph_data else None
         try:
             # a short trace without the need for repeating scenarios is preferred
-            tracestate = self._search_direct_trace()
-            if not tracestate.coverage_reached():
-                logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
-                tracestate = self._try_to_reach_full_coverage(allow_duplicate_scenarios=True, randomise=True,
-                                                              unreached_scenarios=tracestate.unreached)
-            else:
+            direct_tracestate = self._search_direct_trace()
+            if self._discovery_ready(direct_tracestate):
+                self.tracestate = direct_tracestate
+                n = len(direct_tracestate.covered_ids)
+                logger.debug(f"Using one of the discovered traces ({n} scenario{'s' if n != 1 else ''})")
+                self._report_tracestate_to_user(direct_tracestate)
                 # The visualiser assumes that the last trace is the final selected trace, which is not always
-                # the case. Re-adding the selected trace to prevent the wrong path from being highlighted.
-                self._update_visualisation(TraceState(tracestate.prio_order))
-                self._update_visualisation(tracestate)
+                # the case. Re-initialising and then adding the selected trace again prevents the wrong path
+                # from being highlighted.
+                self._update_visualisation(TraceState(direct_tracestate.prio_order))
+                self._update_visualisation(self.tracestate)
+            else:
+                self.tracestate = TraceState([s.src_id for s in self.scenarios])
+                self.tracestate.unreached = direct_tracestate.unreached
+                logger.debug("Direct trace not discovered. Now exploring with loops, allowing repetition of scenarios.")
+                self._generate_next_batch(self.batch_size)
         finally:  # Draw the graph even when a timeout or user interrupt occurs
             if graph:
                 self._write_visualisation(graph)
             if export_graph_data:
                 self._export_graph_data(export_graph_data)
-        if not tracestate.coverage_reached():
+        if len(self.tracestate) == 0:
             raise Exception("Unable to compose a consistent suite")
-        self._report_tracestate_wrapup(tracestate)
-        self.out_suite.scenarios = tracestate.get_trace()
+        self._report_tracestate_wrapup()
         return self.out_suite
+
+    def next_scenario_request(self):
+        if len(self.tracestate) <= self.out_suite.scenario_count():
+            self._generate_next_batch(self.batch_size)
+        if len(self.tracestate) > self.out_suite.scenario_count():
+            self.out_suite.scenarios.append(self.tracestate[self.out_suite.scenario_count()].scenario)
+            self.commit_count += 1
+            self.tracestate.rewind_limit += 1
+
+    @property
+    def scenarios_committed(self) -> int:
+        return self.out_suite.scenario_count()
+
+    @property
+    def scenarios_pending(self) -> int:
+        return len(self.tracestate) - self.out_suite.scenario_count()
+
+    def are_all_targets_reached(self, tracestate: TraceState | None = None, committed_only: bool = True) -> bool:
+        if tracestate is None:
+            tracestate = self.tracestate
+        if self.time_target and time.time() < self.time_target:
+            return False
+        if committed_only:
+            if self.coverage_target and not tracestate[self.commit_count-1].coverage_reached:
+                return False
+            if self.scenario_target and self.commit_count < self.scenario_target:
+                return False
+        else:
+            if self.coverage_target and not tracestate.coverage_reached():
+                return False
+            if self.scenario_target and len(tracestate) < self.scenario_target:
+                return False
+        return True
 
     def draw_graph_from_export_file(self, file_path: str, graph_style: str):
         self._visualiser = self._init_visualiser()
@@ -156,23 +281,26 @@ class SuiteProcessors:
             if self._is_duplicate_prio_order(tracestates, prio_order):
                 continue
             tracestates.append(self._one_shot_trace(prio_order))
-            if tracestates[-1].coverage_reached() and not self._visualiser:
+            if self._discovery_ready(tracestates[-1]) and not self._visualiser:
+                tracestates[-1].unreached = self._unreached_scenarios(tracestates)
                 return tracestates[-1]
             suggestion = self._create_suggestion_by_experience(tracestates)
             if self._is_duplicate_prio_order(tracestates, suggestion):
                 continue
             tracestates.append(self._one_shot_trace(suggestion))
-            if tracestates[-1].coverage_reached() and not self._visualiser:
+            if self._discovery_ready(tracestates[-1]) and not self._visualiser:
+                tracestates[-1].unreached = self._unreached_scenarios(tracestates)
                 return tracestates[-1]
 
         index_longest = self._longest_trace(tracestates)
-        if tracestates[index_longest].coverage_reached():
+        if self._discovery_ready(tracestates[index_longest]):
+            tracestates[index_longest].unreached = self._unreached_scenarios(tracestates)
             return tracestates[index_longest]
         logger.debug("Trying to extend most promising traces")
         prio_order = self._create_suggestion_by_experience(tracestates, index_longest)
         if not self._is_duplicate_prio_order(tracestates, prio_order):
             tracestates.append(self._one_shot_trace(prio_order))
-            if tracestates[-1].coverage_reached():
+            if self._discovery_ready(tracestates[-1]):
                 return tracestates[-1]
         last_new = self._last_new_coverage(tracestates)
         while True:  # while still discovering new coverage
@@ -180,7 +308,7 @@ class SuiteProcessors:
             if self._is_duplicate_prio_order(tracestates, prio_order):
                 break
             tracestates.append(self._one_shot_trace(prio_order))
-            if tracestates[-1].coverage_reached():
+            if self._discovery_ready(tracestates[-1]):
                 return tracestates[-1]
             last_new = self._last_new_coverage(tracestates)
             if last_new != len(tracestates)-1:
@@ -188,7 +316,7 @@ class SuiteProcessors:
 
         longest = tracestates[self._longest_trace(tracestates)]
         not_in_trace = sorted(longest.not_in_trace)
-        longest.unreached = sorted(self._unreached_scenarios(tracestates))
+        longest.unreached = self._unreached_scenarios(tracestates)
         logger.debug(
             f"Longest trace so far ({len(longest.covered_ids)} scenario{'s' if len(longest.covered_ids) != 1 else ''})"
             f": [{', '.join(longest.id_trace)}]\n"
@@ -196,6 +324,9 @@ class SuiteProcessors:
             f": [{', '.join([str(i) + '*' if i in longest.unreached else str(i) for i in not_in_trace])}] "
             "(Scenarios marked with * are not part of any trace)\n\n")
         return longest
+
+    def _discovery_ready(self, tracestate):
+        return self.are_all_targets_reached(tracestate, committed_only=False) or len(tracestate) >= self.batch_size
 
     def _longest_trace(self, tracestate_list: list[TraceState]) -> int:
         """returns the index of the trace that covers the most scenarios"""
@@ -236,7 +367,7 @@ class SuiteProcessors:
         tracestate = TraceState(scenarios)
         self._update_visualisation(tracestate)
         candidate_id = tracestate.next_candidate(retry=False, randomise=False)
-        while candidate_id is not None:
+        while candidate_id is not None and not self._discovery_ready(tracestate):
             candidate = self._select_scenario_variant(candidate_id, tracestate)
             if candidate:  # No valid variant available in the current state
                 modeller.try_to_fit_in_scenario(candidate, tracestate)
@@ -263,15 +394,14 @@ class SuiteProcessors:
         not_in_target = [id for id in tracestate_list[target_index].not_in_trace if id not in never_reached]
         return never_reached + not_in_target + tracestate_list[target_index].covered_ids
 
-    def _try_to_reach_full_coverage(self, allow_duplicate_scenarios: bool, randomise: bool = False,
-                                    unreached_scenarios: list[int] = None) -> TraceState:
-        tracestate = TraceState([s.src_id for s in self.scenarios])
-        if unreached_scenarios:
-            tracestate.unreached = unreached_scenarios
+    def _generate_next_batch(self, batchsize):
+        tracestate = self.tracestate
+        old_len = len(tracestate)
         self._update_visualisation(tracestate)
-        while not tracestate.coverage_reached():
-            candidate_id = tracestate.next_candidate(retry=allow_duplicate_scenarios, randomise=randomise)
-            if candidate_id is None:  # No more candidates remaining for this level
+        while len(tracestate) < old_len + batchsize and not self.are_all_targets_reached(committed_only=False):
+            candidate_id = tracestate.next_candidate(retry=True, randomise=True)
+            if candidate_id is None:
+                logger.debug("No more candidates remaining at this position.")
                 if not tracestate.can_rewind():
                     break
                 tail = modeller.rewind(tracestate)
@@ -295,7 +425,7 @@ class SuiteProcessors:
                     if self.__last_candidate_changed_nothing(tracestate):
                         logger.debug("Repeated scenario did not change the model's state. Stop trying.")
                         modeller.rewind(tracestate)
-                    elif tracestate.coverage_drought > self.DROUGHT_LIMIT:
+                    elif self.coverage_target and not self.tracestate.coverage_reached() and tracestate.coverage_drought > self.DROUGHT_LIMIT:
                         logger.debug(f"Went too long without new coverage (>{self.DROUGHT_LIMIT}x). "
                                      "Roll back to last coverage increase and try something else.")
                         modeller.rewind(tracestate, drought_recovery=True)
@@ -303,7 +433,6 @@ class SuiteProcessors:
                         logger.debug(f"last state:\n{tracestate.model.get_status_text()}")
             self._update_visualisation(tracestate)
         self._update_visualisation(tracestate)
-        return tracestate
 
     @staticmethod
     def __last_candidate_changed_nothing(tracestate: TraceState) -> bool:
@@ -342,14 +471,17 @@ class SuiteProcessors:
 
     @staticmethod
     def _report_tracestate_to_user(tracestate: TraceState):
-        pending = ', '.join([str(i) + '*' if i in tracestate.unreached else str(i) for i in tracestate.not_in_trace])
+        pending = ', '.join([str(i) + '*' if i in tracestate.unreached else str(i)
+                             for i in sorted(tracestate.not_in_trace)])
         logger.debug(f"Trace: [{', '.join(tracestate.id_trace)}] Pending: [{pending}]"
                      f"{' Rejected: ' + str(tracestate.tried) if tracestate.tried else ''}")
 
-    @staticmethod
-    def _report_tracestate_wrapup(tracestate: TraceState):
-        logger.info("Trace composed:")
-        for progression in tracestate:
+    def _report_tracestate_wrapup(self):
+        if self.are_all_targets_reached(committed_only=False):
+            logger.info("Trace composed:")
+        else:
+            logger.info("First part of trace composed: (Check scenarios tagged with `mbt trace extension` for continued generation)")
+        for progression in self.tracestate:
             logger.info(progression.scenario.name)
             logger.debug(f"model\n{progression.model.get_status_text()}\n")
 
@@ -363,7 +495,7 @@ class SuiteProcessors:
                 "Using system's random seed for trace generation. This trace cannot be rerun. Use `seed=new` to generate a reusable seed.")
         elif str(seed).lower() == 'new':
             random.seed()
-            new_seed = SuiteProcessors._generate_seed()
+            new_seed = ModelBased._generate_seed()
             logger.info(f"seed={new_seed} (use seed to rerun this trace)")
             random.seed(new_seed)
         else:

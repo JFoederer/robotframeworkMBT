@@ -146,7 +146,7 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
     tail_inserted, remainder, extra_data = process_scenario(refinement_tail, model)
     if not tail_inserted:
         logger.debug(extra_data['fail_msg'])
-        # Confirm then rewind, to roll back complete scenario, including its refiements
+        # Confirm then rewind, to roll back complete scenario, including its refinements
         # Because that exit check passed, this is an error in the refined scenario itself
         tracestate.confirm_full_scenario(refinement_tail.src_id, refinement_tail, model)
         tail = rewind(tracestate)
@@ -256,10 +256,11 @@ def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[st
 
 
 def rewind(tracestate: TraceState, drought_recovery: bool = False) -> TraceSnapShot | None:
-    if tracestate[-1].remainder and tracestate.highest_part(tracestate[-1].remainder.src_id) > 1:
-        # When rewinding an 'in between' part, rewind both the part and the refinement
-        tracestate.rewind()
     tail = tracestate.rewind()
     while drought_recovery and tracestate.coverage_drought:
+        if not tracestate.can_rewind():
+            logger.debug(
+                f"Coverage drought recovery stalled. {tracestate.coverage_drought} Scenarios are already committed.")
+            break
         tail = tracestate.rewind()
     return tail

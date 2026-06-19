@@ -1,7 +1,7 @@
 *** Settings ***
 Suite Setup       Treat this test suite Model-based
 Library           MyProcessor.py
-Library           robotmbt    processor_lib=MyProcessor
+Library           robotmbt    processor=MyProcessor
 
 *** Test cases ***
 concise model info

@@ -38,11 +38,12 @@ from robotmbt.suitedata import Scenario
 
 class TraceSnapShot:
     def __init__(self, id: str, inserted_scenario: Scenario, model_state: ModelSpace,
-                 remainder: Scenario | None = None, drought: int = 0):
+                 remainder: Scenario | None = None, coverage: int = 0, drought: int = 0):
         self.id: str = id
         self.scenario: Scenario = inserted_scenario
         self.remainder: Scenario | None = remainder
         self._model: ModelSpace = model_state.copy()
+        self.coverage_reached: int = coverage
         self.coverage_drought: int = drought
 
     @property
@@ -59,6 +60,9 @@ class TraceState:
         self._tried: list[list[int]] = [[]]  # Keeps track of the scenarios already tried at each step in the trace
         self._snapshots: list[TraceSnapShot] = []  # Keeps details for elements in trace
         self._open_refinements: list[int] = []
+        # The rewind limit indicates a (soft) limit for scenarios that should not be rewound. E.g. because they were
+        # already scheduled for execution. It refers to the number of scenarios that should remain in the trace.
+        self.rewind_limit = 0
 
     @property
     def model(self) -> ModelSpace | None:
@@ -122,6 +126,7 @@ class TraceState:
         cp._tried = [triedlist[:] for triedlist in self._tried]
         cp._snapshots = self._snapshots[:]
         cp._open_refinements = self._open_refinements[:]
+        cp.rewind_limit = self.rewind_limit
         return cp
 
     def coverage_reached(self) -> bool:
@@ -196,7 +201,8 @@ class TraceState:
             id = str(index)
             self._tried[-1].append(index)
             self._tried.append([])
-        self._snapshots.append(TraceSnapShot(id, scenario, model, drought=c_drought))
+        self._snapshots.append(TraceSnapShot(id, scenario, model,
+                                             coverage=min(self.c_pool.values()), drought=c_drought))
 
     def push_partial_scenario(self, index: int, scenario: Scenario, model: ModelSpace, remainder=None):
         if self.is_refinement_active(index):
@@ -206,16 +212,43 @@ class TraceState:
             self._tried[-1].append(index)
             self._open_refinements.append(index)
         self._tried.append([])
-        self._snapshots.append(TraceSnapShot(id, scenario, model, remainder, self.coverage_drought))
+        self._snapshots.append(TraceSnapShot(id, scenario, model, remainder,
+                                             coverage=min(self.c_pool.values()), drought=self.coverage_drought))
 
     def can_rewind(self) -> bool:
-        return len(self._snapshots) > 0
+        rewind_margin = len(self._snapshots[self.rewind_limit:])
+        if rewind_margin == 0:
+            return False
+        n = 1
+        index, part = self.split_id(self._snapshots[-1].id)
+        if part and part > 1:
+            # When rewinding an 'in between' part, rewind both the part and the refinement
+            n += 1
+        if part != 0:
+            return rewind_margin >= n
+
+        # Refined scenarios that are already closed will be rewound in full.
+        # Check if the scenario's opening part is within the rewind margin.
+        for i in range(1, rewind_margin + 1):
+            if self._snapshots[-i].id == f'{index}.1':
+                n = i
+                return True
+        return False  # went beyond rewind limit
 
     def rewind(self) -> TraceSnapShot | None:
+        """
+        Performs a single rewind action, removing the most recently completed scenario from the trace.
+
+        If the most recently completed scenario contained refinements, then the complete scenario, including
+        its refinements is rewound. If multi-part refinement is ongoing and a refinement step just ended,
+        without completing the full scenario, then the trace is rewound to before the latest refinement.
+        Use can_rewind() to check if a rewind is possible.
+        """
         id = self._snapshots[-1].id
-        index = int(id.split('.')[0])
+        index, part = self.split_id(id)
         self._snapshots.pop()
         if id.endswith('.0'):
+            # refined scenarios are rewinded in full
             self.c_pool[index] -= 1
             self._open_refinements.append(index)
             while self._snapshots[-1].id != f"{index}.1":
@@ -223,11 +256,19 @@ class TraceState:
             return self.rewind()
 
         self._tried.pop()
+        if part and part > 1:
+            # When rewinding an 'in between' part, rewind both the part and the refinement
+            return self.rewind()
+
         if '.' not in id:
             self.c_pool[index] -= 1
         if id.endswith('.1'):
             self._open_refinements.pop()
         return self._snapshots[-1] if self._snapshots else None
+
+    @staticmethod
+    def split_id(id: str) -> tuple[int, int | int, None]:
+        return tuple(map(int, id.split('.'))) if '.' in id else (int(id), None)
 
     def __iter__(self):
         return iter(self._snapshots)

@@ -69,6 +69,9 @@ class Suite:
                 + [e for s in map(Scenario.steps_with_errors, self.scenarios) for e in s]
                 + ([self.teardown] if self.teardown and self.teardown.has_error() else []))
 
+    def scenario_count(self):
+        return len(self.scenarios) + sum([s.scenario_count() for s in self.suites])
+
 
 class Scenario:
     def __init__(self, name: str, parent: Suite, og_tc):

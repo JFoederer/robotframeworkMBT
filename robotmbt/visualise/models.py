@@ -230,7 +230,7 @@ class TraceInfo:
         else:
             # No change - sanity check
             if len(self.current_trace) > 0:
-                self._sanity_check(scenario, state, 'nothing')
+                self._sanity_check(scenario, state, 'nothing changed')
 
     def _push(self, scenario: ScenarioInfo, state: StateInfo, n: int):
         if n > 1:
