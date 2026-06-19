@@ -230,9 +230,11 @@ Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/Robot
 
 ### Setting run targets
 
-By default a trace will be generated that runs to _single coverage_, meaning that each scenario must be included in the trace at least once. This is equivalent to setting `coverage_target=1`. To continue generating longer traces after single coverage is reached, a scenario target can be added. For example, `scenario_target=500` will continue to run until there are 500 scenarios in the trace. Note that when scenarios are split up due to when-step refinement, that each part will count as one scenario.
+By default, a trace will be generated that runs to _single coverage_, meaning that each scenario must be included in the trace at least once. This is equivalent to setting `coverage_target=1`. To continue generating longer traces after single coverage is reached, a scenario target can be added. For example, `scenario_target=500` will continue to run until there are 500 scenarios in the trace. Note that when scenarios are split up due to when-step refinement, that each part will count as one scenario.
 
 If you do not need guaranteed coverage, then `coverage_target=0` will disable the coverage check. Test runs can now finish before all scenarios are executed, once the `scenario_target` is reached. This does not affect the trace generation process, which will still prefer new coverage over repetition.
+
+Tip: _When generating large test suites, use Robot Framework's [Split log](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#splitting-logs)  feature (`--splitlog`), to keep log file sizes manageable._
 
 ### Random seed
 
@@ -246,9 +248,9 @@ Using `seed=new` will force generation of a new reusable seed and is identical t
 
 ### Batch size
 
-Trace generation is done in _Batches_, so that the test run can already start before the full trace is generated. Small batch sizes cause the test run to start quickly, wheras larger batch sizes give more room to find suitable traces. Batch size is configurable by setting `batch_size=`.
+Trace generation is done in _Batches_, so that the test run can already start before the full trace is generated. Small batch sizes cause the test run to start quickly, whereas larger batch sizes give more room to find suitable traces. Batch size is configurable by setting `batch_size=`.
 
-If the batch size is large enough to reach all run targets in a single batch, then the run wil finish without further extensions. If not all targets are achieved in the first batch, then trace generation continues whenever new scenarios are needed. This is always at the end of a scenario. This scenario is tagged `mbt trace extension` and also contains the logging for the extended trace generation.
+If the batch size is large enough to reach all run targets in a single batch, then the run will finish without further extensions. If not all targets are achieved in the first batch, then trace generation continues whenever new scenarios are needed. This is always at the end of a scenario. This scenario is tagged `mbt trace extension` and also contains the logging for the extended trace generation.
 
 Tip: _Small batch sizes are good at exposing dead ends in your model._
 

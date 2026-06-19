@@ -257,6 +257,10 @@ def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[st
 
 def rewind(tracestate: TraceState, drought_recovery: bool = False) -> TraceSnapShot | None:
     tail = tracestate.rewind()
-    while drought_recovery and tracestate.coverage_drought and tracestate.can_rewind():
+    while drought_recovery and tracestate.coverage_drought:
+        if not tracestate.can_rewind():
+            logger.debug(
+                f"Coverage drought recovery stalled. {tracestate.coverage_drought} Scenarios are already committed.")
+            break
         tail = tracestate.rewind()
     return tail

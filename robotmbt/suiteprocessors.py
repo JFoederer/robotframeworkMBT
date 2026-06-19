@@ -175,8 +175,8 @@ class ModelBased(SuiteProcessor):
             if self._discovery_ready(direct_tracestate):
                 self.tracestate = direct_tracestate
                 n = len(direct_tracestate.covered_ids)
-                logger.debug(f"Using discovered trace ({n} scenario{'s' if n != 1 else ''}):"
-                             f" [{', '.join(direct_tracestate.id_trace)}]")
+                logger.debug(f"Using one of the discovered traces ({n} scenario{'s' if n != 1 else ''})")
+                self._report_tracestate_to_user(direct_tracestate)
                 # The visualiser assumes that the last trace is the final selected trace, which is not always
                 # the case. Re-initialising and then adding the selected trace again prevents the wrong path
                 # from being highlighted.
@@ -267,16 +267,19 @@ class ModelBased(SuiteProcessor):
                 continue
             tracestates.append(self._one_shot_trace(prio_order))
             if self._discovery_ready(tracestates[-1]) and not self._visualiser:
+                tracestates[-1].unreached = self._unreached_scenarios(tracestates)
                 return tracestates[-1]
             suggestion = self._create_suggestion_by_experience(tracestates)
             if self._is_duplicate_prio_order(tracestates, suggestion):
                 continue
             tracestates.append(self._one_shot_trace(suggestion))
             if self._discovery_ready(tracestates[-1]) and not self._visualiser:
+                tracestates[-1].unreached = self._unreached_scenarios(tracestates)
                 return tracestates[-1]
 
         index_longest = self._longest_trace(tracestates)
         if self._discovery_ready(tracestates[index_longest]):
+            tracestates[index_longest].unreached = self._unreached_scenarios(tracestates)
             return tracestates[index_longest]
         logger.debug("Trying to extend most promising traces")
         prio_order = self._create_suggestion_by_experience(tracestates, index_longest)
@@ -298,7 +301,7 @@ class ModelBased(SuiteProcessor):
 
         longest = tracestates[self._longest_trace(tracestates)]
         not_in_trace = sorted(longest.not_in_trace)
-        longest.unreached = sorted(self._unreached_scenarios(tracestates))
+        longest.unreached = self._unreached_scenarios(tracestates)
         logger.debug(
             f"Longest trace so far ({len(longest.covered_ids)} scenario{'s' if len(longest.covered_ids) != 1 else ''})"
             f": [{', '.join(longest.id_trace)}]\n"
@@ -453,7 +456,8 @@ class ModelBased(SuiteProcessor):
 
     @staticmethod
     def _report_tracestate_to_user(tracestate: TraceState):
-        pending = ', '.join([str(i) + '*' if i in tracestate.unreached else str(i) for i in tracestate.not_in_trace])
+        pending = ', '.join([str(i) + '*' if i in tracestate.unreached else str(i)
+                             for i in sorted(tracestate.not_in_trace)])
         logger.debug(f"Trace: [{', '.join(tracestate.id_trace)}] Pending: [{pending}]"
                      f"{' Rejected: ' + str(tracestate.tried) if tracestate.tried else ''}")
 
