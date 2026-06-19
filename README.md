@@ -1,6 +1,6 @@
 # RobotMBT - the oneliner
 
- Model-based testing in Robot framework with test case generation
+ Model-based testing in Robot framework with dynamic trace and test case generation
 
 ## Introduction
 
@@ -24,7 +24,7 @@ RobotMBT offers features to cover both _when_ and _what_ variations.
 
 RobotMBT is suitable for sequencing complete scenarios, including action refinement for when-steps. Concrete example scenarios can be generalised for added data-driven variation. When all steps are properly annotated with modelling info, the library can resolve their dependencies and figure out the correct execution order. Each run a new test sequence is generated from the available options.
 
-To be successful, the set of scenarios in the model must (for now) be composable into a single complete sequence, without leftovers. The same scenario can be inserted into the trace multiple times, creating loops, if repetition helps to reach the entry condition for later scenarios. Dead ends should be prevented, i.e., sequences from which there is no way forward and no way to loop back.
+To be successful, the set of scenarios in the model must be composable into a single complete sequence. There are no automatic resets or retries. The same scenario can be inserted into the trace multiple times, creating loops. Either to reach otherwise unreachable scenarios, or simply to create longer test runs. Dead ends should be prevented, i.e., sequences from which there is no way forward and no way to loop back.
 
 ## Getting started
 
@@ -207,6 +207,33 @@ Modified example values do not cascade. If a modifier expression references anot
 
 ## Configuration options
 
+Configure your test run by using any of the options from the list.
+
+| option                                  | purpose                          | values (default marked with *) |
+|-----------------------------------------|----------------------------------|--------------------------------|
+| [coverage_target](#setting-run-targets) | Each scenario must be executed at least this many times | 0 or 1* |
+| [scenario_target](#setting-run-targets) | The trace must have at least this many scenarios   | 0* or higher |
+| [seed](#random-seed)                    | Re-running a prior trace          | a specific seed, new* or None |
+| [batch_size](#batch-size)               | Phased trace generation              | 1 or higher (default 100*) |
+| [graph](#graphs)                        | Visualising the model   | None*, scenario or scenario-delta-value |
+| [export_graph_data](#exporting-and-importing-graph-data) | Storing graphs as json data | None* or file path |
+
+Options are available as named arguments:
+
+```robotframework
+Treat this test suite model-based    coverage_target=1    scenario_target=250
+```
+
+If you want to set configuration options for use in multiple test suites without having to repeat them, the keywords __Set model-based options__ and __Update model-based options__ can be used to configure RobotMBT library options. _Set_ takes the provided options and discards any previously set options. _Update_ allows you to modify existing options or add new ones. Reset all options by calling _Set_ without arguments. Direct options provided to __Treat this test suite model-based__ take precedence over library options and affect only the current test suite.
+
+Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#dictionary-variable) (`&{ }`) can be used to group related options and pass them as one set.
+
+### Setting run targets
+
+By default a trace will be generated that runs to _single coverage_, meaning that each scenario must be included in the trace at least once. This is equivalent to setting `coverage_target=1`. To continue generating longer traces after single coverage is reached, a scenario target can be added. For example, `scenario_target=500` will continue to run until there are 500 scenarios in the trace. Note that when scenarios are split up due to when-step refinement, that each part will count as one scenario.
+
+If you do not need guaranteed coverage, then `coverage_target=0` will disable the coverage check. Test runs can now finish before all scenarios are executed, once the `scenario_target` is reached. This does not affect the trace generation process, which will still prefer new coverage over repetition.
+
 ### Random seed
 
 By default, trace generation is random. The random seed used for the trace is logged by _Treat this test suite model-based_. This seed can be used to rerun the same trace, if no external random factors influence the test run. To activate the seed, pass it as argument:
@@ -216,6 +243,14 @@ Treat this test suite model-based    seed=eag-etou-cxi-leamv-jsi
 ```
 
 Using `seed=new` will force generation of a new reusable seed and is identical to omitting the seed argument. To completely bypass seed generation and use the system's random source, use `seed=None`. This has even more variation but does not produce a reusable seed.
+
+### Batch size
+
+Trace generation is done in _Batches_, so that the test run can already start before the full trace is generated. Small batch sizes cause the test run to start quickly, wheras larger batch sizes give more room to find suitable traces. Batch size is configurable by setting `batch_size=`.
+
+If the batch size is large enough to reach all run targets in a single batch, then the run wil finish without further extensions. If not all targets are achieved in the first batch, then trace generation continues whenever new scenarios are needed. This is always at the end of a scenario. This scenario is tagged `mbt trace extension` and also contains the logging for the extended trace generation.
+
+Tip: _Small batch sizes are good at exposing dead ends in your model._
 
 ### Graphs
 
@@ -251,12 +286,6 @@ Show model graph from exported file    json_file_path=<file_path>    graph_style
 ```
 
 This will draw a graph from the exported file, without the need to rerun the test suite. It is possible to select a different graph style than was used during the test run. If no graph style is selected, then the scenario graph style is used.
-
-### Option management
-
-If you want to set configuration options for use in multiple test suites without having to repeat them, the keywords __Set model-based options__ and __Update model-based options__ can be used to configure RobotMBT library options. _Set_ takes the provided options and discards any previously set options. _Update_ allows you to modify existing options or add new ones. Reset all options by calling _Set_ without arguments. Direct options provided to __Treat this test suite model-based__ take precedence over library options and affect only the current test suite.
-
-Tip: [Robot dictionaries](https://robotframework.org/robotframework/latest/RobotFrameworkUserGuide.html#dictionary-variable) (`&{ }`) can be used to group related options and pass them as one set.
 
 ## Contributing
 
