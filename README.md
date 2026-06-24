@@ -1,14 +1,14 @@
 # RobotMBT - the oneliner
 
- Model-based testing in Robot framework with dynamic trace and test case generation
+ Model-based testing in Robot Framework with dynamic trace and test case generation
 
 ## Introduction
 
-This project is an extension to [Robot framework](https://robotframework.org/) for model-based testing. The term model-based testing, or MBT in short, has been used in many different ways. Within this context two modelling aspects are most important. The first is about domain modelling using a domain specific language, or DSL. [Robot framework](https://robotframework.org/) already has great support for this aspect, which is why it was used as a base. The second aspect is about test case generation.
+This project is an extension to [Robot Framework](https://robotframework.org/) for model-based testing. The term model-based testing, or MBT in short, has been used in many different ways. Within this context two modelling aspects are most important. The first is about domain modelling using a domain specific language, or DSL. [Robot Framework](https://robotframework.org/) already has great support for this aspect, which is why it was used as a base. The second aspect is about test case generation.
 
 Test case generation introduces a more dynamic approach to executing a test suite. A typical traditional test suite is executed front to back. For maintainability reasons, test cases are often kept independent of each other. The downside to this approach is that there is little variation and often a lot of duplication, mostly during the setup phases.
 
-With this project we aim to get the best of both worlds. Allowing testers to write small, independent scenarios that are automatically combined and expanded. Finding more issues in less time, by focusing on effectively reaching the desired coverage.
+With this project we aim to get the best of both worlds. Allowing testers to write small, independent scenarios that are automatically combined and expanded. Finding more issues in less time, by focusing on effectively reaching the desired test coverage.
 
 ## Approach
 
@@ -44,11 +44,11 @@ Library        robotmbt
 Suite Setup    Treat this test suite model-based
 ```
 
-To get a feel for what this library can do, have a look at our [Titanic themed demo](https://github.com/JFoederer/robotframeworkMBT/tree/main/demo/Titanic), which is executable as a [Robot framework](https://robotframework.org/) test suite.
+To get a feel for what this library can do, have a look at our [Titanic themed demo](https://github.com/JFoederer/robotframeworkMBT/tree/main/demo/Titanic), which is executable as a [Robot Framework](https://robotframework.org/) test suite.
 
 ## How to model
 
-Modelling can be done directly from [Robot framework](https://robotframework.org/), without the need for additional tooling besides [RobotMBT](https://github.com/JFoederer/robotframeworkMBT).
+Modelling can be done directly from [Robot Framework](https://robotframework.org/), without the need for additional tooling besides [RobotMBT](https://github.com/JFoederer/robotframeworkMBT).
 
 ### The basics
 
@@ -293,7 +293,3 @@ This will draw a graph from the exported file, without the need to rerun the tes
 ## Contributing
 
 If you have feedback, ideas, or want to get involved in coding, then check out the [Contribution guidelines](https://github.com/JFoederer/robotframeworkMBT/blob/main/CONTRIBUTING.md).
-
-## Disclaimer
-
-Please note that this library is in a premature state and hasn't reached its first official (1.0) release yet. Developments are ongoing within the context of the [TiCToC](https://tictoc.cs.ru.nl/) research project. Interface changes are still frequent, and no deprecation warnings are being issued yet.

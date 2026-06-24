@@ -7,8 +7,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "robotframework-mbt"
-version = "0.14.0"
-description = "Model-Based Testing in Robot framework with test case generation"
+version = "1.0.0"
+description = "Model-Based Testing in Robot Framework with test case generation"
 readme = "README.md"
 authors = [{ name = "Johan Foederer", email = "github@famfoe.nl" }]
 license = { file = "LICENSE" }
