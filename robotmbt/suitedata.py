@@ -33,7 +33,8 @@
 import copy
 from typing import Literal
 
-from robot.errors import TimeoutExceeded  # Raised by Robot in case of keyword timeout
+# Raised by Robot in case of keyword timeout
+from robot.errors import TimeoutExceeded
 from robot.running.arguments.argumentspec import ArgumentSpec
 from robot.running.arguments.argumentvalidator import ArgumentValidator
 from robot.running.keywordimplementation import KeywordImplementation
@@ -65,8 +66,10 @@ class Suite:
 
     def steps_with_errors(self):
         return (([self.setup] if self.setup and self.setup.has_error() else [])
-                + [e for s in map(Suite.steps_with_errors, self.suites) for e in s]
-                + [e for s in map(Scenario.steps_with_errors, self.scenarios) for e in s]
+                + [e for s in map(Suite.steps_with_errors, self.suites)
+                   for e in s]
+                + [e for s in map(Scenario.steps_with_errors,
+                                  self.scenarios) for e in s]
                 + ([self.teardown] if self.teardown and self.teardown.has_error() else []))
 
     def scenario_count(self):
@@ -78,7 +81,8 @@ class Scenario:
         self.name: str = name
         # Keeping any keyword references in the copy of the original test case has a large
         # performance impact. That is why some attributes are set to None.
-        self.og_tc = og_tc.copy(body=[], parent=None, _setup=None, _teardown=None)
+        self.og_tc = og_tc.copy(body=[], parent=None,
+                                _setup=None, _teardown=None)
         # Parent scenario is kept for easy searching, processing and referencing
         # after steps and scenarios have been potentially moved around
         self.parent: Suite = parent
@@ -114,7 +118,8 @@ class Scenario:
         With stepindex 0 the first part has no steps and all steps are in the last part. With
         stepindex 1 the first step is in the first part, the other in the last part, and so on.
         """
-        assert stepindex <= len(self.steps), "Split index out of range. Not enough steps in scenario."
+        assert stepindex <= len(
+            self.steps), "Split index out of range. Not enough steps in scenario."
         front = self.copy()
         front.teardown = None
         front.steps = self.steps[:stepindex]
@@ -133,16 +138,20 @@ class Step:
         # org_pn_args are the positional and named arguments as parsed
         # from the Robot text ('posA' , 'posB', 'named1=namedA')
         self.org_pn_args: tuple[str, ...] = args
-        self.parent: Suite | Scenario = parent  # Parent scenario for easy searching and processing.
+        # Parent scenario for easy searching and processing.
+        self.parent: Suite | Scenario = parent
         # For when a keyword's return value is assigned to a variable.
         # Taken directly from Robot.
         self.assign: tuple[str] = assign
         # gherkin_kw is one of 'given', 'when', 'then', or None for non-bdd keywords.
         self.gherkin_kw = self.step_kw if \
             str(self.step_kw).lower() in ['given', 'when', 'then', 'none'] else prev_gherkin_kw
-        self.signature: str | None = None  # Robot keyword with its embedded arguments in ${...} notation.
-        self.args: StepArguments = StepArguments()  # embedded arguments list of StepArgument objects.
-        self.detached: bool = False  # Decouples StepArguments from the step text (refinement use case)
+        # Robot keyword with its embedded arguments in ${...} notation.
+        self.signature: str | None = None
+        # embedded arguments list of StepArgument objects.
+        self.args: StepArguments = StepArguments()
+        # Decouples StepArguments from the step text (refinement use case)
+        self.detached: bool = False
         # model_info contains modelling information as a dictionary. The standard format is
         # dict(IN=[], OUT=[]) and can optionally contain an error field.
         # The values of IN and OUT are lists of Python evaluatable expressions.
@@ -159,7 +168,8 @@ class Step:
         return f"Step: '{self}' with model info: {self.model_info}"
 
     def copy(self):
-        cp = Step(self.org_step, *self.org_pn_args, parent=self.parent, assign=self.assign)
+        cp = Step(self.org_step, *self.org_pn_args,
+                  parent=self.parent, assign=self.assign)
         cp.gherkin_kw = self.gherkin_kw
         cp.signature = self.signature
         cp.args = StepArguments(self.args)
@@ -233,7 +243,8 @@ class Step:
             if robot_kw.error:
                 raise ValueError(robot_kw.error)
             if robot_kw.embedded:
-                self.args = StepArguments([StepArgument(*match, kind=ArgKind.EMBEDDED) for match in
+                patterns = robot_kw.embedded.custom_patterns
+                self.args = StepArguments([StepArgument(*match, kind=ArgKind.EMBEDDED, regex_pattern=patterns) for match in
                                            zip(robot_kw.embedded.args,
                                                robot_kw.embedded.parse_args(self.kw_wo_gherkin))])
             self.args += self.__handle_non_embedded_arguments(robot_kw.args)
@@ -247,18 +258,22 @@ class Step:
     def __handle_non_embedded_arguments(self, robot_argspec: ArgumentSpec) -> list[StepArgument]:
         result = []
         p_args = [a for a in self.org_pn_args if '=' not in a or r'\=' in a]
-        n_args = [a.split('=', 1) for a in self.org_pn_args if '=' in a and r'\=' not in a]
+        n_args = [a.split('=', 1)
+                  for a in self.org_pn_args if '=' in a and r'\=' not in a]
         self.__validate_arguments(robot_argspec, p_args, n_args)
 
         robot_args = [a for a in robot_argspec]
-        argument_names = [a for a in robot_argspec.argument_names if a not in robot_argspec.embedded]
+        argument_names = [
+            a for a in robot_argspec.argument_names if a not in robot_argspec.embedded]
         for arg in robot_argspec:
             if not p_args or (arg.kind != arg.POSITIONAL_ONLY and arg.kind != arg.POSITIONAL_OR_NAMED):
                 break
-            result.append(StepArgument(argument_names.pop(0), p_args.pop(0), kind=ArgKind.POSITIONAL))
+            result.append(StepArgument(argument_names.pop(
+                0), p_args.pop(0), kind=ArgKind.POSITIONAL))
             robot_args.pop(0)
         if p_args and robot_args[0].kind == robot_args[0].VAR_POSITIONAL:
-            result.append(StepArgument(argument_names.pop(0), p_args, kind=ArgKind.VAR_POS))
+            result.append(StepArgument(argument_names.pop(0),
+                          p_args, kind=ArgKind.VAR_POS))
         free = {}
         for name, value in n_args:
             if name in argument_names:
@@ -267,9 +282,11 @@ class Step:
             else:
                 free[name] = value
         if free:
-            result.append(StepArgument(argument_names.pop(-1), free, kind=ArgKind.FREE_NAMED))
+            result.append(StepArgument(argument_names.pop(-1),
+                          free, kind=ArgKind.FREE_NAMED))
         for unmentioned_arg in argument_names:
-            arg = next(arg for arg in robot_args if arg.name == unmentioned_arg)
+            arg = next(arg for arg in robot_args if arg.name ==
+                       unmentioned_arg)
             default_value = arg.default
             if default_value is robot.utils.notset.NOT_SET:
                 if arg.kind == arg.VAR_POSITIONAL:
@@ -281,7 +298,8 @@ class Step:
                     # but use different names in the method signature. Robot Framework implementation is incomplete for this
                     # aspect and differs between library and user keywords.
                     assert False, f"No default argument expected to be needed for '{unmentioned_arg}' here"
-            result.append(StepArgument(unmentioned_arg, default_value, kind=ArgKind.NAMED, is_default=True))
+            result.append(StepArgument(unmentioned_arg,
+                          default_value, kind=ArgKind.NAMED, is_default=True))
         return result
 
     @staticmethod
@@ -317,7 +335,8 @@ class Step:
             key = elms[1].strip()
             expressions = [e.strip() for e in elms[-1].split("|") if e]
             while lines and not lines[0].startswith(":"):
-                expressions.extend([e.strip() for e in lines.pop(0).split("|") if e])
+                expressions.extend([e.strip()
+                                   for e in lines.pop(0).split("|") if e])
             model_info[key] = expressions
         if not model_info:
             raise ValueError("When present, *model info* cannot be empty")

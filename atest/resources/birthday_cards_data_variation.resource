@@ -1,5 +1,5 @@
 *** Keywords ***
-${person} is having their birthday
+${person:\S+} is having their birthday
     [Documentation]    *model info*
     ...    :IN: new party | party.host = ${person} | party.guests = []
     ...    :OUT: None
@@ -7,7 +7,7 @@ ${person} is having their birthday
     @{guests}=    Create list
     Set suite variable    ${guests}
 
-${guest} is a friend of ${host}
+${guest} is a friend of ${host:\S+}
     [Documentation]    *model info*
     ...    :MOD: ${guest}= [${guest}]
     ...    :IN: party.host == ${host} | party.guests.append(${guest})

@@ -32,7 +32,7 @@
 
 from enum import Enum, auto
 from keyword import iskeyword
-from typing import Any
+from typing import Any, Mapping
 import builtins
 
 
@@ -44,6 +44,8 @@ class StepArguments(list):
         result = text
         for arg in self:
             sub = arg.codestring if as_code else str(arg.value)
+            if arg.regex_pattern is not None:
+                result = result.replace(arg.full_arg, sub)
             result = result.replace(arg.arg, sub)
         return result
 
@@ -68,7 +70,7 @@ class ArgKind(Enum):
 
 
 class StepArgument:
-    def __init__(self, arg_name: str, value: Any, kind: ArgKind = ArgKind.UNKNOWN, is_default: bool = False):
+    def __init__(self, arg_name: str, value: Any, kind: ArgKind = ArgKind.UNKNOWN, is_default: bool = False, regex_pattern: Mapping[str, str] | None = None):
         self.name: str = arg_name
         self.org_value: Any = value
         self.kind: ArgKind = kind
@@ -78,10 +80,17 @@ class StepArgument:
         # is_default indicates that the argument was not filled in from the scenario. This
         # argment's value is taken from the keyword's default as provided by Robot.
         self.is_default: bool = is_default
+        self.regex_pattern: str | None = regex_pattern.get(
+            self.name, None) if regex_pattern is not None else None
 
     @property
     def arg(self) -> str:
         return "${%s}" % self.name
+
+    @property
+    def full_arg(self) -> str:
+        maybe_suffix = f":{self.regex_pattern}" if self.regex_pattern else ""
+        return f"${{{self.name}{maybe_suffix}}}"
 
     @property
     def value(self) -> Any:
@@ -102,8 +111,10 @@ class StepArgument:
         return self._codestr
 
     def copy(self):
-        cp = StepArgument(self.arg.strip('${}'), self.value, self.kind, self.is_default)
+        cp = StepArgument(self.arg.strip('${}'), self.value,
+                          self.kind, self.is_default)
         cp.org_value = self.org_value
+        cp.regex_pattern = self.regex_pattern
         return cp
 
     def __str__(self):
