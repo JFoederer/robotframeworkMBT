@@ -30,17 +30,20 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from typing import Any, Literal
+from typing import Any, TypeGuard
 
 from robot.api import logger
-from robot.utils import is_list_like
+from robot.utils import is_list_like as robot_list_like
 from robot.errors import TimeoutExceeded  # Raised by Robot in case of keyword timeout
 
 from .modelspace import ModelSpace
-from .steparguments import StepArgument, StepArguments, ArgKind
+from .steparguments import StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
+
+def is_list_like(value: object) -> TypeGuard[list[Any]]:
+    return robot_list_like(value)
 
 def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
     """
@@ -163,18 +166,20 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
         tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, model, remainder)
 
 
-def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario:
+def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario | None:
     scenario = scenario.copy()
     # collect set of constraints
     subs = SubstitutionMap()
     model.new_scenario_scope()
+    step = None
     try:
         for step in scenario.steps:
             for expr in step.model_info.get('MOD', []):
                 modded_arg, constraint = _parse_modifier_expression(expr, step.args)
-                if modded_arg == "scenario":
+                if isinstance(modded_arg, ScenarioAssignment):
                     model.process_expression(expr, step.args)
                     continue
+                assert constraint is not None
                 if step.args[modded_arg].is_default:
                     continue
                 if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
@@ -240,7 +245,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
         if 'MOD' in step.model_info:
             for expr in step.model_info['MOD']:
                 modded_arg, _ = _parse_modifier_expression(expr, step.args)
-                if modded_arg == "scenario" or step.args[modded_arg].is_default:
+                if isinstance(modded_arg, ScenarioAssignment) or step.args[modded_arg].is_default:
                     continue
                 org_example = step.args[modded_arg].org_value
                 if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
@@ -248,12 +253,14 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     model.end_scenario_scope()
     return scenario
 
+class ScenarioAssignment:
+    """ Simple marker value for parsing an assignment of the form scenario.var = expr"""
 
-def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str] | tuple[Literal["scenario"],None]:
+def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str] | tuple[ScenarioAssignment,None]:
     """
     Parses one :MOD: expression.
     For assignments of the form ${var} = expr, both ${var} and expr are returned
-    For assignments of the form scenario.var = expr, Only the string "scenario" is returned
+    For assignments of the form scenario.var = expr, ScenarioAssignment, None is returned
     All other expressions raise an ValueError.
     """
     if expression.startswith('${'):
@@ -265,7 +272,7 @@ def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[st
                 constraint = assignment_expr.replace('=', '', 1).strip()
                 return var.arg, constraint
     elif expression.startswith('scenario.'):
-        return "scenario", None
+        return ScenarioAssignment(), None
     raise ValueError(f"Invalid argument substitution: {expression}")
 
 
