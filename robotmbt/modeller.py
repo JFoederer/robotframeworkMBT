@@ -30,7 +30,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from typing import Any
+from typing import Any, Literal
 
 from robot.api import logger
 from robot.utils import is_list_like
@@ -41,7 +41,6 @@ from .steparguments import StepArgument, StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
-
 
 def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
     """
@@ -168,10 +167,14 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     scenario = scenario.copy()
     # collect set of constraints
     subs = SubstitutionMap()
+    model.new_scenario_scope()
     try:
         for step in scenario.steps:
             for expr in step.model_info.get('MOD', []):
                 modded_arg, constraint = _parse_modifier_expression(expr, step.args)
+                if modded_arg == "scenario":
+                    model.process_expression(expr, step.args)
+                    continue
                 if step.args[modded_arg].is_default:
                     continue
                 if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
@@ -218,6 +221,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     except Exception as err:
         logger.debug(f"Rejecting scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                      f"    In step {step}: {err}")
+        model.end_scenario_scope()
         return None
 
     try:
@@ -225,6 +229,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     except ValueError as err:
         logger.debug(f"Rejecting scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                      f"    {err}: {subs}")
+        model.end_scenario_scope()
         return None
 
     # Update scenario with generated values
@@ -235,15 +240,22 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
         if 'MOD' in step.model_info:
             for expr in step.model_info['MOD']:
                 modded_arg, _ = _parse_modifier_expression(expr, step.args)
-                if step.args[modded_arg].is_default:
+                if modded_arg == "scenario" or step.args[modded_arg].is_default:
                     continue
                 org_example = step.args[modded_arg].org_value
                 if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
                     step.args[modded_arg].value = subs.solution[org_example]
+    model.end_scenario_scope()
     return scenario
 
 
-def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str]:
+def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str] | tuple[Literal["scenario"],None]:
+    """
+    Parses one :MOD: expression.
+    For assignments of the form ${var} = expr, both ${var} and expr are returned
+    For assignments of the form scenario.var = expr, Only the string "scenario" is returned
+    All other expressions raise an ValueError.
+    """
     if expression.startswith('${'):
         for var in args:
             if expression.casefold().startswith(var.arg.casefold()):
@@ -252,6 +264,8 @@ def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[st
                     break  # not an assignment
                 constraint = assignment_expr.replace('=', '', 1).strip()
                 return var.arg, constraint
+    elif expression.startswith('scenario.'):
+        return "scenario", None
     raise ValueError(f"Invalid argument substitution: {expression}")
 
 
