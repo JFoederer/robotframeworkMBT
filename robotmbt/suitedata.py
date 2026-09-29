@@ -85,8 +85,18 @@ class Scenario:
         self.setup: Step | None = None  # Can be a single step or None
         self.teardown: Step | None = None  # Can be a single step or None
         self.steps: list[Step] = []
-        self.src_id: int | None = None
+        self._src_id: int | None = None
         self.data_choices: SubstitutionMap = SubstitutionMap()
+
+    @property
+    def src_id(self) -> int:
+        if self._src_id is None:
+            raise ValueError(f"src_id has not been set for scenario '{self.name}'")
+        return self._src_id
+
+    @src_id.setter
+    def src_id(self, value: int) -> None:
+        self._src_id = value
 
     @property
     def longname(self) -> str:

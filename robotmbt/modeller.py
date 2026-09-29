@@ -42,8 +42,10 @@ from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
 
+
 def is_list_like(value: object) -> TypeGuard[list[Any]]:
     return robot_list_like(value)
+
 
 def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
     """
@@ -69,10 +71,11 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
         tracestate.push_partial_scenario(inserted.src_id, inserted, model, remainder)
 
 
-def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, Scenario, dict[str, Any]]:
+def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario | None, Scenario | None, dict[str, Any]]:
+    expr = "crashed before evaluating a step expression"
     for step in scenario.steps:
         if 'error' in step.model_info:
-            return None, None, dict(fail_masg=f"Error in scenario {scenario.name} "
+            return None, None, dict(fail_msg=f"Error in scenario {scenario.name} "
                                     f"at step {step}: {step.model_info['error']}")
         if step.gherkin_kw is None and not step.model_info:
             continue  # model info is optional for action keywords
@@ -125,6 +128,8 @@ def _escape_robot_vars(text: str) -> str:
 
 def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState):
     refinement_tail = tracestate.get_remainder(tracestate.active_refinements[-1])
+    assert refinement_tail is not None, f"attempted to acess remainder of tracestate while handeling scenario refinement, but there was none"
+    assert tracestate.model is not None, f"no model data found for while handeling scenario refinement "
     exit_conditions = refinement_tail.steps[1].model_info['OUT']
     exit_conditions_processed = False
     for expr in exit_conditions:
@@ -253,10 +258,12 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     model.end_scenario_scope()
     return scenario
 
+
 class ScenarioAssignment:
     """ Simple marker value for parsing an assignment of the form scenario.var = expr"""
 
-def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str] | tuple[ScenarioAssignment,None]:
+
+def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str] | tuple[ScenarioAssignment, None]:
     """
     Parses one :MOD: expression.
     For assignments of the form ${var} = expr, both ${var} and expr are returned

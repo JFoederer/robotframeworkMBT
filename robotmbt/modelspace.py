@@ -177,7 +177,8 @@ class ModelSpace:
             for attr in dir(self.props[p]):
                 status += f"    {attr}={getattr(self.props[p], attr)}\n"
         if scenario_attrs:
-            assert not isinstance(scenario_attrs, ModelSpace), "Internal error: the scenario variable did not resolve to local scoped variable, but to a global scope"
+            assert not isinstance(
+                scenario_attrs, ModelSpace), "Internal error: the scenario variable did not resolve to local scoped variable, but to a global scope"
             status += "scenario:\n"
             for attr, value in scenario_attrs:
                 status += f"    {attr}={value}\n"
