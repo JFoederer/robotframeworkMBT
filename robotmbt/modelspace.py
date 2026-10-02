@@ -115,12 +115,14 @@ class ModelSpace:
                 exec(expr, local_locals)
                 result = 'exec'
             except NameError as missing:
+                if missing.name is None:
+                    raise
                 self.__add_alias(missing.name, step_args)
                 result = self.process_expression(expression, step_args)
             except AttributeError as err:
                 self.__handle_attribute_error(err)
         except NameError as missing:
-            if missing.name == expr:
+            if missing.name == expr or missing.name is None:
                 raise  # Putting only a name in an expression can be used as exists check
             self.__add_alias(missing.name, step_args)
             result = self.process_expression(expression, step_args)
@@ -175,6 +177,8 @@ class ModelSpace:
             for attr in dir(self.props[p]):
                 status += f"    {attr}={getattr(self.props[p], attr)}\n"
         if scenario_attrs:
+            assert not isinstance(
+                scenario_attrs, ModelSpace), "Internal error: the scenario variable did not resolve to local scoped variable, but to a global scope"
             status += "scenario:\n"
             for attr, value in scenario_attrs:
                 status += f"    {attr}={value}\n"

@@ -57,10 +57,12 @@ class SubstitutionMap:
         new.solution = self.solution.copy()
         return new
 
-    def substitute(self, example_value: str, constraint: list[Any]):
+    def substitute(self, example_value: str, constraint: list[Any] | None):
         self.solution = {}
         if example_value in self.substitutions:
             self.substitutions[example_value].add_constraint(constraint)
+        elif constraint is None:
+            raise ValueError(f"initial constraint for value {example_value} cannot be {constraint}")
         else:
             self.substitutions[example_value] = Constraint(constraint)
 

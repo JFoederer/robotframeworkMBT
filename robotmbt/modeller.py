@@ -30,17 +30,21 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-from typing import Any
+from typing import Any, TypeGuard
 
 from robot.api import logger
-from robot.utils import is_list_like
+from robot.utils import is_list_like as robot_list_like
 from robot.errors import TimeoutExceeded  # Raised by Robot in case of keyword timeout
 
 from .modelspace import ModelSpace
-from .steparguments import StepArgument, StepArguments, ArgKind
+from .steparguments import StepArguments, ArgKind
 from .substitutionmap import SubstitutionMap
 from .suitedata import Scenario, Step
 from .tracestate import TraceState, TraceSnapShot
+
+
+def is_list_like(value: object) -> TypeGuard[list[Any]]:
+    return robot_list_like(value)
 
 
 def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
@@ -67,10 +71,11 @@ def try_to_fit_in_scenario(candidate: Scenario, tracestate: TraceState):
         tracestate.push_partial_scenario(inserted.src_id, inserted, model, remainder)
 
 
-def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario, Scenario, dict[str, Any]]:
+def process_scenario(scenario: Scenario, model: ModelSpace) -> tuple[Scenario | None, Scenario | None, dict[str, Any]]:
+    expr = "crashed before evaluating a step expression"
     for step in scenario.steps:
         if 'error' in step.model_info:
-            return None, None, dict(fail_masg=f"Error in scenario {scenario.name} "
+            return None, None, dict(fail_msg=f"Error in scenario {scenario.name} "
                                     f"at step {step}: {step.model_info['error']}")
         if step.gherkin_kw is None and not step.model_info:
             continue  # model info is optional for action keywords
@@ -123,6 +128,8 @@ def _escape_robot_vars(text: str) -> str:
 
 def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState):
     refinement_tail = tracestate.get_remainder(tracestate.active_refinements[-1])
+    assert refinement_tail is not None, f"attempted to acess remainder of tracestate while handeling scenario refinement, but there was none"
+    assert tracestate.model is not None, f"no model data found for while handeling scenario refinement "
     exit_conditions = refinement_tail.steps[1].model_info['OUT']
     exit_conditions_processed = False
     for expr in exit_conditions:
@@ -164,14 +171,20 @@ def handle_refinement_exit(inserted_refinement: Scenario, tracestate: TraceState
         tracestate.push_partial_scenario(tail_inserted.src_id, tail_inserted, model, remainder)
 
 
-def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario:
+def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario | None:
     scenario = scenario.copy()
     # collect set of constraints
     subs = SubstitutionMap()
+    model.new_scenario_scope()
+    step = None
     try:
         for step in scenario.steps:
             for expr in step.model_info.get('MOD', []):
                 modded_arg, constraint = _parse_modifier_expression(expr, step.args)
+                if isinstance(modded_arg, ScenarioAssignment):
+                    model.process_expression(expr, step.args)
+                    continue
+                assert constraint is not None
                 if step.args[modded_arg].is_default:
                     continue
                 if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
@@ -218,6 +231,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     except Exception as err:
         logger.debug(f"Rejecting scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                      f"    In step {step}: {err}")
+        model.end_scenario_scope()
         return None
 
     try:
@@ -225,6 +239,7 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
     except ValueError as err:
         logger.debug(f"Rejecting scenario {scenario.src_id}, {scenario.name}, due to modifier\n"
                      f"    {err}: {subs}")
+        model.end_scenario_scope()
         return None
 
     # Update scenario with generated values
@@ -235,15 +250,26 @@ def generate_scenario_variant(scenario: Scenario, model: ModelSpace) -> Scenario
         if 'MOD' in step.model_info:
             for expr in step.model_info['MOD']:
                 modded_arg, _ = _parse_modifier_expression(expr, step.args)
-                if step.args[modded_arg].is_default:
+                if isinstance(modded_arg, ScenarioAssignment) or step.args[modded_arg].is_default:
                     continue
                 org_example = step.args[modded_arg].org_value
                 if step.args[modded_arg].kind in [ArgKind.EMBEDDED, ArgKind.POSITIONAL, ArgKind.NAMED]:
                     step.args[modded_arg].value = subs.solution[org_example]
+    model.end_scenario_scope()
     return scenario
 
 
-def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str]:
+class ScenarioAssignment:
+    """ Simple marker value for parsing an assignment of the form scenario.var = expr"""
+
+
+def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[str, str] | tuple[ScenarioAssignment, None]:
+    """
+    Parses one :MOD: expression.
+    For assignments of the form ${var} = expr, both ${var} and expr are returned
+    For assignments of the form scenario.var = expr, ScenarioAssignment, None is returned
+    All other expressions raise an ValueError.
+    """
     if expression.startswith('${'):
         for var in args:
             if expression.casefold().startswith(var.arg.casefold()):
@@ -252,6 +278,8 @@ def _parse_modifier_expression(expression: str, args: StepArguments) -> tuple[st
                     break  # not an assignment
                 constraint = assignment_expr.replace('=', '', 1).strip()
                 return var.arg, constraint
+    elif expression.startswith('scenario.'):
+        return ScenarioAssignment(), None
     raise ValueError(f"Invalid argument substitution: {expression}")
 
 
